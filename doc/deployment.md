@@ -37,6 +37,28 @@ The systemd unit reads `/etc/talaria/env`. Back up with `pg_dump` together
 with `data_dir/blobs`; a database without its blobs, or the reverse, is
 incomplete.
 
+## Inbound filtering
+
+Port 25 checks every connection before it accepts mail, so refused mail is
+never stored:
+
+- **HELO.** A server that claims this server's own name, or an address
+  literal that is not its own, is refused.
+- **DNS blocklists** (`filter.dnsbl`). Spamhaus answers only through your
+  own resolver: install `unbound` and point `/etc/resolv.conf` at
+  127.0.0.1, or drop it from the list.
+- **Greylisting** (`filter.greylist`, off by default). The first message
+  from an unknown sender, network and recipient is deferred for five
+  minutes; real servers retry, most spam software does not. It delays the
+  first mail from every new sender.
+- **Reverse DNS** (`filter.require_rdns`, off by default).
+- **Rate limit** (`filter.max_per_ip_hour`).
+- **Tenant lists.** Admins block or allow senders by address, domain or IP
+  range under Admin > Sender filtering. Allow skips the blocklists,
+  greylisting and reverse DNS check.
+
+Mail from loopback and private addresses skips the network checks.
+
 ## Outbound mail
 
 Most VPS providers block outbound port 25, so `outbound.mode = "relay"` is the

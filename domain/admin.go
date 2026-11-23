@@ -337,3 +337,55 @@ type DeleteAlias struct {
 	TenantScope
 	ID int64 `json:"-" path:"id"`
 }
+
+// SenderRule allows or blocks inbound mail for a tenant. Kind is "ip" (an
+// address or CIDR range), "domain" (with its subdomains) or "address";
+// Action is "allow" (skip blocklists, greylisting and reverse DNS checks)
+// or "block" (refuse).
+type SenderRule struct {
+	ID        int64  `json:"id"`
+	TenantID  int64  `json:"tenantId"`
+	Kind      string `json:"kind"`
+	Value     string `json:"value"`
+	Action    string `json:"action"`
+	Note      string `json:"note"`
+	CreatedAt int64  `json:"createdAt"`
+}
+
+// ListSenderRules asks for a tenant's allow and block lists.
+type ListSenderRules struct {
+	TenantScope
+}
+
+// SenderRules is a tenant's allow and block lists.
+type SenderRules struct {
+	Rules []SenderRule `json:"rules"`
+}
+
+// CreateSenderRule adds an allow or block rule.
+type CreateSenderRule struct {
+	TenantID int64  `json:"tenantId,omitzero"`
+	Kind     string `json:"kind"`
+	Value    string `json:"value"`
+	Action   string `json:"action"`
+	Note     string `json:"note,omitzero"`
+}
+
+// Validate checks the fields the store does not.
+func (c CreateSenderRule) Validate() error {
+	if c.Value == "" {
+		return invalid("value", "enter an IP address, range, domain or email address")
+	}
+	return nil
+}
+
+// SenderRuleCreated is the new rule.
+type SenderRuleCreated struct {
+	Rule SenderRule `json:"rule"`
+}
+
+// DeleteSenderRule removes a rule.
+type DeleteSenderRule struct {
+	TenantScope
+	ID int64 `json:"-" path:"id"`
+}

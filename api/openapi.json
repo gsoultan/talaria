@@ -509,6 +509,133 @@
         }
       }
     },
+    "/api/v1/admin/sender-rules": {
+      "get": {
+        "operationId": "admin.ListSenderRules",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenderRules"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "admin.CreateSenderRule",
+        "tags": [
+          "admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSenderRule"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SenderRuleCreated"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/sender-rules/{id}": {
+      "delete": {
+        "operationId": "admin.DeleteSenderRule",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Done"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/stats": {
       "get": {
         "operationId": "admin.GetStats",
@@ -2046,6 +2173,32 @@
           "name"
         ]
       },
+      "CreateSenderRule": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "value",
+          "action"
+        ]
+      },
       "CreateTenant": {
         "type": "object",
         "properties": {
@@ -2797,6 +2950,69 @@
         },
         "required": [
           "message"
+        ]
+      },
+      "SenderRule": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "kind",
+          "value",
+          "action",
+          "note",
+          "createdAt"
+        ]
+      },
+      "SenderRuleCreated": {
+        "type": "object",
+        "properties": {
+          "rule": {
+            "$ref": "#/components/schemas/SenderRule"
+          }
+        },
+        "required": [
+          "rule"
+        ]
+      },
+      "SenderRules": {
+        "type": "object",
+        "properties": {
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SenderRule"
+            }
+          }
+        },
+        "required": [
+          "rules"
         ]
       },
       "Sent": {

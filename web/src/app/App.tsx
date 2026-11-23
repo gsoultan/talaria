@@ -21,6 +21,7 @@ const AdminShell = lazy(() => import('../features/admin/AdminShell').then((m) =>
 const DomainsPage = lazy(() => import('../features/admin/DomainsPage').then((m) => ({ default: m.DomainsPage })))
 const UsersPage = lazy(() => import('../features/admin/UsersPage').then((m) => ({ default: m.UsersPage })))
 const QueuePage = lazy(() => import('../features/admin/QueuePage').then((m) => ({ default: m.QueuePage })))
+const FilteringPage = lazy(() => import('../features/admin/FilteringPage').then((m) => ({ default: m.FilteringPage })))
 const TenantsPage = lazy(() => import('../features/admin/TenantsPage').then((m) => ({ default: m.TenantsPage })))
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 
@@ -62,6 +63,7 @@ function Routes() {
     else if (path === '/admin/domains') page = <DomainsPage />
     else if (path === '/admin/users') page = <UsersPage />
     else if (path === '/admin/queue') page = <QueuePage />
+    else if (path === '/admin/filtering') page = <FilteringPage />
     else if (path === '/admin/tenants' && isPlatformAdmin(me)) page = <TenantsPage />
     else page = <Redirect to="/admin/domains" />
     return (

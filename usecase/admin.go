@@ -309,3 +309,46 @@ func (s *Admin) DeleteAlias(ctx context.Context, in domain.DeleteAlias) (domain.
 	}
 	return domain.Done{}, storeErr(s.Store.DeleteAlias(ctx, tid, in.ID))
 }
+
+func senderRuleOf(r store.SenderRule) domain.SenderRule {
+	return domain.SenderRule{ID: r.ID, TenantID: r.TenantID, Kind: r.Kind, Value: r.Value, Action: r.Action, Note: r.Note, CreatedAt: r.CreatedAt}
+}
+
+// ListSenderRules returns a tenant's allow and block lists.
+func (s *Admin) ListSenderRules(ctx context.Context, in domain.ListSenderRules) (domain.SenderRules, error) {
+	_, tid, err := scope(ctx, in.TenantID)
+	if err != nil {
+		return domain.SenderRules{}, err
+	}
+	rs, err := s.Store.ListSenderRules(ctx, tid)
+	if err != nil {
+		return domain.SenderRules{}, storeErr(err)
+	}
+	out := domain.SenderRules{Rules: make([]domain.SenderRule, len(rs))}
+	for i, r := range rs {
+		out.Rules[i] = senderRuleOf(r)
+	}
+	return out, nil
+}
+
+// CreateSenderRule adds an allow or block rule.
+func (s *Admin) CreateSenderRule(ctx context.Context, in domain.CreateSenderRule) (domain.SenderRuleCreated, error) {
+	_, tid, err := scope(ctx, in.TenantID)
+	if err != nil {
+		return domain.SenderRuleCreated{}, err
+	}
+	r, err := s.Store.CreateSenderRule(ctx, store.SenderRule{TenantID: tid, Kind: in.Kind, Value: in.Value, Action: in.Action, Note: in.Note})
+	if err != nil {
+		return domain.SenderRuleCreated{}, storeErr(err)
+	}
+	return domain.SenderRuleCreated{Rule: senderRuleOf(r)}, nil
+}
+
+// DeleteSenderRule removes a rule.
+func (s *Admin) DeleteSenderRule(ctx context.Context, in domain.DeleteSenderRule) (domain.Done, error) {
+	_, tid, err := scope(ctx, in.TenantID)
+	if err != nil {
+		return domain.Done{}, err
+	}
+	return domain.Done{}, storeErr(s.Store.DeleteSenderRule(ctx, tid, in.ID))
+}

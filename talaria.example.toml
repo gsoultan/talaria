@@ -82,3 +82,19 @@ token_file = "/etc/talaria/ingest-token"
 # [smtp]
 # trusted_proxies = ["10.0.0.2"]
 # upstream_tls = false
+
+[filter]
+# Checks on inbound SMTP (port 25) before mail is accepted. Tenants add
+# their own allow and block lists under Admin > Sender filtering.
+#
+# DNS blocklists. Spamhaus refuses queries that arrive through public
+# resolvers (8.8.8.8, 1.1.1.1, your provider's); run a local resolver such
+# as unbound on this machine, or remove it from the list.
+dnsbl = ["zen.spamhaus.org", "bl.spamcop.net"]
+# Defer the first message from an unknown sender; real servers retry.
+greylist = false
+greylist_delay = "5m"
+# Refuse servers without reverse DNS that points back to their address.
+require_rdns = false
+# Messages per hour from one address (IPv6: one /64). 0 = no limit.
+max_per_ip_hour = 500

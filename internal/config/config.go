@@ -35,6 +35,24 @@ type Config struct {
 	Outbound    Outbound `toml:"outbound"`
 	TLS         TLS      `toml:"tls"`
 	Ingest      Ingest   `toml:"ingest"`
+	Filter      Filter   `toml:"filter"`
+}
+
+// Filter configures the checks on inbound SMTP connections. Tenants add
+// their own allow and block lists in the admin.
+type Filter struct {
+	// DNSBL lists DNS blocklist zones. Spamhaus refuses queries that come
+	// through public resolvers (8.8.8.8, 1.1.1.1); run a local resolver
+	// such as unbound, or use its data query service key in the zone.
+	DNSBL []string `toml:"dnsbl"`
+	// Greylist defers the first message from an unknown sender for
+	// greylist_delay; real mail servers retry and get through.
+	Greylist      bool     `toml:"greylist"`
+	GreylistDelay Duration `toml:"greylist_delay"`
+	// RequireRDNS refuses servers without forward-confirmed reverse DNS.
+	RequireRDNS bool `toml:"require_rdns"`
+	// MaxPerIPHour caps messages per hour from one IP (IPv6: one /64).
+	MaxPerIPHour int `toml:"max_per_ip_hour"`
 }
 
 // Database configures the PostgreSQL connection.
@@ -160,9 +178,14 @@ func Default() Config {
 		DataDir:     "./data",
 		MemoryLimit: 512 * MiB,
 		Database:    Database{MaxConns: 10},
-		Log:         Log{Level: "info", Format: "text"},
-		HTTP:        HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
-		TLS:         TLS{Mode: "off"},
+		Filter: Filter{
+			DNSBL:         []string{"zen.spamhaus.org", "bl.spamcop.net"},
+			GreylistDelay: Duration(5 * time.Minute),
+			MaxPerIPHour:  500,
+		},
+		Log:  Log{Level: "info", Format: "text"},
+		HTTP: HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
+		TLS:  TLS{Mode: "off"},
 		SMTP: SMTP{
 			Listen:         ":25",
 			Submission:     ":587",

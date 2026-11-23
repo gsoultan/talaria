@@ -11,7 +11,7 @@ Built in this order, each step usable on its own. Everything runs inside
 the Talaria binary and fits the 2 GB machine; the heavier scanners are
 optional and talk to Talaria over a socket.
 
-1. **Connection filtering.** DNS blocklists, greylisting, reverse DNS and
+1. **Connection filtering** (done). DNS blocklists, greylisting, reverse DNS and
    HELO checks, per-IP rate limits, and per-tenant allow and block lists,
    applied before a message is accepted.
 2. **Anti-spam.** A built-in scorer in Go using SPF, DKIM and DMARC results,

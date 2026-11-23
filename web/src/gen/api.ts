@@ -70,6 +70,14 @@ export type CreateMailbox = {
   name: string
 }
 
+export type CreateSenderRule = {
+  action: string
+  kind: string
+  note?: string
+  tenantId?: number
+  value: string
+}
+
 export type CreateTenant = {
   dailySendLimit?: number
   displayName: string
@@ -283,6 +291,24 @@ export type SaveDraft = {
   message: Compose
 }
 
+export type SenderRule = {
+  action: string
+  createdAt: number
+  id: number
+  kind: string
+  note: string
+  tenantId: number
+  value: string
+}
+
+export type SenderRuleCreated = {
+  rule: SenderRule
+}
+
+export type SenderRules = {
+  rules: SenderRule[]
+}
+
 export type SendMessage = {
   message: Compose
 }
@@ -395,10 +421,12 @@ export interface Ops {
   "admin.CancelQueue": { input: CancelQueue; output: Done }
   "admin.CreateAlias": { input: CreateAlias; output: AliasCreated }
   "admin.CreateDomain": { input: CreateDomain; output: DomainCreated }
+  "admin.CreateSenderRule": { input: CreateSenderRule; output: SenderRuleCreated }
   "admin.CreateTenant": { input: CreateTenant; output: TenantCreated }
   "admin.CreateUser": { input: CreateUser; output: UserCreated }
   "admin.DeleteAlias": { input: { tenantId?: number; id: number }; output: Done }
   "admin.DeleteDomain": { input: { tenantId?: number; id: number }; output: Done }
+  "admin.DeleteSenderRule": { input: { tenantId?: number; id: number }; output: Done }
   "admin.DeleteTenant": { input: { id: number }; output: Done }
   "admin.DeleteUser": { input: { id: number }; output: Done }
   "admin.GetDomainSetup": { input: { tenantId?: number; domainId: number; check?: boolean }; output: DomainSetup }
@@ -406,6 +434,7 @@ export interface Ops {
   "admin.ListAliases": { input: { tenantId?: number; userId?: number }; output: Aliases }
   "admin.ListDomains": { input: { tenantId?: number }; output: Domains }
   "admin.ListQueue": { input: { tenantId?: number; status?: string; limit?: number }; output: Queue }
+  "admin.ListSenderRules": { input: { tenantId?: number }; output: SenderRules }
   "admin.ListTenants": { input: Record<string, never>; output: Tenants }
   "admin.ListUsers": { input: { tenantId?: number }; output: Users }
   "admin.RetryQueue": { input: RetryQueue; output: Done }
@@ -441,10 +470,12 @@ export const ops = {
   "admin.CancelQueue": { method: 'POST', path: '/api/v1/admin/queue/cancel', pathParams: [], query: [], body: true, stream: false },
   "admin.CreateAlias": { method: 'POST', path: '/api/v1/admin/aliases', pathParams: [], query: [], body: true, stream: false },
   "admin.CreateDomain": { method: 'POST', path: '/api/v1/admin/domains', pathParams: [], query: [], body: true, stream: false },
+  "admin.CreateSenderRule": { method: 'POST', path: '/api/v1/admin/sender-rules', pathParams: [], query: [], body: true, stream: false },
   "admin.CreateTenant": { method: 'POST', path: '/api/v1/admin/tenants', pathParams: [], query: [], body: true, stream: false },
   "admin.CreateUser": { method: 'POST', path: '/api/v1/admin/users', pathParams: [], query: [], body: true, stream: false },
   "admin.DeleteAlias": { method: 'DELETE', path: '/api/v1/admin/aliases/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
   "admin.DeleteDomain": { method: 'DELETE', path: '/api/v1/admin/domains/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
+  "admin.DeleteSenderRule": { method: 'DELETE', path: '/api/v1/admin/sender-rules/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
   "admin.DeleteTenant": { method: 'DELETE', path: '/api/v1/admin/tenants/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.DeleteUser": { method: 'DELETE', path: '/api/v1/admin/users/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.GetDomainSetup": { method: 'GET', path: '/api/v1/admin/domains/{domainId}/setup', pathParams: ["domainId"], query: ["tenantId","check"], body: false, stream: false },
@@ -452,6 +483,7 @@ export const ops = {
   "admin.ListAliases": { method: 'GET', path: '/api/v1/admin/aliases', pathParams: [], query: ["tenantId","userId"], body: false, stream: false },
   "admin.ListDomains": { method: 'GET', path: '/api/v1/admin/domains', pathParams: [], query: ["tenantId"], body: false, stream: false },
   "admin.ListQueue": { method: 'GET', path: '/api/v1/admin/queue', pathParams: [], query: ["tenantId","status","limit"], body: false, stream: false },
+  "admin.ListSenderRules": { method: 'GET', path: '/api/v1/admin/sender-rules', pathParams: [], query: ["tenantId"], body: false, stream: false },
   "admin.ListTenants": { method: 'GET', path: '/api/v1/admin/tenants', pathParams: [], query: [], body: false, stream: false },
   "admin.ListUsers": { method: 'GET', path: '/api/v1/admin/users', pathParams: [], query: ["tenantId"], body: false, stream: false },
   "admin.RetryQueue": { method: 'POST', path: '/api/v1/admin/queue/retry', pathParams: [], query: [], body: true, stream: false },

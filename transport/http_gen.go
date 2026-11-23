@@ -46,6 +46,9 @@ func RegisterAdminHTTP(r *httpx.Router, eps endpoint.AdminEndpoints, mws ...kaka
 	g.Handle("GET /api/v1/admin/aliases", eps.ListAliases, httpx.Name("ListAliases"))
 	g.Handle("POST /api/v1/admin/aliases", eps.CreateAlias, httpx.Name("CreateAlias"))
 	g.Handle("DELETE /api/v1/admin/aliases/{id}", eps.DeleteAlias, httpx.Name("DeleteAlias"))
+	g.Handle("GET /api/v1/admin/sender-rules", eps.ListSenderRules, httpx.Name("ListSenderRules"))
+	g.Handle("POST /api/v1/admin/sender-rules", eps.CreateSenderRule, httpx.Name("CreateSenderRule"))
+	g.Handle("DELETE /api/v1/admin/sender-rules/{id}", eps.DeleteSenderRule, httpx.Name("DeleteSenderRule"))
 }
 
 // RegisterMailHTTP mounts every //kakarot:http method of MailService.

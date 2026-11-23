@@ -19,6 +19,7 @@ import (
 	"github.com/emersion/go-smtp"
 
 	"github.com/gsoultan/talaria/internal/auth"
+	"github.com/gsoultan/talaria/internal/filter"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/store"
 )
@@ -31,6 +32,8 @@ type Config struct {
 	TLS            *tls.Config // nil disables STARTTLS
 	// UpstreamTLS marks connections as TLS because a gateway terminated it.
 	UpstreamTLS bool
+	// Filter runs the connection checks; nil skips them.
+	Filter *filter.Filter
 }
 
 // Inbound is the port 25 backend.
@@ -75,14 +78,36 @@ func (b *Inbound) NewSession(c *smtp.Conn) (smtp.Session, error) {
 	if ip != nil && !b.unknown.Allowed(ip.String()) {
 		return nil, &smtp.SMTPError{Code: 421, EnhancedCode: smtp.EnhancedCode{4, 7, 0}, Message: "Too many unknown recipients, try later"}
 	}
+	var fc *filter.Conn
+	if f := b.cfg.Filter; f != nil {
+		var err error
+		if fc, err = f.Connect(context.Background(), ip, c.Hostname()); err != nil {
+			b.log.Info("refused", "ip", ip, "helo", c.Hostname(), "reason", err)
+			return nil, rejectError(err)
+		}
+	}
 	_, isTLS := c.TLSConnectionState()
-	return &session{b: b, c: c, ip: ip, tls: isTLS || b.cfg.UpstreamTLS}, nil
+	return &session{b: b, c: c, ip: ip, fc: fc, tls: isTLS || b.cfg.UpstreamTLS}, nil
+}
+
+// rejectError turns a filter refusal into an SMTP reply.
+func rejectError(err error) error {
+	var r *filter.Reject
+	if !errors.As(err, &r) {
+		return errTemporary
+	}
+	code := 550
+	if r.Temporary {
+		code = 450
+	}
+	return &smtp.SMTPError{Code: code, EnhancedCode: smtp.EnhancedCode{r.Code[0], r.Code[1], r.Code[2]}, Message: r.Reason}
 }
 
 type session struct {
 	b     *Inbound
 	c     *smtp.Conn
 	ip    net.IP
+	fc    *filter.Conn // nil when filtering is off
 	tls   bool
 	from  string
 	rcpts []store.User
@@ -97,6 +122,12 @@ func (s *session) Logout() error { return nil }
 
 func (s *session) Mail(from string, _ *smtp.MailOptions) error {
 	s.Reset()
+	if s.fc != nil {
+		if err := s.b.cfg.Filter.Mail(s.fc); err != nil {
+			s.b.log.Info("refused", "ip", s.ip, "from", from, "reason", err)
+			return rejectError(err)
+		}
+	}
 	s.from = from
 	return nil
 }
@@ -128,6 +159,12 @@ func (s *session) Rcpt(to string, _ *smtp.RcptOptions) error {
 		return errTemporary
 	case u.Suspended:
 		return errDisabled
+	}
+	if s.fc != nil {
+		if err := s.b.cfg.Filter.Recipient(context.Background(), s.fc, s.from, u); err != nil {
+			s.b.log.Info("refused", "ip", s.ip, "from", s.from, "to", to, "reason", err)
+			return rejectError(err)
+		}
 	}
 	s.rcpts = append(s.rcpts, u)
 	return nil

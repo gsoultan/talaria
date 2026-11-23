@@ -29,6 +29,7 @@ import (
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/clientip"
 	"github.com/gsoultan/talaria/internal/config"
+	"github.com/gsoultan/talaria/internal/filter"
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/imapd"
 	"github.com/gsoultan/talaria/internal/ingest"
@@ -50,6 +51,7 @@ type Server struct {
 	Store   *store.Store
 	Blobs   *blob.Store
 	Hub     *hub.Hub
+	Filter  *filter.Filter // inbound connection checks
 	Deliver *mail.Deliverer
 	Keys    *outbound.Keys
 	Queue   *outbound.Queue
@@ -198,7 +200,14 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 	}
 	smtpCfg := smtpd.Config{Hostname: cfg.Hostname, MaxMessageSize: int64(cfg.SMTP.MaxMessageSize), TLS: s.tls}
 	if cfg.SMTP.Listen != "" {
-		s.smtp = smtpd.NewInbound(smtpCfg, st, s.Deliver, log)
+		in := smtpCfg
+		s.Filter = filter.New(filter.Config{
+			Hostname: cfg.Hostname, DNSBL: cfg.Filter.DNSBL,
+			Greylist: cfg.Filter.Greylist, GreylistDelay: cfg.Filter.GreylistDelay.D(),
+			RequireRDNS: cfg.Filter.RequireRDNS, MaxPerIPHour: cfg.Filter.MaxPerIPHour,
+		}, st, nil, log)
+		in.Filter = s.Filter
+		s.smtp = smtpd.NewInbound(in, st, s.Deliver, log)
 	}
 	if cfg.SMTP.Submission != "" || cfg.SMTP.SubmissionTLS != "" {
 		s.sub = smtpd.NewSubmission(smtpCfg, st, s.Submit, log)
@@ -458,6 +467,11 @@ func (s *Server) sweep(ctx context.Context) {
 		}
 		if len(dead) < 500 || ctx.Err() != nil {
 			break
+		}
+	}
+	if s.Filter != nil {
+		if err := s.Filter.Prune(ctx); err != nil {
+			s.log.Warn("prune greylist", "err", err)
 		}
 	}
 	if err := s.Store.PruneQueue(ctx, 30*86400); err != nil {

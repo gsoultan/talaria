@@ -277,7 +277,7 @@ func TestOpenAPI(t *testing.T) {
 	for _, ops := range doc.Paths {
 		n += len(ops)
 	}
-	if n != 42 { // the generated routes; uploads and downloads are raw HTTP
-		t.Fatalf("%d operations, want 42", n)
+	if n != 45 { // the generated routes; uploads and downloads are raw HTTP
+		t.Fatalf("%d operations, want 45", n)
 	}
 }

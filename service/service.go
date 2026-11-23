@@ -130,6 +130,12 @@ type AdminService interface {
 	CreateAlias(ctx context.Context, in domain.CreateAlias) (domain.AliasCreated, error)
 	//kakarot:http DELETE /api/v1/admin/aliases/{id}
 	DeleteAlias(ctx context.Context, in domain.DeleteAlias) (domain.Done, error)
+	//kakarot:http GET /api/v1/admin/sender-rules
+	ListSenderRules(ctx context.Context, in domain.ListSenderRules) (domain.SenderRules, error)
+	//kakarot:http POST /api/v1/admin/sender-rules
+	CreateSenderRule(ctx context.Context, in domain.CreateSenderRule) (domain.SenderRuleCreated, error)
+	//kakarot:http DELETE /api/v1/admin/sender-rules/{id}
+	DeleteSenderRule(ctx context.Context, in domain.DeleteSenderRule) (domain.Done, error)
 }
 
 // The usecases implement the contract; the compiler checks it here.

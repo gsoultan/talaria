@@ -32,54 +32,60 @@ func MakeAccountEndpoints(svc service.AccountService) AccountEndpoints {
 
 // AdminEndpoints holds one typed endpoint or stream per AdminService method.
 type AdminEndpoints struct {
-	ListTenants     kakarot.Endpoint[domain.ListTenants, domain.Tenants]
-	CreateTenant    kakarot.Endpoint[domain.CreateTenant, domain.TenantCreated]
-	UpdateTenant    kakarot.Endpoint[domain.UpdateTenant, domain.Done]
-	DeleteTenant    kakarot.Endpoint[domain.DeleteTenant, domain.Done]
-	ListDomains     kakarot.Endpoint[domain.ListDomains, domain.Domains]
-	CreateDomain    kakarot.Endpoint[domain.CreateDomain, domain.DomainCreated]
-	DeleteDomain    kakarot.Endpoint[domain.DeleteDomain, domain.Done]
-	GetDomainSetup  kakarot.Endpoint[domain.GetDomainSetup, domain.DomainSetup]
-	RotateDKIM      kakarot.Endpoint[domain.RotateDKIM, domain.DKIMRotated]
-	ListQueue       kakarot.Endpoint[domain.ListQueue, domain.Queue]
-	RetryQueue      kakarot.Endpoint[domain.RetryQueue, domain.Done]
-	CancelQueue     kakarot.Endpoint[domain.CancelQueue, domain.Done]
-	GetStats        kakarot.Endpoint[domain.GetStats, domain.Stats]
-	ListUsers       kakarot.Endpoint[domain.ListUsers, domain.Users]
-	CreateUser      kakarot.Endpoint[domain.CreateUser, domain.UserCreated]
-	UpdateUser      kakarot.Endpoint[domain.UpdateUser, domain.Done]
-	SetUserPassword kakarot.Endpoint[domain.SetUserPassword, domain.Done]
-	DeleteUser      kakarot.Endpoint[domain.DeleteUser, domain.Done]
-	ListAliases     kakarot.Endpoint[domain.ListAliases, domain.Aliases]
-	CreateAlias     kakarot.Endpoint[domain.CreateAlias, domain.AliasCreated]
-	DeleteAlias     kakarot.Endpoint[domain.DeleteAlias, domain.Done]
+	ListTenants      kakarot.Endpoint[domain.ListTenants, domain.Tenants]
+	CreateTenant     kakarot.Endpoint[domain.CreateTenant, domain.TenantCreated]
+	UpdateTenant     kakarot.Endpoint[domain.UpdateTenant, domain.Done]
+	DeleteTenant     kakarot.Endpoint[domain.DeleteTenant, domain.Done]
+	ListDomains      kakarot.Endpoint[domain.ListDomains, domain.Domains]
+	CreateDomain     kakarot.Endpoint[domain.CreateDomain, domain.DomainCreated]
+	DeleteDomain     kakarot.Endpoint[domain.DeleteDomain, domain.Done]
+	GetDomainSetup   kakarot.Endpoint[domain.GetDomainSetup, domain.DomainSetup]
+	RotateDKIM       kakarot.Endpoint[domain.RotateDKIM, domain.DKIMRotated]
+	ListQueue        kakarot.Endpoint[domain.ListQueue, domain.Queue]
+	RetryQueue       kakarot.Endpoint[domain.RetryQueue, domain.Done]
+	CancelQueue      kakarot.Endpoint[domain.CancelQueue, domain.Done]
+	GetStats         kakarot.Endpoint[domain.GetStats, domain.Stats]
+	ListUsers        kakarot.Endpoint[domain.ListUsers, domain.Users]
+	CreateUser       kakarot.Endpoint[domain.CreateUser, domain.UserCreated]
+	UpdateUser       kakarot.Endpoint[domain.UpdateUser, domain.Done]
+	SetUserPassword  kakarot.Endpoint[domain.SetUserPassword, domain.Done]
+	DeleteUser       kakarot.Endpoint[domain.DeleteUser, domain.Done]
+	ListAliases      kakarot.Endpoint[domain.ListAliases, domain.Aliases]
+	CreateAlias      kakarot.Endpoint[domain.CreateAlias, domain.AliasCreated]
+	DeleteAlias      kakarot.Endpoint[domain.DeleteAlias, domain.Done]
+	ListSenderRules  kakarot.Endpoint[domain.ListSenderRules, domain.SenderRules]
+	CreateSenderRule kakarot.Endpoint[domain.CreateSenderRule, domain.SenderRuleCreated]
+	DeleteSenderRule kakarot.Endpoint[domain.DeleteSenderRule, domain.Done]
 }
 
 // MakeAdminEndpoints builds the endpoints. Requests with a Validate
 // method are wrapped with middleware.Validated.
 func MakeAdminEndpoints(svc service.AdminService) AdminEndpoints {
 	return AdminEndpoints{
-		ListTenants:     svc.ListTenants,
-		CreateTenant:    middleware.Validated(svc.CreateTenant),
-		UpdateTenant:    svc.UpdateTenant,
-		DeleteTenant:    svc.DeleteTenant,
-		ListDomains:     svc.ListDomains,
-		CreateDomain:    middleware.Validated(svc.CreateDomain),
-		DeleteDomain:    svc.DeleteDomain,
-		GetDomainSetup:  svc.GetDomainSetup,
-		RotateDKIM:      svc.RotateDKIM,
-		ListQueue:       svc.ListQueue,
-		RetryQueue:      svc.RetryQueue,
-		CancelQueue:     svc.CancelQueue,
-		GetStats:        svc.GetStats,
-		ListUsers:       svc.ListUsers,
-		CreateUser:      middleware.Validated(svc.CreateUser),
-		UpdateUser:      middleware.Validated(svc.UpdateUser),
-		SetUserPassword: middleware.Validated(svc.SetUserPassword),
-		DeleteUser:      svc.DeleteUser,
-		ListAliases:     svc.ListAliases,
-		CreateAlias:     svc.CreateAlias,
-		DeleteAlias:     svc.DeleteAlias,
+		ListTenants:      svc.ListTenants,
+		CreateTenant:     middleware.Validated(svc.CreateTenant),
+		UpdateTenant:     svc.UpdateTenant,
+		DeleteTenant:     svc.DeleteTenant,
+		ListDomains:      svc.ListDomains,
+		CreateDomain:     middleware.Validated(svc.CreateDomain),
+		DeleteDomain:     svc.DeleteDomain,
+		GetDomainSetup:   svc.GetDomainSetup,
+		RotateDKIM:       svc.RotateDKIM,
+		ListQueue:        svc.ListQueue,
+		RetryQueue:       svc.RetryQueue,
+		CancelQueue:      svc.CancelQueue,
+		GetStats:         svc.GetStats,
+		ListUsers:        svc.ListUsers,
+		CreateUser:       middleware.Validated(svc.CreateUser),
+		UpdateUser:       middleware.Validated(svc.UpdateUser),
+		SetUserPassword:  middleware.Validated(svc.SetUserPassword),
+		DeleteUser:       svc.DeleteUser,
+		ListAliases:      svc.ListAliases,
+		CreateAlias:      svc.CreateAlias,
+		DeleteAlias:      svc.DeleteAlias,
+		ListSenderRules:  svc.ListSenderRules,
+		CreateSenderRule: middleware.Validated(svc.CreateSenderRule),
+		DeleteSenderRule: svc.DeleteSenderRule,
 	}
 }
 
