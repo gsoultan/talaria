@@ -55,6 +55,12 @@ func TestLoadRejectsUnknownKeysAndBadMode(t *testing.T) {
 	for name, body := range map[string]string{
 		"unknown": "hostnme = \"typo\"\n",
 		"mode":    "[outbound]\nmode = \"carrier-pigeon\"\n",
+		// upstream_tls without trusted_proxies would treat everyone as encrypted.
+		"upstream": "hostname = \"mx.example\"\n[imap]\nupstream_tls = true\n",
+		// ACME proves domains over port 443.
+		"acme": "hostname = \"mx.example\"\n[tls]\nmode = \"acme\"\n",
+		// HTTPS without certificates.
+		"https": "hostname = \"mx.example\"\n[http]\nlisten_tls = \":443\"\n",
 	} {
 		p := filepath.Join(dir, name+".toml")
 		os.WriteFile(p, []byte(body), 0o600)

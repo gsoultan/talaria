@@ -63,6 +63,11 @@ type Log struct {
 
 type HTTP struct {
 	Listen string `toml:"listen"`
+	// ListenTLS serves HTTPS (usually ":443") with the certificates from
+	// [tls]. Leave empty behind Cloudflare Tunnel or a gateway that
+	// terminates HTTPS. tls.mode "acme" needs it: certificates are proven over
+	// this port (TLS-ALPN-01), or over Listen on port 80 (HTTP-01).
+	ListenTLS string `toml:"listen_tls"`
 	// TrustedProxies lists CIDRs (e.g. the cloudflared host, a gateway) whose
 	// forwarded client-IP headers are believed. Empty means trust nobody.
 	TrustedProxies []string `toml:"trusted_proxies"`
@@ -186,7 +191,14 @@ func (c Config) Validate() error {
 		errs = append(errs, fmt.Errorf("outbound.mode %q: must be relay or direct", c.Outbound.Mode))
 	}
 	switch c.TLS.Mode {
-	case "off", "acme":
+	case "off":
+		if c.HTTP.ListenTLS != "" {
+			errs = append(errs, errors.New("http.listen_tls needs certificates: set tls.mode to acme or files"))
+		}
+	case "acme":
+		if c.HTTP.ListenTLS == "" {
+			errs = append(errs, errors.New(`tls.mode "acme" needs http.listen_tls (port 443 reachable from the internet)`))
+		}
 	case "files":
 		if c.TLS.CertFile == "" || c.TLS.KeyFile == "" {
 			errs = append(errs, errors.New("tls.mode files needs cert_file and key_file"))
@@ -202,6 +214,11 @@ func (c Config) Validate() error {
 	for _, list := range [][]string{c.HTTP.TrustedProxies, c.SMTP.TrustedProxies, c.IMAP.TrustedProxies, c.POP3.TrustedProxies} {
 		if _, err := ParsePrefixes(list); err != nil {
 			errs = append(errs, err)
+		}
+	}
+	for name, pp := range map[string]ProxyProtocol{"smtp": c.SMTP.ProxyProtocol, "imap": c.IMAP.ProxyProtocol, "pop3": c.POP3.ProxyProtocol} {
+		if pp.UpstreamTLS && len(pp.TrustedProxies) == 0 {
+			errs = append(errs, fmt.Errorf("%s.upstream_tls needs %s.trusted_proxies: only the gateway's connections count as encrypted", name, name))
 		}
 	}
 	if c.Ingest.Enabled && c.Ingest.TokenFile == "" {

@@ -5,8 +5,15 @@ package pop3
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"log/slog"
+	"math/big"
 	"net"
 	"net/textproto"
 	"strings"
@@ -45,13 +52,32 @@ func TestPOP3(t *testing.T) {
 		}
 	}
 
-	srv := New(Config{Hostname: "mx.test", UpstreamTLS: true}, st, bl, h, slog.New(slog.DiscardHandler))
-	ln, _ := net.Listen("tcp", "127.0.0.1:0")
+	srvTLS := testTLS(t)
+	srv := New(Config{Hostname: "mx.test", TLS: srvTLS}, st, bl, h, slog.New(slog.DiscardHandler))
+	raw, _ := net.Listen("tcp", "127.0.0.1:0")
+	ln := tls.NewListener(raw, srvTLS)
 	go srv.Serve(ln)
 	defer srv.Close()
 
+	// Without TLS, passwords are refused.
+	{
+		plainLn, _ := net.Listen("tcp", "127.0.0.1:0")
+		go srv.Serve(plainLn)
+		nc, err := net.Dial("tcp", plainLn.Addr().String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := textproto.NewConn(nc)
+		c.ReadLine()
+		c.PrintfLine("USER ana@acme.example")
+		if r, _ := c.ReadLine(); !strings.HasPrefix(r, "-ERR") {
+			t.Fatalf("plaintext USER accepted: %q", r)
+		}
+		c.Close()
+	}
+
 	open := func() *textproto.Conn {
-		nc, err := net.Dial("tcp", ln.Addr().String())
+		nc, err := tls.Dial("tcp", ln.Addr().String(), &tls.Config{InsecureSkipVerify: true})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -130,4 +156,20 @@ func TestPOP3(t *testing.T) {
 	if r := cmd(c3, "AUTH PLAIN "+plain); r != "+OK 1 messages" {
 		t.Fatal(r)
 	}
+}
+
+// testTLS returns a server config with a throwaway self-signed certificate.
+func testTLS(t *testing.T) *tls.Config {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpl := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "mx.test"},
+		DNSNames: []string{"mx.test"}, NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour)}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &tls.Config{Certificates: []tls.Certificate{{Certificate: [][]byte{der}, PrivateKey: key}}}
 }

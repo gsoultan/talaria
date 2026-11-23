@@ -12,11 +12,13 @@ format = "json"
 
 [http]
 listen = ":8080"
+# listen_tls = ":443"   # HTTPS with the [tls] certificates; required for "acme"
 
 [smtp]
 listen = ":25"            # inbound mail from the internet
-# Mail apps send through these, with AUTH. They need tls.mode = "files", or
-# upstream_tls = true when a gateway terminates TLS in front of them.
+# Mail apps send through these, with AUTH. STARTTLS ports need certificates
+# (tls.mode "acme" or "files"); implicit-TLS ports need certificates or
+# upstream_tls = true behind a gateway that terminates TLS.
 submission = ":587"       # STARTTLS
 submission_tls = ":465"   # implicit TLS
 max_message_size = "25MiB"
@@ -43,7 +45,9 @@ password_file = "/etc/talaria/relay-password"
 timeout = "30s"
 
 # Where TLS is terminated. Use "off" when Cloudflare Tunnel or a web gateway
-# terminates HTTPS; "acme" or "files" when SMTP/IMAP face the internet.
+# terminates HTTPS; "acme" (Let's Encrypt, needs http.listen_tls on 443) or
+# "files" (certbot, acme.sh) when SMTP/IMAP face the internet. The same
+# certificates serve HTTPS and every mail port.
 [tls]
 mode = "off"
 # cert_file = "/etc/talaria/tls/fullchain.pem"
@@ -64,7 +68,8 @@ token_file = "/etc/talaria/ingest-token"
 #
 # For a TCP gateway (Gateon, HAProxy, nginx stream) in front of SMTP/IMAP,
 # list its address. It must send PROXY protocol v1 or v2. Set upstream_tls
-# when the gateway terminates TLS on 465/993 and forwards plaintext.
+# when the gateway terminates TLS on 465/993/995 and forwards plaintext; only
+# connections from trusted_proxies count as encrypted, so it needs that list.
 # [smtp]
 # trusted_proxies = ["10.0.0.2"]
 # upstream_tls = false

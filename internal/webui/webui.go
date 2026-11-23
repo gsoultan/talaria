@@ -22,6 +22,15 @@ import (
 var embedded embed.FS
 
 // Handler returns an http.Handler serving the webmail.
+// PageCSP is the webmail page's Content-Security-Policy. Only the app's own
+// scripts run. Message bodies render in a sandboxed srcdoc frame, which
+// inherits this policy and adds its own stricter one, so images may come from
+// anywhere here and each message decides whether remote ones load. Inline
+// styles are allowed for the UI library and for HTML mail.
+const PageCSP = "default-src 'self'; script-src 'self'; worker-src 'self'; connect-src 'self'; " +
+	"img-src 'self' data: blob: https: http:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; " +
+	"frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; manifest-src 'self'"
+
 func Handler() http.Handler {
 	sub, err := fs.Sub(embedded, "dist")
 	if err != nil {
@@ -65,6 +74,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		hdr.Set("Cache-Control", "public, max-age=31536000, immutable")
 	case name == "sw.js" || name == "index.html" || strings.HasSuffix(name, ".webmanifest"):
 		hdr.Set("Cache-Control", "no-cache")
+		if name == "index.html" {
+			hdr.Set("Content-Security-Policy", PageCSP)
+		}
 	default:
 		hdr.Set("Cache-Control", "public, max-age=3600")
 	}

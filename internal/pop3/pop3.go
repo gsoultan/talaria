@@ -23,6 +23,7 @@ import (
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
+	"github.com/gsoultan/talaria/internal/listener"
 	"github.com/gsoultan/talaria/internal/store"
 )
 
@@ -30,9 +31,6 @@ import (
 type Config struct {
 	Hostname string
 	TLS      *tls.Config
-	// UpstreamTLS treats plaintext connections as secure because a gateway
-	// terminated TLS in front of them.
-	UpstreamTLS bool
 	// IdleTimeout closes silent sessions; RFC 1939 asks for at least 10 minutes.
 	IdleTimeout time.Duration
 }
@@ -180,10 +178,9 @@ func (s *Server) handle(nc net.Conn) {
 		if err := tc.Handshake(); err != nil {
 			return
 		}
-		c.secure = true
-	} else if s.cfg.UpstreamTLS {
-		c.secure = true
 	}
+	// TLS here, or a trusted gateway that terminated it (listener.Implicit).
+	c.secure = listener.Secure(nc)
 	defer func() {
 		if c.u != nil {
 			s.unlock(c.u.ID)

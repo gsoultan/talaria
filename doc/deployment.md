@@ -86,15 +86,62 @@ listen_tls = ":995"
 trusted_proxies = ["10.0.0.2"]
 ```
 
-IMAP, POP3 and submission refuse to start without certificates
-(`tls.mode`), unless `upstream_tls` says a gateway handles TLS, because mail
-apps send passwords on them.
+Mail apps send passwords, so Talaria only opens a port where they are safe:
+
+- STARTTLS ports (587, 143, 110) open only with certificates (`tls.mode`).
+- Implicit-TLS ports (465, 993, 995) open with certificates, or with
+  `upstream_tls` behind a gateway that terminates TLS.
+- Port 25 always opens, offering STARTTLS when there are certificates.
+
+`upstream_tls` is checked per connection. Only connections from
+`trusted_proxies` that start with a PROXY header count as encrypted. Any
+other connection to that port gets a normal TLS handshake when Talaria has
+certificates, and is closed when it does not, so a client that reaches the
+port directly can never log in over plaintext. `upstream_tls` without
+`trusted_proxies` is a configuration error.
+
+Each client address may hold at most 32 connections per mail port, on top of
+`smtp.max_connections` for the whole port.
 
 Connections from a trusted proxy must start with a PROXY header; the address
 in it is what SPF, DNSBL lookups, rate limits and logs use. Connections from
 any other address are served directly, and a PROXY header they send is not
 believed. Firewall the mail ports so only Gateon can reach them if Talaria
 should never take direct traffic.
+
+## Certificates
+
+With a public IP, let Talaria get certificates from Let's Encrypt:
+
+```toml
+[http]
+listen = ":80"         # also answers HTTP-01 challenges
+listen_tls = ":443"
+
+[tls]
+mode = "acme"
+email = "admin@example.com"
+hosts = ["mail.example.com"]   # defaults to hostname
+```
+
+Certificates are kept in `data_dir/acme` and renewed before they expire. The
+same certificate serves HTTPS, SMTP, submission, IMAP and POP3; a mail app
+that sends no server name gets the one for `hostname`. Port 443 (or 80) must
+be reachable from the internet for the domain check.
+
+If certbot or acme.sh already manages certificates, use `mode = "files"`
+with `cert_file` and `key_file`. Talaria notices renewed files within a
+minute without a restart.
+
+## Browser security
+
+The webmail page only runs its own scripts (a strict Content-Security-Policy)
+and cannot be framed by other sites. HTML mail renders in a sandboxed frame
+with scripts off, and remote images stay blocked until the reader allows
+them. Attachments are sent with `Content-Security-Policy: sandbox`, and
+types that can run script (HTML, SVG) always download instead of opening.
+Over HTTPS, responses carry HSTS. Behind Cloudflare Tunnel, turn on HSTS in
+the Cloudflare dashboard instead.
 
 ## Behind Cloudflare Tunnel
 

@@ -13,7 +13,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/netip"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -62,6 +61,13 @@ type Server struct {
 	sub     *smtp.Server
 	imap    *imapserver.Server
 	pop     *pop3.Server
+	// Instances for implicit-TLS ports behind a TLS-terminating gateway.
+	// Every connection they get is secure (see listener.Implicit), so they
+	// allow password logins without seeing a TLS handshake themselves.
+	subUp  *smtp.Server
+	imapUp *imapserver.Server
+	https  *http.Server
+	acme   *tlsutil.ACME
 }
 
 // OpenStores opens the database and blob store under the data directory.
@@ -101,8 +107,12 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 		}
 		s.tls = r.Config()
 	case "acme":
-		st.Close()
-		return nil, errors.New(`tls.mode "acme" is not available yet; use "files" with certbot, or "off" behind a gateway`)
+		hosts := cfg.TLS.Hosts
+		if len(hosts) == 0 {
+			hosts = []string{cfg.Hostname}
+		}
+		s.acme = tlsutil.NewACME(filepath.Join(cfg.DataDir, "acme"), cfg.TLS.Email, cfg.Hostname, hosts)
+		s.tls = s.acme.Config()
 	}
 	s.Deliver = &mail.Deliverer{
 		Store: st, Blobs: bl, Hub: s.Hub, Hostname: cfg.Hostname, Log: log,
@@ -160,30 +170,55 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 	var protocols http.Protocols
 	protocols.SetHTTP1(true)
 	protocols.SetUnencryptedHTTP2(true)
+	handler := securityHeaders(clientip.Middleware(trusted, cfg.HTTP.ClientIPHeader, mux))
+	plainHandler := handler
+	if s.acme != nil {
+		plainHandler = s.acme.HTTPHandler(handler)
+	}
 	s.http = &http.Server{
 		Addr:              cfg.HTTP.Listen,
-		Handler:           clientip.Middleware(trusted, cfg.HTTP.ClientIPHeader, mux),
+		Handler:           plainHandler,
 		Protocols:         &protocols,
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    64 << 10,
 	}
+	if cfg.HTTP.ListenTLS != "" && s.tls != nil {
+		tc := s.tls.Clone()
+		if len(tc.NextProtos) == 0 {
+			tc.NextProtos = []string{"h2", "http/1.1"}
+		}
+		s.https = &http.Server{
+			Addr:              cfg.HTTP.ListenTLS,
+			Handler:           handler,
+			TLSConfig:         tc,
+			ReadHeaderTimeout: 10 * time.Second,
+			IdleTimeout:       120 * time.Second,
+			MaxHeaderBytes:    64 << 10,
+		}
+	}
+	smtpCfg := smtpd.Config{Hostname: cfg.Hostname, MaxMessageSize: int64(cfg.SMTP.MaxMessageSize), TLS: s.tls}
 	if cfg.SMTP.Listen != "" {
-		s.smtp = smtpd.NewInbound(smtpd.Config{
-			Hostname: cfg.Hostname, MaxMessageSize: int64(cfg.SMTP.MaxMessageSize), TLS: s.tls, UpstreamTLS: cfg.SMTP.UpstreamTLS,
-		}, st, s.Deliver, log)
+		s.smtp = smtpd.NewInbound(smtpCfg, st, s.Deliver, log)
 	}
 	if cfg.SMTP.Submission != "" || cfg.SMTP.SubmissionTLS != "" {
-		s.sub = smtpd.NewSubmission(smtpd.Config{
-			Hostname: cfg.Hostname, MaxMessageSize: int64(cfg.SMTP.MaxMessageSize), TLS: s.tls, UpstreamTLS: cfg.SMTP.UpstreamTLS,
-		}, st, s.Submit, log)
+		s.sub = smtpd.NewSubmission(smtpCfg, st, s.Submit, log)
+		if cfg.SMTP.UpstreamTLS && cfg.SMTP.SubmissionTLS != "" {
+			up := smtpCfg
+			up.UpstreamTLS = true
+			s.subUp = smtpd.NewSubmission(up, st, s.Submit, log)
+		}
 	}
 	if cfg.IMAP.Listen != "" || cfg.IMAP.ListenTLS != "" {
-		s.imap = imapd.New(imapd.Config{TLS: s.tls, UpstreamTLS: cfg.IMAP.UpstreamTLS, MaxSize: int64(cfg.SMTP.MaxMessageSize)},
-			st, s.Blobs, s.Hub, s.Deliver, log)
+		imapCfg := imapd.Config{TLS: s.tls, MaxSize: int64(cfg.SMTP.MaxMessageSize)}
+		s.imap = imapd.New(imapCfg, st, s.Blobs, s.Hub, s.Deliver, log)
+		if cfg.IMAP.UpstreamTLS && cfg.IMAP.ListenTLS != "" {
+			imapCfg.UpstreamTLS = true
+			s.imapUp = imapd.New(imapCfg, st, s.Blobs, s.Hub, s.Deliver, log)
+		}
 	}
 	if cfg.POP3.Listen != "" || cfg.POP3.ListenTLS != "" {
-		s.pop = pop3.New(pop3.Config{Hostname: cfg.Hostname, TLS: s.tls, UpstreamTLS: cfg.POP3.UpstreamTLS}, st, s.Blobs, s.Hub, log)
+		s.pop = pop3.New(pop3.Config{Hostname: cfg.Hostname, TLS: s.tls}, st, s.Blobs, s.Hub, log)
 	}
 	return s, nil
 }
@@ -218,7 +253,7 @@ func (s *Server) Close() error { return s.Store.Close() }
 // Run serves until ctx is cancelled, then shuts down gracefully.
 func (s *Server) Run(ctx context.Context) error {
 	defer s.Close()
-	errc := make(chan error, 4)
+	errc := make(chan error, 16)
 	var wg sync.WaitGroup
 
 	ln, err := net.Listen("tcp", s.http.Addr)
@@ -227,6 +262,14 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	s.log.Info("http listening", "addr", ln.Addr().String())
 	go func() { errc <- s.http.Serve(ln) }()
+	if s.https != nil {
+		hl, err := net.Listen("tcp", s.https.Addr)
+		if err != nil {
+			return fmt.Errorf("https: %w", err)
+		}
+		s.log.Info("https listening", "addr", hl.Addr().String(), "tls", s.cfg.TLS.Mode)
+		go func() { errc <- s.https.Serve(tls.NewListener(hl, s.https.TLSConfig)) }()
+	}
 
 	if s.smtp != nil {
 		trusted, _ := config.ParsePrefixes(s.cfg.SMTP.TrustedProxies)
@@ -238,47 +281,44 @@ func (s *Server) Run(ctx context.Context) error {
 			sl = netutil.LimitListener(sl, s.cfg.SMTP.MaxConnections)
 		}
 		s.log.Info("smtp listening", "addr", sl.Addr().String(), "starttls", s.tls != nil)
-		go func() { errc <- s.smtp.Serve(listener.Wrap(sl, trusted)) }()
+		go func() { errc <- s.smtp.Serve(listener.PerIP(listener.Wrap(sl, trusted), perIPLimit)) }()
 	}
 
+	type port struct {
+		name     string
+		addr     string
+		implicit bool
+		pp       config.ProxyProtocol
+		serve    func(net.Listener) error
+	}
+	var ports []port
 	if s.sub != nil {
-		trusted, _ := config.ParsePrefixes(s.cfg.SMTP.TrustedProxies)
-		if err := s.serveSubmission(s.cfg.SMTP.Submission, false, trusted, errc); err != nil {
-			return err
+		sub465 := s.sub.Serve
+		if s.subUp != nil {
+			sub465 = s.subUp.Serve
 		}
-		if err := s.serveSubmission(s.cfg.SMTP.SubmissionTLS, true, trusted, errc); err != nil {
-			return err
-		}
+		ports = append(ports, port{"submission", s.cfg.SMTP.Submission, false, s.cfg.SMTP.ProxyProtocol, s.sub.Serve},
+			port{"submission", s.cfg.SMTP.SubmissionTLS, true, s.cfg.SMTP.ProxyProtocol, sub465})
 	}
-
 	if s.imap != nil {
-		trusted, _ := config.ParsePrefixes(s.cfg.IMAP.TrustedProxies)
-		for _, l := range []struct {
-			addr     string
-			implicit bool
-		}{{s.cfg.IMAP.Listen, false}, {s.cfg.IMAP.ListenTLS, true}} {
-			ln, err := s.mailListener("imap", l.addr, l.implicit, s.cfg.IMAP.ProxyProtocol, trusted)
-			if err != nil {
-				return err
-			}
-			if ln != nil {
-				go func() { errc <- s.imap.Serve(ln) }()
-			}
+		imap993 := s.imap.Serve
+		if s.imapUp != nil {
+			imap993 = s.imapUp.Serve
 		}
+		ports = append(ports, port{"imap", s.cfg.IMAP.Listen, false, s.cfg.IMAP.ProxyProtocol, s.imap.Serve},
+			port{"imap", s.cfg.IMAP.ListenTLS, true, s.cfg.IMAP.ProxyProtocol, imap993})
 	}
 	if s.pop != nil {
-		trusted, _ := config.ParsePrefixes(s.cfg.POP3.TrustedProxies)
-		for _, l := range []struct {
-			addr     string
-			implicit bool
-		}{{s.cfg.POP3.Listen, false}, {s.cfg.POP3.ListenTLS, true}} {
-			ln, err := s.mailListener("pop3", l.addr, l.implicit, s.cfg.POP3.ProxyProtocol, trusted)
-			if err != nil {
-				return err
-			}
-			if ln != nil {
-				go func() { errc <- s.pop.Serve(ln) }()
-			}
+		ports = append(ports, port{"pop3", s.cfg.POP3.Listen, false, s.cfg.POP3.ProxyProtocol, s.pop.Serve},
+			port{"pop3", s.cfg.POP3.ListenTLS, true, s.cfg.POP3.ProxyProtocol, s.pop.Serve})
+	}
+	for _, p := range ports {
+		ln, err := s.mailListener(p.name, p.addr, p.implicit, p.pp)
+		if err != nil {
+			return err
+		}
+		if ln != nil {
+			go func() { errc <- p.serve(ln) }()
 		}
 	}
 
@@ -300,14 +340,21 @@ func (s *Server) Run(ctx context.Context) error {
 	if s.smtp != nil {
 		s.smtp.Shutdown(shutdownCtx)
 	}
-	if s.sub != nil {
-		s.sub.Shutdown(shutdownCtx)
+	for _, sub := range []*smtp.Server{s.sub, s.subUp} {
+		if sub != nil {
+			sub.Shutdown(shutdownCtx)
+		}
 	}
-	if s.imap != nil {
-		s.imap.Close()
+	for _, im := range []*imapserver.Server{s.imap, s.imapUp} {
+		if im != nil {
+			im.Close()
+		}
 	}
 	if s.pop != nil {
 		s.pop.Close()
+	}
+	if s.https != nil {
+		s.https.Shutdown(shutdownCtx)
 	}
 	err = s.http.Shutdown(shutdownCtx)
 	wg.Wait()
@@ -317,37 +364,12 @@ func (s *Server) Run(ctx context.Context) error {
 	return nil
 }
 
-// serveSubmission starts one submission listener. implicit marks port 465:
-// TLS from the first byte, unless a gateway already terminated it.
-func (s *Server) serveSubmission(addr string, implicit bool, trusted []netip.Prefix, errc chan<- error) error {
-	if addr == "" {
-		return nil
-	}
-	if s.tls == nil && !s.cfg.SMTP.UpstreamTLS {
-		s.log.Warn("submission disabled: it needs tls.mode files, or upstream_tls behind a TLS-terminating gateway", "addr", addr)
-		return nil
-	}
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		return fmt.Errorf("submission: %w", err)
-	}
-	if s.cfg.SMTP.MaxConnections > 0 {
-		l = netutil.LimitListener(l, s.cfg.SMTP.MaxConnections)
-	}
-	l = listener.Wrap(l, trusted)
-	if implicit && !s.cfg.SMTP.UpstreamTLS {
-		l = tls.NewListener(l, s.tls)
-	}
-	s.log.Info("submission listening", "addr", addr, "implicit_tls", implicit)
-	go func() { errc <- s.sub.Serve(l) }()
-	return nil
-}
-
 // mailEndpoints lists the mail-app listeners that will start, for the
 // webmail's setup screen. Mail apps need TLS, so listeners without it are
 // left out, as mailListener and serveSubmission skip them too.
 func mailEndpoints(cfg config.Config) []*talariav1.MailEndpoint {
-	secure := func(pp config.ProxyProtocol) bool { return cfg.TLS.Mode != "off" || pp.UpstreamTLS }
+	certs := cfg.TLS.Mode != "off"
+	secure := func(pp config.ProxyProtocol) bool { return certs || pp.UpstreamTLS }
 	var out []*talariav1.MailEndpoint
 	add := func(proto, addr, sec string, ok bool) {
 		if addr == "" || !ok {
@@ -361,24 +383,33 @@ func mailEndpoints(cfg config.Config) []*talariav1.MailEndpoint {
 		out = append(out, &talariav1.MailEndpoint{Protocol: proto, Port: int32(port), Security: sec})
 	}
 	add("IMAP", cfg.IMAP.ListenTLS, "TLS", secure(cfg.IMAP.ProxyProtocol))
-	add("IMAP", cfg.IMAP.Listen, "STARTTLS", secure(cfg.IMAP.ProxyProtocol))
+	add("IMAP", cfg.IMAP.Listen, "STARTTLS", certs)
 	add("POP3", cfg.POP3.ListenTLS, "TLS", secure(cfg.POP3.ProxyProtocol))
-	add("POP3", cfg.POP3.Listen, "STARTTLS", secure(cfg.POP3.ProxyProtocol))
+	add("POP3", cfg.POP3.Listen, "STARTTLS", certs)
 	add("SMTP", cfg.SMTP.SubmissionTLS, "TLS", secure(cfg.SMTP.ProxyProtocol))
-	add("SMTP", cfg.SMTP.Submission, "STARTTLS", secure(cfg.SMTP.ProxyProtocol))
+	add("SMTP", cfg.SMTP.Submission, "STARTTLS", certs)
 	return out
 }
 
-// mailListener opens an IMAP or POP3 listener. Mail apps send passwords, so
-// a listener only starts with certificates, or behind a gateway that
-// terminates TLS (upstream_tls). implicit marks 993/995.
-func (s *Server) mailListener(name, addr string, implicit bool, pp config.ProxyProtocol, trusted []netip.Prefix) (net.Listener, error) {
+// perIPLimit caps open connections from one client address on each mail
+// port; mail apps open a few each, so this leaves room for an office NAT.
+const perIPLimit = 32
+
+// mailListener opens a submission, IMAP or POP3 listener. Mail apps send
+// passwords, so a STARTTLS port only starts with certificates, and an
+// implicit-TLS port (465/993/995) with certificates or behind a gateway that
+// terminates TLS (upstream_tls).
+func (s *Server) mailListener(name, addr string, implicit bool, pp config.ProxyProtocol) (net.Listener, error) {
 	if addr == "" {
 		return nil, nil
 	}
-	if s.tls == nil && !pp.UpstreamTLS {
-		s.log.Warn(name+" disabled: it needs tls.mode files, or upstream_tls behind a TLS-terminating gateway", "addr", addr)
+	if s.tls == nil && (!implicit || !pp.UpstreamTLS) {
+		s.log.Warn(name+" port disabled: it needs certificates (tls.mode), or upstream_tls on an implicit-TLS port behind a gateway", "addr", addr)
 		return nil, nil
+	}
+	trusted, err := config.ParsePrefixes(pp.TrustedProxies)
+	if err != nil {
+		return nil, err
 	}
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -387,11 +418,11 @@ func (s *Server) mailListener(name, addr string, implicit bool, pp config.ProxyP
 	if s.cfg.SMTP.MaxConnections > 0 {
 		l = netutil.LimitListener(l, s.cfg.SMTP.MaxConnections)
 	}
-	l = listener.Wrap(l, trusted)
-	if implicit && !pp.UpstreamTLS {
-		l = tls.NewListener(l, s.tls)
+	l = listener.PerIP(listener.Wrap(l, trusted), perIPLimit)
+	if implicit {
+		l = listener.Implicit(l, s.tls, pp.UpstreamTLS)
 	}
-	s.log.Info(name+" listening", "addr", addr, "implicit_tls", implicit)
+	s.log.Info(name+" listening", "addr", addr, "implicit_tls", implicit, "upstream_tls", implicit && pp.UpstreamTLS)
 	return l, nil
 }
 
