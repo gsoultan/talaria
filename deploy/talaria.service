@@ -1,0 +1,36 @@
+[Unit]
+Description=Talaria mail server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=talaria
+Group=talaria
+ExecStart=/usr/local/bin/talaria -config /etc/talaria/talaria.toml
+Restart=on-failure
+RestartSec=2s
+# Bind 25/465/587/143/993 without running as root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+# Hard ceiling above the Go soft limit (memory_limit), so the kernel stops a
+# runaway process before the 2 GB box starts swapping.
+MemoryMax=768M
+LimitNOFILE=65536
+StateDirectory=talaria
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+SystemCallArchitectures=native
+ReadWritePaths=/var/lib/talaria
+
+[Install]
+WantedBy=multi-user.target

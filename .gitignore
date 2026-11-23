@@ -1,0 +1,6 @@
+/bin/
+/data/
+/internal/webui/dist/*
+!/internal/webui/dist/.gitkeep
+*.test
+coverage.out

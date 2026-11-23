@@ -1,0 +1,63 @@
+# Talaria configuration. Domains, users and mailboxes are managed in the
+# admin UI / API and stored in the database, not in this file.
+
+hostname = "mail.example.com"
+data_dir = "/var/lib/talaria"
+# Go runtime soft memory limit. 512MiB leaves room for the OS on a 2 GB box.
+memory_limit = "512MiB"
+
+[log]
+level = "info"
+format = "json"
+
+[http]
+listen = ":8080"
+
+[smtp]
+listen = ":25"
+submission = ":587"
+submission_tls = ":465"
+max_message_size = "25MiB"
+max_connections = 200
+
+[imap]
+listen = ":143"
+listen_tls = ":993"
+
+# Most VPS providers block outbound port 25, so relay is the default.
+[outbound]
+mode = "relay"   # "relay" or "direct"
+
+[outbound.relay]
+host = "smtp.your-relay.example"
+port = 587       # 587 (STARTTLS) or 465 (implicit TLS)
+username = "apikey"
+password_file = "/etc/talaria/relay-password"
+timeout = "30s"
+
+# Where TLS is terminated. Use "off" when Cloudflare Tunnel or a web gateway
+# terminates HTTPS; "acme" or "files" when SMTP/IMAP face the internet.
+[tls]
+mode = "off"
+# cert_file = "/etc/talaria/tls/fullchain.pem"
+# key_file  = "/etc/talaria/tls/privkey.pem"
+# email = "admin@example.com"
+# hosts = ["mail.example.com"]
+
+# Accept raw messages over HTTPS, for setups without a public port 25
+# (Cloudflare Email Worker or an external MX relay through the tunnel).
+[ingest]
+enabled = false
+token_file = "/etc/talaria/ingest-token"
+
+# Behind cloudflared or a gateway, trust its address for client-IP headers:
+# [http]
+# trusted_proxies = ["127.0.0.1", "::1"]
+# client_ip_header = "CF-Connecting-IP"
+#
+# For a TCP gateway (Gateon, HAProxy, nginx stream) in front of SMTP/IMAP,
+# list its address. It must send PROXY protocol v1 or v2. Set upstream_tls
+# when the gateway terminates TLS on 465/993 and forwards plaintext.
+# [smtp]
+# trusted_proxies = ["10.0.0.2"]
+# upstream_tls = false
