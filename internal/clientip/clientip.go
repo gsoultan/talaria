@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package server
+// Package clientip resolves the real client address behind trusted proxies.
+package clientip
 
 import (
 	"context"
@@ -13,17 +14,17 @@ import (
 
 type clientIPKey struct{}
 
-// ClientIP returns the client address resolved by ClientIPMiddleware.
-func ClientIP(ctx context.Context) netip.Addr {
+// From returns the client address resolved by Middleware.
+func From(ctx context.Context) netip.Addr {
 	a, _ := ctx.Value(clientIPKey{}).(netip.Addr)
 	return a
 }
 
-// ClientIPMiddleware resolves the real client address. Forwarded headers are
+// Middleware resolves the real client address. Forwarded headers are
 // honoured only when the direct peer is in trusted, so a client cannot spoof
 // its address by sending the header itself. For X-Forwarded-For the rightmost
 // address that is not itself a trusted proxy wins.
-func ClientIPMiddleware(trusted []netip.Prefix, header string, next http.Handler) http.Handler {
+func Middleware(trusted []netip.Prefix, header string, next http.Handler) http.Handler {
 	isTrusted := func(a netip.Addr) bool {
 		for _, p := range trusted {
 			if p.Contains(a) {

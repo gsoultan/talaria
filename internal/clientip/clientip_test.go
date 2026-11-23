@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-package server
+package clientip
 
 import (
 	"net/http"
@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestClientIPMiddleware(t *testing.T) {
+func TestMiddleware(t *testing.T) {
 	trusted := []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32"), netip.MustParsePrefix("10.0.0.0/8")}
 	cases := []struct {
 		name, remote, header, value, want string
@@ -23,8 +23,8 @@ func TestClientIPMiddleware(t *testing.T) {
 	}
 	for _, c := range cases {
 		var got netip.Addr
-		h := ClientIPMiddleware(trusted, c.header, http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-			got = ClientIP(r.Context())
+		h := Middleware(trusted, c.header, http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			got = From(r.Context())
 		}))
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.RemoteAddr = c.remote

@@ -7,7 +7,7 @@ behind Cloudflare Tunnel. The three differ only in how traffic reaches it.
 | Traffic | Direct public IP | Behind Gateon (or HAProxy, nginx) | Cloudflare Tunnel only |
 |---|---|---|---|
 | Webmail and API (HTTP) | yes | yes, HTTP route | yes |
-| Inbound mail (SMTP 25) | yes | yes, L4 TCP route + PROXY protocol | via Cloudflare Email Routing and the HTTP ingest endpoint (phase 1) |
+| Inbound mail (SMTP 25) | yes | yes, L4 TCP route + PROXY protocol | via Cloudflare Email Routing and the HTTP ingest endpoint |
 | Mail apps (IMAP 143/993, submission 587/465) | yes | yes, L4 TCP routes | no, unless each client runs WARP or `cloudflared access tcp` |
 | Outbound mail | relay (default) or direct on 25 | same | relay |
 
@@ -101,7 +101,7 @@ so it does not depend on end-to-end HTTP/2 trailers through the tunnel.
 A public tunnel does **not** accept raw TCP from the internet, so port 25 and
 IMAP need another path:
 
-- **Inbound mail through Cloudflare Email Routing (phase 1).** Email Routing
+- **Inbound mail through Cloudflare Email Routing.** Email Routing
   receives mail for the domain and an Email Worker posts each raw message to
   Talaria's ingest endpoint through the tunnel, authenticated with a bearer
   token (`[ingest]` in the config). Cloudflare then sees all inbound mail,
@@ -113,6 +113,57 @@ IMAP need another path:
   (Gateon or a direct port on some host with a public IP) or clients on
   Cloudflare WARP / private networks. With the tunnel alone, webmail is the
   way to read and send mail.
+
+### Cloudflare Email Worker for inbound mail
+
+1. Create a token of at least 32 characters and point the config at it:
+
+   ```sh
+   openssl rand -base64 48 > /etc/talaria/ingest-token
+   chmod 600 /etc/talaria/ingest-token
+   ```
+
+   ```toml
+   [ingest]
+   enabled = true
+   token_file = "/etc/talaria/ingest-token"
+   ```
+
+2. Create an Email Worker with the same token as the secret `TALARIA_TOKEN`
+   and the variable `TALARIA_URL` set to `https://mail.example.com`:
+
+   ```js
+   export default {
+     async email(message, env) {
+       const res = await fetch(`${env.TALARIA_URL}/ingest/v1/message`, {
+         method: "POST",
+         headers: {
+           Authorization: `Bearer ${env.TALARIA_TOKEN}`,
+           "X-Envelope-From": message.from,
+           "X-Envelope-To": message.to,
+         },
+         body: message.raw,
+       });
+       if (res.ok) return;
+       const why = await res.text();
+       // 550 and 413 are permanent: refuse the message so the sender gets a bounce.
+       if (res.status === 550 || res.status === 413) {
+         message.setReject(why);
+         return;
+       }
+       // Anything else is temporary; failing lets the sender retry.
+       throw new Error(`talaria ${res.status}: ${why}`);
+     },
+   };
+   ```
+
+3. In Email Routing, send the catch-all (or each address) to the Worker.
+
+The endpoint answers `200` when delivered, `550` when no recipient exists or
+the message is refused, `413` when it is larger than `smtp.max_message_size`,
+and `503` for temporary problems. Messages that fail DMARC are filed in Junk
+rather than refused, because the Worker cannot pass on the sender's IP for
+an SPF check.
 
 A combined setup works well: Cloudflare Tunnel for webmail, and Gateon (or a
 small public-IP host) for ports 25, 587, 465, 143 and 993.

@@ -20,6 +20,13 @@ import (
 )
 
 func main() {
+	if handled, err := runAdmin(os.Args[1:]); handled {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "talaria:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	configPath := flag.String("config", os.Getenv("TALARIA_CONFIG"), "path to talaria.toml")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()

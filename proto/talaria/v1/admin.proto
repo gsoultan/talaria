@@ -1,0 +1,155 @@
+// Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
+// SPDX-License-Identifier: MIT
+
+syntax = "proto3";
+
+package talaria.v1;
+
+option go_package = "github.com/gsoultan/talaria/gen/go/talaria/v1;talariav1";
+
+import "talaria/v1/auth.proto";
+
+// AdminService manages tenants, domains, users and aliases. Platform admins
+// manage every tenant; tenant admins only their own. tenant_id 0 means the
+// caller's tenant.
+service AdminService {
+  rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse) {}
+  rpc UpdateTenant(UpdateTenantRequest) returns (UpdateTenantResponse) {}
+  rpc DeleteTenant(DeleteTenantRequest) returns (DeleteTenantResponse) {}
+
+  rpc ListDomains(ListDomainsRequest) returns (ListDomainsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc CreateDomain(CreateDomainRequest) returns (CreateDomainResponse) {}
+  rpc DeleteDomain(DeleteDomainRequest) returns (DeleteDomainResponse) {}
+
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+  rpc SetUserPassword(SetUserPasswordRequest) returns (SetUserPasswordResponse) {}
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
+
+  rpc ListAliases(ListAliasesRequest) returns (ListAliasesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc CreateAlias(CreateAliasRequest) returns (CreateAliasResponse) {}
+  rpc DeleteAlias(DeleteAliasRequest) returns (DeleteAliasResponse) {}
+}
+
+message Tenant {
+  int64 id = 1;
+  string name = 2;
+  string display_name = 3;
+  int64 seat_limit = 4;
+  int64 quota_bytes = 5;
+  int64 daily_send_limit = 6;
+  bool suspended = 7;
+  int64 created_at = 8;
+  int64 domains = 9;
+  int64 users = 10;
+  int64 used_bytes = 11;
+}
+
+message Domain {
+  int64 id = 1;
+  int64 tenant_id = 2;
+  string name = 3;
+  int64 catchall_user_id = 4;
+  int64 created_at = 5;
+}
+
+message Alias {
+  int64 id = 1;
+  int64 tenant_id = 2;
+  string address = 3;
+  int64 user_id = 4;
+  string user_email = 5;
+}
+
+message ListTenantsRequest {}
+message ListTenantsResponse { repeated Tenant tenants = 1; }
+
+message CreateTenantRequest {
+  string name = 1;
+  string display_name = 2;
+  int64 seat_limit = 3;
+  int64 quota_bytes = 4;
+  int64 daily_send_limit = 5;
+}
+message CreateTenantResponse { Tenant tenant = 1; }
+
+message UpdateTenantRequest { Tenant tenant = 1; }
+message UpdateTenantResponse {}
+
+message DeleteTenantRequest { int64 id = 1; }
+message DeleteTenantResponse {}
+
+message ListDomainsRequest { int64 tenant_id = 1; }
+message ListDomainsResponse { repeated Domain domains = 1; }
+
+message CreateDomainRequest {
+  int64 tenant_id = 1;
+  string name = 2;
+}
+message CreateDomainResponse { Domain domain = 1; }
+
+message DeleteDomainRequest {
+  int64 tenant_id = 1;
+  int64 id = 2;
+}
+message DeleteDomainResponse {}
+
+message ListUsersRequest { int64 tenant_id = 1; }
+message ListUsersResponse { repeated User users = 1; }
+
+message CreateUserRequest {
+  int64 tenant_id = 1;
+  string email = 2;
+  string display_name = 3;
+  string password = 4;
+  Role role = 5;
+  int64 quota_bytes = 6;
+}
+message CreateUserResponse { User user = 1; }
+
+message UpdateUserRequest {
+  int64 id = 1;
+  string display_name = 2;
+  Role role = 3;
+  int64 quota_bytes = 4;
+  bool suspended = 5;
+}
+message UpdateUserResponse {}
+
+message SetUserPasswordRequest {
+  int64 id = 1;
+  string password = 2;
+}
+message SetUserPasswordResponse {}
+
+message DeleteUserRequest { int64 id = 1; }
+message DeleteUserResponse {}
+
+message ListAliasesRequest {
+  int64 tenant_id = 1;
+  int64 user_id = 2; // 0 = all
+}
+message ListAliasesResponse { repeated Alias aliases = 1; }
+
+message CreateAliasRequest {
+  int64 tenant_id = 1;
+  string address = 2;
+  int64 user_id = 3;
+}
+message CreateAliasResponse { Alias alias = 1; }
+
+message DeleteAliasRequest {
+  int64 tenant_id = 1;
+  int64 id = 2;
+}
+message DeleteAliasResponse {}

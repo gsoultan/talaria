@@ -1,0 +1,188 @@
+// Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
+// SPDX-License-Identifier: MIT
+
+syntax = "proto3";
+
+package talaria.v1;
+
+option go_package = "github.com/gsoultan/talaria/gen/go/talaria/v1;talariav1";
+
+// MailService is the webmail API for the signed-in user's own mail.
+service MailService {
+  rpc ListMailboxes(ListMailboxesRequest) returns (ListMailboxesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc CreateMailbox(CreateMailboxRequest) returns (CreateMailboxResponse) {}
+  rpc RenameMailbox(RenameMailboxRequest) returns (RenameMailboxResponse) {}
+  rpc DeleteMailbox(DeleteMailboxRequest) returns (DeleteMailboxResponse) {}
+
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc Search(SearchRequest) returns (SearchResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetMessage(GetMessageRequest) returns (GetMessageResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetThread(GetThreadRequest) returns (GetThreadResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc UpdateFlags(UpdateFlagsRequest) returns (UpdateFlagsResponse) {}
+  rpc MoveMessages(MoveMessagesRequest) returns (MoveMessagesResponse) {}
+  // DeleteMessages moves messages to Trash, or removes them for good when
+  // they are already in Trash or Junk.
+  rpc DeleteMessages(DeleteMessagesRequest) returns (DeleteMessagesResponse) {}
+
+  // Watch streams a notice whenever the user's mailboxes change.
+  rpc Watch(WatchRequest) returns (stream WatchResponse) {}
+}
+
+message Mailbox {
+  int64 id = 1;
+  string name = 2;
+  // \Inbox, \Sent, \Drafts, \Junk, \Trash, \Archive or empty.
+  string special_use = 3;
+  int64 total = 4;
+  int64 unread = 5;
+  int64 size = 6;
+  bool subscribed = 7;
+}
+
+enum Flag {
+  FLAG_UNSPECIFIED = 0;
+  FLAG_SEEN = 1;
+  FLAG_ANSWERED = 2;
+  FLAG_FLAGGED = 3;
+  FLAG_DELETED = 4;
+  FLAG_DRAFT = 5;
+}
+
+message MessageSummary {
+  int64 id = 1;
+  int64 mailbox_id = 2;
+  int64 thread_id = 3;
+  int64 date = 4;  // received, unix seconds
+  int64 sent_date = 5;
+  int64 size = 6;
+  string subject = 7;
+  string from_name = 8;
+  string from_addr = 9;
+  string to = 10;
+  string cc = 11;
+  string preview = 12;
+  bool seen = 13;
+  bool flagged = 14;
+  bool answered = 15;
+  bool draft = 16;
+  bool has_attachments = 17;
+  // Sender authentication at delivery.
+  bool spf_pass = 18;
+  bool dkim_pass = 19;
+  bool dmarc_pass = 20;
+  int64 modseq = 21;
+}
+
+message ListMailboxesRequest {}
+message ListMailboxesResponse { repeated Mailbox mailboxes = 1; }
+
+message CreateMailboxRequest { string name = 1; }
+message CreateMailboxResponse { Mailbox mailbox = 1; }
+
+message RenameMailboxRequest {
+  int64 id = 1;
+  string name = 2;
+}
+message RenameMailboxResponse {}
+
+message DeleteMailboxRequest { int64 id = 1; }
+message DeleteMailboxResponse {}
+
+message ListMessagesRequest {
+  int64 mailbox_id = 1;
+  int32 limit = 2;
+  // Cursor from the previous page; empty for the first page.
+  string cursor = 3;
+  bool unread_only = 4;
+  bool flagged_only = 5;
+}
+message ListMessagesResponse {
+  repeated MessageSummary messages = 1;
+  string next_cursor = 2;
+  int64 highest_modseq = 3;
+}
+
+message SearchRequest {
+  string query = 1;
+  int64 mailbox_id = 2;
+  string from = 3;
+  bool unread = 4;
+  bool flagged = 5;
+  bool has_attachments = 6;
+  int64 after = 7;
+  int64 before = 8;
+  int32 limit = 9;
+}
+message SearchResponse { repeated MessageSummary messages = 1; }
+
+message Attachment {
+  // Part path, e.g. "2" or "1.2"; download with GET /api/messages/{id}/parts/{part}.
+  string part = 1;
+  string filename = 2;
+  string content_type = 3;
+  int64 size = 4;
+  string content_id = 5;
+  bool inline = 6;
+}
+
+message Header {
+  string name = 1;
+  string value = 2;
+}
+
+message MessageDetail {
+  MessageSummary summary = 1;
+  string message_id = 2;
+  string in_reply_to = 3;
+  string reply_to = 4;
+  string text_body = 5;
+  // Unsanitized HTML. Clients must sanitize and render it in a sandbox.
+  string html_body = 6;
+  repeated Attachment attachments = 7;
+  repeated Header headers = 8;
+  repeated string keywords = 9;
+  string authentication_results = 10;
+}
+
+message GetMessageRequest {
+  int64 id = 1;
+  // Mark the message as read.
+  bool mark_seen = 2;
+}
+message GetMessageResponse { MessageDetail message = 1; }
+
+message GetThreadRequest { int64 thread_id = 1; }
+message GetThreadResponse { repeated MessageSummary messages = 1; }
+
+message UpdateFlagsRequest {
+  repeated int64 ids = 1;
+  repeated Flag add = 2;
+  repeated Flag remove = 3;
+  repeated string add_keywords = 4;
+  repeated string remove_keywords = 5;
+}
+message UpdateFlagsResponse {}
+
+message MoveMessagesRequest {
+  repeated int64 ids = 1;
+  int64 mailbox_id = 2;
+}
+message MoveMessagesResponse {}
+
+message DeleteMessagesRequest { repeated int64 ids = 1; }
+message DeleteMessagesResponse {}
+
+message WatchRequest {}
+message WatchResponse {
+  repeated int64 mailbox_ids = 1;
+}
