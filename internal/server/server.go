@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/emersion/go-imap/v2/imapserver"
 	"github.com/emersion/go-smtp"
 	"golang.org/x/net/netutil"
 
@@ -30,10 +31,12 @@ import (
 	"github.com/gsoultan/talaria/internal/clientip"
 	"github.com/gsoultan/talaria/internal/config"
 	"github.com/gsoultan/talaria/internal/hub"
+	"github.com/gsoultan/talaria/internal/imapd"
 	"github.com/gsoultan/talaria/internal/ingest"
 	"github.com/gsoultan/talaria/internal/listener"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/outbound"
+	"github.com/gsoultan/talaria/internal/pop3"
 	"github.com/gsoultan/talaria/internal/smtpd"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/tlsutil"
@@ -55,6 +58,8 @@ type Server struct {
 	http    *http.Server
 	smtp    *smtp.Server
 	sub     *smtp.Server
+	imap    *imapserver.Server
+	pop     *pop3.Server
 }
 
 // OpenStores opens the database and blob store under the data directory.
@@ -171,6 +176,13 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 			Hostname: cfg.Hostname, MaxMessageSize: int64(cfg.SMTP.MaxMessageSize), TLS: s.tls, UpstreamTLS: cfg.SMTP.UpstreamTLS,
 		}, st, s.Submit, log)
 	}
+	if cfg.IMAP.Listen != "" || cfg.IMAP.ListenTLS != "" {
+		s.imap = imapd.New(imapd.Config{TLS: s.tls, UpstreamTLS: cfg.IMAP.UpstreamTLS, MaxSize: int64(cfg.SMTP.MaxMessageSize)},
+			st, s.Blobs, s.Hub, s.Deliver, log)
+	}
+	if cfg.POP3.Listen != "" || cfg.POP3.ListenTLS != "" {
+		s.pop = pop3.New(pop3.Config{Hostname: cfg.Hostname, TLS: s.tls, UpstreamTLS: cfg.POP3.UpstreamTLS}, st, s.Blobs, s.Hub, log)
+	}
 	return s, nil
 }
 
@@ -237,6 +249,37 @@ func (s *Server) Run(ctx context.Context) error {
 		}
 	}
 
+	if s.imap != nil {
+		trusted, _ := config.ParsePrefixes(s.cfg.IMAP.TrustedProxies)
+		for _, l := range []struct {
+			addr     string
+			implicit bool
+		}{{s.cfg.IMAP.Listen, false}, {s.cfg.IMAP.ListenTLS, true}} {
+			ln, err := s.mailListener("imap", l.addr, l.implicit, s.cfg.IMAP.ProxyProtocol, trusted)
+			if err != nil {
+				return err
+			}
+			if ln != nil {
+				go func() { errc <- s.imap.Serve(ln) }()
+			}
+		}
+	}
+	if s.pop != nil {
+		trusted, _ := config.ParsePrefixes(s.cfg.POP3.TrustedProxies)
+		for _, l := range []struct {
+			addr     string
+			implicit bool
+		}{{s.cfg.POP3.Listen, false}, {s.cfg.POP3.ListenTLS, true}} {
+			ln, err := s.mailListener("pop3", l.addr, l.implicit, s.cfg.POP3.ProxyProtocol, trusted)
+			if err != nil {
+				return err
+			}
+			if ln != nil {
+				go func() { errc <- s.pop.Serve(ln) }()
+			}
+		}
+	}
+
 	jctx, stopJanitor := context.WithCancel(ctx)
 	wg.Add(2)
 	go func() { defer wg.Done(); s.janitor(jctx) }()
@@ -257,6 +300,12 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	if s.sub != nil {
 		s.sub.Shutdown(shutdownCtx)
+	}
+	if s.imap != nil {
+		s.imap.Close()
+	}
+	if s.pop != nil {
+		s.pop.Close()
 	}
 	err = s.http.Shutdown(shutdownCtx)
 	wg.Wait()
@@ -290,6 +339,32 @@ func (s *Server) serveSubmission(addr string, implicit bool, trusted []netip.Pre
 	s.log.Info("submission listening", "addr", addr, "implicit_tls", implicit)
 	go func() { errc <- s.sub.Serve(l) }()
 	return nil
+}
+
+// mailListener opens an IMAP or POP3 listener. Mail apps send passwords, so
+// a listener only starts with certificates, or behind a gateway that
+// terminates TLS (upstream_tls). implicit marks 993/995.
+func (s *Server) mailListener(name, addr string, implicit bool, pp config.ProxyProtocol, trusted []netip.Prefix) (net.Listener, error) {
+	if addr == "" {
+		return nil, nil
+	}
+	if s.tls == nil && !pp.UpstreamTLS {
+		s.log.Warn(name+" disabled: it needs tls.mode files, or upstream_tls behind a TLS-terminating gateway", "addr", addr)
+		return nil, nil
+	}
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
+	}
+	if s.cfg.SMTP.MaxConnections > 0 {
+		l = netutil.LimitListener(l, s.cfg.SMTP.MaxConnections)
+	}
+	l = listener.Wrap(l, trusted)
+	if implicit && !pp.UpstreamTLS {
+		l = tls.NewListener(l, s.tls)
+	}
+	s.log.Info(name+" listening", "addr", addr, "implicit_tls", implicit)
+	return l, nil
 }
 
 // janitor does periodic housekeeping: expired sessions, unreferenced blobs

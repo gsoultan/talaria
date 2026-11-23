@@ -78,3 +78,28 @@ func (s *Store) Search(ctx context.Context, userID int64, text string, o SearchO
 	args = append(args, o.Limit)
 	return s.queryMessages(ctx, q, args...)
 }
+
+// MatchIDs returns the ids of messages in a mailbox whose indexed text
+// (subject, addresses, body) matches every term of text. IMAP SEARCH uses it
+// for TEXT and BODY keys.
+func (s *Store) MatchIDs(ctx context.Context, userID, mailboxID int64, text string) (map[int64]bool, error) {
+	out := map[int64]bool{}
+	fq := ftsQuery(text)
+	if fq == "" {
+		return out, nil
+	}
+	rows, err := s.r.QueryContext(ctx, `SELECT m.id FROM messages m JOIN mailboxes b ON b.id=m.mailbox_id
+		WHERE b.user_id=? AND m.mailbox_id=? AND m.id IN (SELECT rowid FROM messages_fts WHERE messages_fts MATCH ?)`, userID, mailboxID, fq)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out[id] = true
+	}
+	return out, rows.Err()
+}

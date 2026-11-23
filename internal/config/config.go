@@ -28,6 +28,7 @@ type Config struct {
 	HTTP        HTTP     `toml:"http"`
 	SMTP        SMTP     `toml:"smtp"`
 	IMAP        IMAP     `toml:"imap"`
+	POP3        POP3     `toml:"pop3"`
 	Outbound    Outbound `toml:"outbound"`
 	TLS         TLS      `toml:"tls"`
 	Ingest      Ingest   `toml:"ingest"`
@@ -99,6 +100,14 @@ type SMTP struct {
 type IMAP struct {
 	Listen    string `toml:"listen"`     // STARTTLS, port 143
 	ListenTLS string `toml:"listen_tls"` // implicit TLS, port 993
+	ProxyProtocol
+}
+
+// POP3 serves the Inbox to apps that download and delete. Off by default;
+// IMAP is the better choice for most people.
+type POP3 struct {
+	Listen    string `toml:"listen"`     // STARTTLS (STLS), port 110
+	ListenTLS string `toml:"listen_tls"` // implicit TLS, port 995
 	ProxyProtocol
 }
 
@@ -190,7 +199,7 @@ func (c Config) Validate() error {
 	default:
 		errs = append(errs, fmt.Errorf("http.client_ip_header %q: use X-Forwarded-For, X-Real-IP or CF-Connecting-IP", c.HTTP.ClientIPHeader))
 	}
-	for _, list := range [][]string{c.HTTP.TrustedProxies, c.SMTP.TrustedProxies, c.IMAP.TrustedProxies} {
+	for _, list := range [][]string{c.HTTP.TrustedProxies, c.SMTP.TrustedProxies, c.IMAP.TrustedProxies, c.POP3.TrustedProxies} {
 		if _, err := ParsePrefixes(list); err != nil {
 			errs = append(errs, err)
 		}

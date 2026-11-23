@@ -8,7 +8,7 @@ behind Cloudflare Tunnel. The three differ only in how traffic reaches it.
 |---|---|---|---|
 | Webmail and API (HTTP) | yes | yes, HTTP route | yes |
 | Inbound mail (SMTP 25) | yes | yes, L4 TCP route + PROXY protocol | via Cloudflare Email Routing and the HTTP ingest endpoint |
-| Mail apps (IMAP 143/993, submission 587/465) | yes | yes, L4 TCP routes | no, unless each client runs WARP or `cloudflared access tcp` |
+| Mail apps (IMAP 143/993, POP3 110/995, submission 587/465) | yes | yes, L4 TCP routes | no, unless each client runs WARP or `cloudflared access tcp` |
 | Outbound mail | relay (default) or direct on 25 | same | relay |
 
 ## Outbound mail
@@ -56,15 +56,16 @@ Gateon's L4 TCP proxy carries SMTP and IMAP unchanged, including STARTTLS.
 Its guide is `doc/email-backend-setup.md` in the Gateon repository. On the
 Gateon side:
 
-1. Create one TCP entrypoint per mail port (25, 587, 465, 143, 993) and give
+1. Create one TCP entrypoint per mail port (25, 587, 465, 143, 993, and 110
+   and 995 if POP3 is on) and give
    each only its `tcp` route. A port that also serves HTTP routes delays the
    greeting by 500 ms, because Gateon waits to see whether the client speaks
    first. Also list explicit entrypoints on every HTTP and gRPC route, or they
    get served on the mail ports too.
 2. Create a TCP service whose targets are Talaria's ports, with **Send PROXY
    protocol** on. Gateon's L4 proxy sends v1; Talaria accepts v1 and v2.
-3. Leave TLS off on the STARTTLS ports (25, 587, 143).
-4. For 465 and 993, either pass TLS through to Talaria (no TLS on the
+3. Leave TLS off on the STARTTLS ports (25, 587, 143, 110).
+4. For 465, 993 and 995, either pass TLS through to Talaria (no TLS on the
    entrypoint, targets on Talaria's 465/993), or let Gateon terminate TLS and
    point the targets at Talaria's plaintext listeners with `upstream_tls`.
 
@@ -78,7 +79,16 @@ upstream_tls = false             # true if Gateon terminates TLS on 465
 [imap]
 trusted_proxies = ["10.0.0.2"]
 upstream_tls = false             # true if Gateon terminates TLS on 993
+
+[pop3]                           # only if POP3 is on
+listen = ":110"
+listen_tls = ":995"
+trusted_proxies = ["10.0.0.2"]
 ```
+
+IMAP, POP3 and submission refuse to start without certificates
+(`tls.mode`), unless `upstream_tls` says a gateway handles TLS, because mail
+apps send passwords on them.
 
 Connections from a trusted proxy must start with a PROXY header; the address
 in it is what SPF, DNSBL lookups, rate limits and logs use. Connections from

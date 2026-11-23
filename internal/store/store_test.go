@@ -132,7 +132,7 @@ func TestMessageLifecycle(t *testing.T) {
 	}
 	inbox := mbs[0]
 	_, gone, _, err := s.Changes(ctx, u.ID, inbox.ID, 0)
-	if err != nil || len(gone) != 1 || gone[0] != m1.ID {
+	if err != nil || len(gone) != 1 || gone[0] != m1.UID {
 		t.Fatalf("changes: %v %v", gone, err)
 	}
 	if _, err := s.ExpungeMessages(ctx, u.ID, []int64{m1.ID, reply.ID}); err != nil {

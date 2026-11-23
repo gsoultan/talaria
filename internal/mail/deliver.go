@@ -181,3 +181,50 @@ func (d *Deliverer) log() *slog.Logger {
 
 // sanitize keeps header values on one line.
 func sanitize(s string) string { return clean(s, 255) }
+
+// Append stores a message a user uploads into one of their mailboxes (IMAP
+// APPEND), with the given flags and internal date.
+func (d *Deliverer) Append(ctx context.Context, u store.User, mailboxID int64, flags store.Flag, date time.Time, r io.Reader) (store.Message, error) {
+	spool, err := os.CreateTemp(d.TmpDir, "app-*")
+	if err != nil {
+		return store.Message{}, err
+	}
+	defer os.Remove(spool.Name())
+	defer spool.Close()
+	src := r
+	if d.MaxSize > 0 {
+		src = io.LimitReader(r, d.MaxSize+1)
+	}
+	n, err := io.Copy(spool, src)
+	if err != nil {
+		return store.Message{}, err
+	}
+	if d.MaxSize > 0 && n > d.MaxSize {
+		return store.Message{}, ErrTooLarge
+	}
+	spool.Seek(0, io.SeekStart)
+	sum := Summarize(spool)
+	spool.Seek(0, io.SeekStart)
+	defer d.Blobs.Hold()()
+	res, err := d.Blobs.Put(u.TenantID, spool, 0)
+	if err != nil {
+		return store.Message{}, err
+	}
+	if date.IsZero() {
+		date = time.Now()
+	}
+	m, err := d.Store.InsertMessage(ctx, store.NewMessage{
+		TenantID: u.TenantID, UserID: u.ID, MailboxID: mailboxID,
+		BlobHash: res.Hash, Size: res.Size, StoredSize: res.StoredSize, InternalDate: date.Unix(), Flags: flags,
+		SentDate: sum.SentDate, Subject: sum.Subject, FromName: sum.FromName, FromAddr: sum.FromAddr,
+		To: sum.To, Cc: sum.Cc, MessageID: sum.MessageID, InReplyTo: sum.InReplyTo, References: sum.References,
+		Preview: sum.Preview, HasAttachments: sum.HasAttachments, SearchText: sum.Text,
+	})
+	if err != nil {
+		return m, err
+	}
+	if d.Hub != nil {
+		d.Hub.Publish(u.ID, m.MailboxID)
+	}
+	return m, nil
+}

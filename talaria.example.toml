@@ -23,8 +23,13 @@ max_message_size = "25MiB"
 max_connections = 200
 
 [imap]
-listen = ":143"
-listen_tls = ":993"
+listen = ":143"       # STARTTLS
+listen_tls = ":993"   # implicit TLS
+
+# POP3 serves only the Inbox and is off unless you set the listeners.
+# [pop3]
+# listen = ":110"
+# listen_tls = ":995"
 
 # Most VPS providers block outbound port 25, so relay is the default.
 [outbound]

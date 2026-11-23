@@ -282,7 +282,7 @@ func (s *Store) MailboxMessages(ctx context.Context, userID, mailboxID int64) ([
 }
 
 // Changes lists what changed in a mailbox after modseq: updated or added
-// messages and expunged UIDs.
+// messages, and the UIDs expunged since.
 func (s *Store) Changes(ctx context.Context, userID, mailboxID, sinceModSeq int64) ([]Message, []int64, int64, error) {
 	mb, err := s.Mailbox(ctx, userID, mailboxID)
 	if err != nil {
@@ -292,7 +292,7 @@ func (s *Store) Changes(ctx context.Context, userID, mailboxID, sinceModSeq int6
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	gone, err := queryIDs(ctx, s.r, `SELECT message_id FROM expunged WHERE mailbox_id=? AND modseq>? LIMIT 1000`, mailboxID, sinceModSeq)
+	gone, err := queryIDs(ctx, s.r, `SELECT uid FROM expunged WHERE mailbox_id=? AND modseq>? ORDER BY uid LIMIT 10000`, mailboxID, sinceModSeq)
 	return msgs, gone, mb.HighestModSeq, err
 }
 
@@ -403,7 +403,18 @@ func (s *Store) Keywords(ctx context.Context, messageID int64) ([]string, error)
 // gets a new UID there; the source records an expunge. It returns the
 // affected mailbox ids.
 func (s *Store) MoveMessages(ctx context.Context, userID int64, ids []int64, destID int64) ([]int64, error) {
+	touched, _, err := s.MoveMessagesUIDs(ctx, userID, ids, destID)
+	return touched, err
+}
+
+// Moved maps a moved message's old UID to its new one.
+type Moved struct{ OldUID, NewUID int64 }
+
+// MoveMessagesUIDs is MoveMessages that also reports the UID mapping (IMAP
+// MOVE needs it for COPYUID).
+func (s *Store) MoveMessagesUIDs(ctx context.Context, userID int64, ids []int64, destID int64) ([]int64, []Moved, error) {
 	var touched []int64
+	var moved []Moved
 	err := s.tx(ctx, func(tx *sql.Tx) error {
 		var owner int64
 		if err := tx.QueryRowContext(ctx, `SELECT user_id FROM mailboxes WHERE id=?`, destID).Scan(&owner); err != nil || owner != userID {
@@ -427,9 +438,14 @@ func (s *Store) MoveMessages(ctx context.Context, userID int64, ids []int64, des
 					RETURNING uid_next - 1, highest_modseq`, destID).Scan(&uid, &modseq); err != nil {
 					return err
 				}
-				if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO expunged(mailbox_id, uid, modseq, message_id) SELECT mailbox_id, uid, ?, id FROM messages WHERE id=?`, srcModSeq, id); err != nil {
+				var oldUID int64
+				if err := tx.QueryRowContext(ctx, `SELECT uid FROM messages WHERE id=?`, id).Scan(&oldUID); err != nil {
 					return err
 				}
+				if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO expunged(mailbox_id, uid, modseq, message_id) VALUES (?, ?, ?, ?)`, src, oldUID, srcModSeq, id); err != nil {
+					return err
+				}
+				moved = append(moved, Moved{OldUID: oldUID, NewUID: uid})
 				if _, err := tx.ExecContext(ctx, `UPDATE messages SET mailbox_id=?, uid=?, modseq=? WHERE id=?`, destID, uid, modseq, id); err != nil {
 					return err
 				}
@@ -439,7 +455,7 @@ func (s *Store) MoveMessages(ctx context.Context, userID int64, ids []int64, des
 		touched = append(touched, destID)
 		return nil
 	})
-	return touched, err
+	return touched, moved, err
 }
 
 // CopyMessages copies a user's messages into another of their mailboxes,
@@ -613,4 +629,53 @@ func chunks(ids []int64, n int) [][]int64 {
 func (s *Store) MessageByMessageID(ctx context.Context, userID int64, msgID string) (Message, error) {
 	return scanMessage(s.r.QueryRowContext(ctx, `SELECT `+msgCols+` FROM messages m JOIN mailboxes b ON b.id=m.mailbox_id
 		WHERE b.user_id=? AND m.message_id=? ORDER BY m.id LIMIT 1`, userID, strings.Trim(msgID, "<> ")))
+}
+
+// KeywordsByMailbox returns the keywords of every message in a mailbox.
+func (s *Store) KeywordsByMailbox(ctx context.Context, mailboxID int64) (map[int64][]string, error) {
+	rows, err := s.r.QueryContext(ctx, `SELECT k.message_id, k.keyword FROM message_keywords k JOIN messages m ON m.id=k.message_id WHERE m.mailbox_id=?`, mailboxID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64][]string{}
+	for rows.Next() {
+		var id int64
+		var k string
+		if err := rows.Scan(&id, &k); err != nil {
+			return nil, err
+		}
+		out[id] = append(out[id], k)
+	}
+	return out, rows.Err()
+}
+
+// ReplaceKeywords sets the exact keyword list of a user's messages.
+func (s *Store) ReplaceKeywords(ctx context.Context, userID int64, ids []int64, kws []string) error {
+	return s.tx(ctx, func(tx *sql.Tx) error {
+		groups, err := groupByMailbox(ctx, tx, userID, ids)
+		if err != nil {
+			return err
+		}
+		for mb, mids := range groups {
+			modseq, err := bumpModSeq(ctx, tx, mb)
+			if err != nil {
+				return err
+			}
+			for _, id := range mids {
+				if _, err := tx.ExecContext(ctx, `DELETE FROM message_keywords WHERE message_id=?`, id); err != nil {
+					return err
+				}
+				for _, k := range kws {
+					if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO message_keywords(message_id, keyword) VALUES (?, ?)`, id, k); err != nil {
+						return err
+					}
+				}
+				if _, err := tx.ExecContext(ctx, `UPDATE messages SET modseq=? WHERE id=?`, modseq, id); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 }
