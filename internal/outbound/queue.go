@@ -102,16 +102,22 @@ func (q *Queue) Run(ctx context.Context) {
 }
 
 func (q *Queue) attempt(ctx context.Context, it store.QueueItem) {
+	// Recording the outcome must survive shutdown: a message the relay took
+	// but that is not marked sent would go out twice, and a lost bounce report
+	// leaves the sender never knowing.
+	rctx, rcancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+	defer rcancel()
 	r, err := q.Blobs.Open(it.TenantID, it.BlobHash)
 	if err != nil {
 		q.Log.Error("queue: body missing", "id", it.ID, "err", err)
-		q.bounce(ctx, it, "message body lost on the server")
+		q.bounce(rctx, it, "message body lost on the server")
 		return
 	}
 	defer r.Close()
 	sctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 	reply, err := q.Transport.Send(sctx, it.MailFrom, it.RcptTo, r)
+	ctx = rctx
 	if err == nil {
 		q.Store.MarkSent(ctx, it.ID, reply)
 		q.Log.Info("sent", "id", it.ID, "to", it.RcptTo, "reply", reply)
@@ -132,7 +138,9 @@ func (q *Queue) attempt(ctx context.Context, it store.QueueItem) {
 // bounce records the failure and tells the sender, unless the message was
 // itself a bounce (null sender).
 func (q *Queue) bounce(ctx context.Context, it store.QueueItem, reason string) {
-	q.Store.MarkBounced(ctx, it.ID, reason)
+	// The report is written before the item is marked bounced, so the
+	// sender is told by the time the queue shows the failure.
+	defer q.Store.MarkBounced(ctx, it.ID, reason)
 	if it.MailFrom == "" || it.UserID == 0 || q.Deliver == nil {
 		return
 	}
