@@ -6,12 +6,13 @@ package store
 import (
 	"context"
 	"errors"
+	"github.com/gsoultan/talaria/internal/store/pgtest"
 	"testing"
 )
 
 func open(t *testing.T) *Store {
 	t.Helper()
-	s, err := Open(t.TempDir())
+	s, err := Open(context.Background(), pgtest.URL(t), Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

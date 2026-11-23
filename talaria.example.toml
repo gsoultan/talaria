@@ -2,9 +2,18 @@
 # admin UI / API and stored in the database, not in this file.
 
 hostname = "mail.example.com"
+# Message bodies (compressed), certificates and temporary files.
 data_dir = "/var/lib/talaria"
 # Go runtime soft memory limit. 512MiB leaves room for the OS on a 2 GB box.
 memory_limit = "512MiB"
+
+[database]
+# PostgreSQL holds tenants, users, mailboxes, message summaries and the
+# search index. TALARIA_DATABASE_URL overrides this, so the password can
+# stay out of this file (systemd: EnvironmentFile=).
+url = "postgres://talaria@localhost:5432/talaria?sslmode=disable"
+# Each connection is a PostgreSQL process; 10 is plenty for one server.
+max_conns = 10
 
 [log]
 level = "info"

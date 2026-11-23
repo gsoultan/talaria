@@ -29,6 +29,8 @@ func TestLoad(t *testing.T) {
 	p := filepath.Join(dir, "talaria.toml")
 	body := `hostname = "mail.example.com"
 memory_limit = "256MiB"
+[database]
+url = "postgres://talaria@localhost/talaria"
 [outbound]
 mode = "relay"
 [outbound.relay]
@@ -61,6 +63,9 @@ func TestLoadRejectsUnknownKeysAndBadMode(t *testing.T) {
 		"acme": "hostname = \"mx.example\"\n[tls]\nmode = \"acme\"\n",
 		// HTTPS without certificates.
 		"https": "hostname = \"mx.example\"\n[http]\nlisten_tls = \":443\"\n",
+		// No database.
+		"database": "hostname = \"mx.example\"\n",
+		"dsn":      "hostname = \"mx.example\"\n[database]\nurl = \"/var/lib/talaria.db\"\n",
 	} {
 		p := filepath.Join(dir, name+".toml")
 		os.WriteFile(p, []byte(body), 0o600)

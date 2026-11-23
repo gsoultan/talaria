@@ -19,6 +19,7 @@ import (
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/store"
+	"github.com/gsoultan/talaria/internal/store/pgtest"
 )
 
 const multipart = "From: =?utf-8?q?Priya_N=C3=A1ir?= <Priya@Lumen.example>\r\n" +
@@ -74,7 +75,7 @@ func (fakeDNS) LookupAddr(context.Context, string) ([]string, error) {
 func setup(t *testing.T, dns fakeDNS) (*Deliverer, store.User) {
 	t.Helper()
 	dir := t.TempDir()
-	st, err := store.Open(dir)
+	st, err := store.Open(context.Background(), pgtest.URL(t), store.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

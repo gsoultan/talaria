@@ -66,7 +66,7 @@ func (s *Store) CreateUser(ctx context.Context, tenantID int64, address, display
 		return User{}, err
 	}
 	u := User{TenantID: tenantID, LocalPart: local, Domain: domain, DisplayName: displayName, PasswordHash: passwordHash, Role: role, QuotaBytes: quota, CreatedAt: s.unix()}
-	err = s.tx(ctx, func(tx *sql.Tx) error {
+	err = s.tx(ctx, func(tx *Tx) error {
 		if err := tx.QueryRowContext(ctx, `SELECT id FROM domains WHERE name=? AND tenant_id=?`, domain, tenantID).Scan(&u.DomainID); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("domain %s is not in this tenant: %w", domain, ErrNotFound)
@@ -85,15 +85,14 @@ func (s *Store) CreateUser(ctx context.Context, tenantID int64, address, display
 		if taken > 0 {
 			return fmt.Errorf("%s is an alias: %w", address, ErrExists)
 		}
-		res, err := tx.ExecContext(ctx, `INSERT INTO users(tenant_id, domain_id, local_part, display_name, password_hash, role, quota_bytes, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, tenantID, u.DomainID, local, displayName, passwordHash, role, quota, u.CreatedAt)
+		err := tx.QueryRowContext(ctx, `INSERT INTO users(tenant_id, domain_id, local_part, display_name, password_hash, role, quota_bytes, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`, tenantID, u.DomainID, local, displayName, passwordHash, role, quota, u.CreatedAt).Scan(&u.ID)
 		if isUnique(err) {
 			return fmt.Errorf("user %s: %w", address, ErrExists)
 		}
 		if err != nil {
 			return err
 		}
-		u.ID, _ = res.LastInsertId()
 		return createDefaultMailboxes(ctx, tx, u.ID, s.unix())
 	})
 	return u, err
@@ -185,7 +184,7 @@ func (s *Store) UpdateUser(ctx context.Context, u User) error {
 
 // SetPassword replaces a user's password hash and signs out all sessions.
 func (s *Store) SetPassword(ctx context.Context, userID int64, hash string) error {
-	return s.tx(ctx, func(tx *sql.Tx) error {
+	return s.tx(ctx, func(tx *Tx) error {
 		res, err := tx.ExecContext(ctx, `UPDATE users SET password_hash=? WHERE id=?`, hash, userID)
 		if err := affected(res, err); err != nil {
 			return err
@@ -197,12 +196,9 @@ func (s *Store) SetPassword(ctx context.Context, userID int64, hash string) erro
 
 // DeleteUser removes a user of a tenant and all their mail.
 func (s *Store) DeleteUser(ctx context.Context, tenantID, id int64) error {
-	return s.tx(ctx, func(tx *sql.Tx) error {
+	return s.tx(ctx, func(tx *Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE blobs SET refs = refs - (SELECT COUNT(*) FROM messages m JOIN mailboxes b ON b.id=m.mailbox_id WHERE b.user_id=? AND m.blob_id=blobs.id)
 			WHERE id IN (SELECT m.blob_id FROM messages m JOIN mailboxes b ON b.id=m.mailbox_id WHERE b.user_id=?)`, id, id); err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM messages_fts WHERE rowid IN (SELECT m.id FROM messages m JOIN mailboxes b ON b.id=m.mailbox_id WHERE b.user_id=?)`, id); err != nil {
 			return err
 		}
 		res, err := tx.ExecContext(ctx, `DELETE FROM users WHERE id=? AND tenant_id=?`, id, tenantID)
@@ -224,7 +220,7 @@ func (s *Store) CreateAlias(ctx context.Context, tenantID int64, address string,
 		return Alias{}, err
 	}
 	a := Alias{Address: local + "@" + domain, UserID: userID}
-	err = s.tx(ctx, func(tx *sql.Tx) error {
+	err = s.tx(ctx, func(tx *Tx) error {
 		var domainID, owner int64
 		if err := tx.QueryRowContext(ctx, `SELECT id FROM domains WHERE name=? AND tenant_id=?`, domain, tenantID).Scan(&domainID); err != nil {
 			return fmt.Errorf("domain %s is not in this tenant: %w", domain, ErrNotFound)
@@ -237,14 +233,13 @@ func (s *Store) CreateAlias(ctx context.Context, tenantID int64, address string,
 		if taken > 0 {
 			return fmt.Errorf("%s is a user: %w", a.Address, ErrExists)
 		}
-		res, err := tx.ExecContext(ctx, `INSERT INTO aliases(tenant_id, domain_id, local_part, user_id) VALUES (?, ?, ?, ?)`, tenantID, domainID, local, userID)
+		err := tx.QueryRowContext(ctx, `INSERT INTO aliases(tenant_id, domain_id, local_part, user_id) VALUES (?, ?, ?, ?) RETURNING id`, tenantID, domainID, local, userID).Scan(&a.ID)
 		if isUnique(err) {
 			return fmt.Errorf("alias %s: %w", a.Address, ErrExists)
 		}
 		if err != nil {
 			return err
 		}
-		a.ID, _ = res.LastInsertId()
 		return nil
 	})
 	return a, err

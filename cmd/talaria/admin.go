@@ -70,7 +70,7 @@ func runAdmin(args []string) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	st, _, err := server.OpenStores(cfg.DataDir)
+	st, _, err := server.OpenStores(cfg)
 	if err != nil {
 		return true, err
 	}

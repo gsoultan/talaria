@@ -8,12 +8,15 @@ A fast, low-footprint mail server with built-in webmail, sized for a
   described by an OpenAPI document at `/api/v1/openapi.json`.
 - Multi-tenant: each tenant has its own domains, users, aliases, admins,
   seat limit and storage quota, and no data crosses tenants.
+- PostgreSQL for metadata and full-text search; message bodies are
+  compressed and deduplicated on disk.
 - Webmail: React 19, Mantine 9, TanStack Query and Form, built with Bun and
   Vite 8, installable as a PWA, with heavy work in web workers.
 - Runs on a public IP, behind a gateway such as Gateon (PROXY protocol), or
   behind Cloudflare Tunnel. See [doc/deployment.md](doc/deployment.md).
 
-Status: phase 5 (hardening). Talaria receives mail on port 25 or through the
+Status: phase 5 (hardening) is done; phase 6 (mail security) is next, see
+[doc/roadmap.md](doc/roadmap.md). Talaria receives mail on port 25 or through the
 HTTP ingest endpoint, checks SPF, DKIM and DMARC, and files it into
 compressed, deduplicated storage with full-text search. Users send from the
 webmail or from mail apps on 587/465; mail is DKIM-signed and leaves through
@@ -35,20 +38,31 @@ a gateway), and limits connections per client address.
 
 ## Build
 
-Requirements: Go 1.27.4 and Bun 1.4.5. The kakarot code generator is a Go
+Requirements: Go 1.27.4, Bun 1.4.5 and PostgreSQL 15 or newer. The kakarot code generator is a Go
 tool dependency, so `go tool kakarot` needs nothing else installed.
 
 ```sh
 make gen     # regenerate endpoints, transport, OpenAPI and the TS client
 make check   # kakarot layer rules; generated code is current
 make build   # builds the webmail, embeds it, writes bin/talaria
-make test
+make test    # set TALARIA_TEST_DATABASE_URL to run the database tests
 ./bin/talaria -config talaria.example.toml
 ```
 
+Tests that need PostgreSQL use `TALARIA_TEST_DATABASE_URL` (for example
+`postgres://talaria:talaria@localhost:5432/talaria_test`); each test gets an
+empty schema of its own and drops it afterwards. Without the variable those
+tests are skipped.
+
 ## First run
 
+Create a database and a user for Talaria, then point `database.url` (or
+`TALARIA_DATABASE_URL`) at it. Talaria creates its tables on first start.
+
 ```sh
+sudo -u postgres createuser -P talaria
+sudo -u postgres createdb -O talaria talaria
+export TALARIA_DATABASE_URL=postgres://talaria:SECRET@localhost:5432/talaria
 talaria init -config talaria.toml -tenant acme -domain acme.example -admin you@acme.example
 talaria user -config talaria.toml -tenant acme -email ana@acme.example -name "Ana"
 talaria alias -config talaria.toml -tenant acme -alias sales@acme.example -to ana@acme.example
@@ -70,7 +84,7 @@ internal/config   TOML config
 internal/server   wiring, listeners, housekeeping
 internal/listener SMTP/IMAP listeners with PROXY protocol
 internal/clientip real client address behind trusted proxies
-internal/store    SQLite metadata: tenants, domains, users, mailboxes, messages
+internal/store    PostgreSQL: tenants, domains, users, mailboxes, messages, search
 internal/blob     zstd-compressed, content-addressed message bodies
 internal/mail     parsing, SPF/DKIM/DMARC, delivery
 internal/smtpd    inbound SMTP and submission

@@ -103,7 +103,7 @@ func scanMessage(row interface{ Scan(...any) error }, extra ...any) (Message, er
 // search indexing.
 func (s *Store) InsertMessage(ctx context.Context, nm NewMessage) (Message, error) {
 	var m Message
-	err := s.tx(ctx, func(tx *sql.Tx) error {
+	err := s.tx(ctx, func(tx *Tx) error {
 		var err error
 		m, err = insertMessage(ctx, tx, nm)
 		return err
@@ -111,9 +111,9 @@ func (s *Store) InsertMessage(ctx context.Context, nm NewMessage) (Message, erro
 	return m, err
 }
 
-func checkQuota(ctx context.Context, tx *sql.Tx, tenantID, userID, add int64) error {
+func checkQuota(ctx context.Context, tx *Tx, tenantID, userID, add int64) error {
 	var userQuota, used, tenantQuota, tenantUsed int64
-	err := tx.QueryRowContext(ctx, `SELECT u.quota_bytes, u.used_bytes, t.quota_bytes, (SELECT COALESCE(SUM(used_bytes),0) FROM users WHERE tenant_id=t.id)
+	err := tx.QueryRowContext(ctx, `SELECT u.quota_bytes, u.used_bytes, t.quota_bytes, (SELECT COALESCE(SUM(used_bytes),0)::bigint FROM users WHERE tenant_id=t.id)
 		FROM users u JOIN tenants t ON t.id=u.tenant_id WHERE u.id=? AND u.tenant_id=?`, userID, tenantID).Scan(&userQuota, &used, &tenantQuota, &tenantUsed)
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("user: %w", ErrNotFound)
@@ -127,7 +127,7 @@ func checkQuota(ctx context.Context, tx *sql.Tx, tenantID, userID, add int64) er
 	return nil
 }
 
-func insertMessage(ctx context.Context, tx *sql.Tx, nm NewMessage) (Message, error) {
+func insertMessage(ctx context.Context, tx *Tx, nm NewMessage) (Message, error) {
 	if err := checkQuota(ctx, tx, nm.TenantID, nm.UserID, nm.Size); err != nil {
 		return Message{}, err
 	}
@@ -148,7 +148,7 @@ func insertMessage(ctx context.Context, tx *sql.Tx, nm NewMessage) (Message, err
 	}
 	var blobID int64
 	if err := tx.QueryRowContext(ctx, `INSERT INTO blobs(tenant_id, hash, size, stored_size, refs) VALUES (?, ?, ?, ?, 1)
-		ON CONFLICT(tenant_id, hash) DO UPDATE SET refs = refs + 1 RETURNING id`, nm.TenantID, nm.BlobHash, nm.Size, nm.StoredSize).Scan(&blobID); err != nil {
+		ON CONFLICT(tenant_id, hash) DO UPDATE SET refs = blobs.refs + 1 RETURNING id`, nm.TenantID, nm.BlobHash, nm.Size, nm.StoredSize).Scan(&blobID); err != nil {
 		return Message{}, err
 	}
 	var uid, modseq int64
@@ -157,24 +157,21 @@ func insertMessage(ctx context.Context, tx *sql.Tx, nm NewMessage) (Message, err
 		return Message{}, err
 	}
 	threadID := findThread(ctx, tx, nm.UserID, append([]string{nm.InReplyTo}, nm.References...))
-	res, err := tx.ExecContext(ctx, `INSERT INTO messages(mailbox_id, uid, modseq, blob_id, thread_id, flags, internal_date, size, sent_date,
-		subject, from_name, from_addr, to_addrs, cc_addrs, message_id, in_reply_to, preview, has_attachments, auth_results)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	var id int64
+	err := tx.QueryRowContext(ctx, `INSERT INTO messages(mailbox_id, uid, modseq, blob_id, thread_id, flags, internal_date, size, sent_date,
+		subject, from_name, from_addr, to_addrs, cc_addrs, message_id, in_reply_to, preview, has_attachments, auth_results, search)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, `+searchVector+`) RETURNING id`,
 		mailboxID, uid, modseq, blobID, threadID, nm.Flags, nm.InternalDate, nm.Size, nm.SentDate,
-		nm.Subject, nm.FromName, nm.FromAddr, nm.To, nm.Cc, nm.MessageID, nm.InReplyTo, nm.Preview, nm.HasAttachments, nm.Auth)
+		nm.Subject, nm.FromName, nm.FromAddr, nm.To, nm.Cc, nm.MessageID, nm.InReplyTo, nm.Preview, nm.HasAttachments, nm.Auth,
+		searchText(nm.Subject+" "+strings.Join([]string{nm.FromName, nm.FromAddr, nm.To, nm.Cc}, " ")+" "+nm.SearchText)).Scan(&id)
 	if err != nil {
 		return Message{}, err
 	}
-	id, _ := res.LastInsertId()
 	if threadID == 0 {
 		threadID = id
 		if _, err := tx.ExecContext(ctx, `UPDATE messages SET thread_id=? WHERE id=?`, id, id); err != nil {
 			return Message{}, err
 		}
-	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO messages_fts(rowid, subject, addrs, body) VALUES (?, ?, ?, ?)`,
-		id, nm.Subject, strings.Join([]string{nm.FromName, nm.FromAddr, nm.To, nm.Cc}, " "), nm.SearchText); err != nil {
-		return Message{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE users SET used_bytes = used_bytes + ? WHERE id=?`, nm.Size, nm.UserID); err != nil {
 		return Message{}, err
@@ -185,7 +182,7 @@ func insertMessage(ctx context.Context, tx *sql.Tx, nm NewMessage) (Message, err
 		Preview: nm.Preview, HasAttachments: nm.HasAttachments, Auth: nm.Auth}, nil
 }
 
-func findThread(ctx context.Context, tx *sql.Tx, userID int64, ids []string) int64 {
+func findThread(ctx context.Context, tx *Tx, userID int64, ids []string) int64 {
 	var clean []any
 	for _, id := range ids {
 		if id != "" && len(clean) < 20 {
@@ -297,7 +294,7 @@ func (s *Store) Changes(ctx context.Context, userID, mailboxID, sinceModSeq int6
 }
 
 // groupByMailbox returns the user's messages among ids, grouped by mailbox.
-func groupByMailbox(ctx context.Context, tx *sql.Tx, userID int64, ids []int64) (map[int64][]int64, error) {
+func groupByMailbox(ctx context.Context, tx *Tx, userID int64, ids []int64) (map[int64][]int64, error) {
 	out := map[int64][]int64{}
 	for _, chunk := range chunks(ids, 500) {
 		rows, err := tx.QueryContext(ctx, `SELECT m.id, m.mailbox_id FROM messages m JOIN mailboxes b ON b.id=m.mailbox_id
@@ -318,7 +315,7 @@ func groupByMailbox(ctx context.Context, tx *sql.Tx, userID int64, ids []int64) 
 	return out, nil
 }
 
-func bumpModSeq(ctx context.Context, tx *sql.Tx, mailboxID int64) (int64, error) {
+func bumpModSeq(ctx context.Context, tx *Tx, mailboxID int64) (int64, error) {
 	var m int64
 	err := tx.QueryRowContext(ctx, `UPDATE mailboxes SET highest_modseq = highest_modseq + 1 WHERE id=? RETURNING highest_modseq`, mailboxID).Scan(&m)
 	return m, err
@@ -328,7 +325,7 @@ func bumpModSeq(ctx context.Context, tx *sql.Tx, mailboxID int64) (int64, error)
 // affected mailbox ids.
 func (s *Store) SetFlags(ctx context.Context, userID int64, ids []int64, add, remove Flag) ([]int64, error) {
 	var mailboxes []int64
-	err := s.tx(ctx, func(tx *sql.Tx) error {
+	err := s.tx(ctx, func(tx *Tx) error {
 		groups, err := groupByMailbox(ctx, tx, userID, ids)
 		if err != nil {
 			return err
@@ -338,7 +335,7 @@ func (s *Store) SetFlags(ctx context.Context, userID int64, ids []int64, add, re
 			if err != nil {
 				return err
 			}
-			if _, err := tx.ExecContext(ctx, `UPDATE messages SET flags = (flags | ?) & ~?, modseq=? WHERE id IN (`+placeholders(len(mids))+`)`,
+			if _, err := tx.ExecContext(ctx, `UPDATE messages SET flags = (flags | ?::bigint) & ~?::bigint, modseq=? WHERE id IN (`+placeholders(len(mids))+`)`,
 				append([]any{add, remove, modseq}, toAny(mids)...)...); err != nil {
 				return err
 			}
@@ -351,7 +348,7 @@ func (s *Store) SetFlags(ctx context.Context, userID int64, ids []int64, add, re
 
 // SetKeywords adds and removes keywords (labels) on a user's messages.
 func (s *Store) SetKeywords(ctx context.Context, userID int64, ids []int64, add, remove []string) error {
-	return s.tx(ctx, func(tx *sql.Tx) error {
+	return s.tx(ctx, func(tx *Tx) error {
 		groups, err := groupByMailbox(ctx, tx, userID, ids)
 		if err != nil {
 			return err
@@ -363,7 +360,7 @@ func (s *Store) SetKeywords(ctx context.Context, userID int64, ids []int64, add,
 			}
 			for _, id := range mids {
 				for _, k := range add {
-					if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO message_keywords(message_id, keyword) VALUES (?, ?)`, id, k); err != nil {
+					if _, err := tx.ExecContext(ctx, `INSERT INTO message_keywords(message_id, keyword) VALUES (?, ?) ON CONFLICT DO NOTHING`, id, k); err != nil {
 						return err
 					}
 				}
@@ -415,7 +412,7 @@ type Moved struct{ OldUID, NewUID int64 }
 func (s *Store) MoveMessagesUIDs(ctx context.Context, userID int64, ids []int64, destID int64) ([]int64, []Moved, error) {
 	var touched []int64
 	var moved []Moved
-	err := s.tx(ctx, func(tx *sql.Tx) error {
+	err := s.tx(ctx, func(tx *Tx) error {
 		var owner int64
 		if err := tx.QueryRowContext(ctx, `SELECT user_id FROM mailboxes WHERE id=?`, destID).Scan(&owner); err != nil || owner != userID {
 			return fmt.Errorf("destination: %w", ErrNotFound)
@@ -442,7 +439,7 @@ func (s *Store) MoveMessagesUIDs(ctx context.Context, userID int64, ids []int64,
 				if err := tx.QueryRowContext(ctx, `SELECT uid FROM messages WHERE id=?`, id).Scan(&oldUID); err != nil {
 					return err
 				}
-				if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO expunged(mailbox_id, uid, modseq, message_id) VALUES (?, ?, ?, ?)`, src, oldUID, srcModSeq, id); err != nil {
+				if _, err := tx.ExecContext(ctx, `INSERT INTO expunged(mailbox_id, uid, modseq, message_id) VALUES (?, ?, ?, ?) ON CONFLICT (mailbox_id, uid) DO UPDATE SET modseq=excluded.modseq, message_id=excluded.message_id`, src, oldUID, srcModSeq, id); err != nil {
 					return err
 				}
 				moved = append(moved, Moved{OldUID: oldUID, NewUID: uid})
@@ -462,7 +459,7 @@ func (s *Store) MoveMessagesUIDs(ctx context.Context, userID int64, ids []int64,
 // sharing the stored body. It returns the new messages.
 func (s *Store) CopyMessages(ctx context.Context, tenantID, userID int64, ids []int64, destID int64) ([]Message, error) {
 	var out []Message
-	err := s.tx(ctx, func(tx *sql.Tx) error {
+	err := s.tx(ctx, func(tx *Tx) error {
 		for _, id := range ids {
 			var nm NewMessage
 			var refsHash []byte
@@ -494,7 +491,7 @@ func (s *Store) CopyMessages(ctx context.Context, tenantID, userID int64, ids []
 // affected mailbox ids.
 func (s *Store) ExpungeMessages(ctx context.Context, userID int64, ids []int64) ([]int64, error) {
 	var touched []int64
-	err := s.tx(ctx, func(tx *sql.Tx) error {
+	err := s.tx(ctx, func(tx *Tx) error {
 		groups, err := groupByMailbox(ctx, tx, userID, ids)
 		if err != nil {
 			return err
@@ -511,7 +508,7 @@ func (s *Store) ExpungeMessages(ctx context.Context, userID int64, ids []int64) 
 }
 
 // expungeIDs deletes messages already known to belong to userID.
-func expungeIDs(ctx context.Context, tx *sql.Tx, userID int64, ids []int64, record bool) error {
+func expungeIDs(ctx context.Context, tx *Tx, userID int64, ids []int64, record bool) error {
 	for _, chunk := range chunks(ids, 500) {
 		in := placeholders(len(chunk))
 		args := toAny(chunk)
@@ -532,21 +529,18 @@ func expungeIDs(ctx context.Context, tx *sql.Tx, userID int64, ids []int64, reco
 				if err != nil {
 					return err
 				}
-				if _, err := tx.ExecContext(ctx, `INSERT OR REPLACE INTO expunged(mailbox_id, uid, modseq, message_id) SELECT mailbox_id, uid, ?, id FROM messages
-					WHERE mailbox_id=? AND id IN (`+in+`)`, append([]any{modseq, mb}, args...)...); err != nil {
+				if _, err := tx.ExecContext(ctx, `INSERT INTO expunged(mailbox_id, uid, modseq, message_id) SELECT mailbox_id, uid, ?, id FROM messages
+					WHERE mailbox_id=? AND id IN (`+in+`) ON CONFLICT (mailbox_id, uid) DO UPDATE SET modseq=excluded.modseq, message_id=excluded.message_id`, append([]any{modseq, mb}, args...)...); err != nil {
 					return err
 				}
 			}
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE users SET used_bytes = MAX(0, used_bytes - (SELECT COALESCE(SUM(size),0) FROM messages WHERE id IN (`+in+`))) WHERE id=?`,
+		if _, err := tx.ExecContext(ctx, `UPDATE users SET used_bytes = GREATEST(0, used_bytes - (SELECT COALESCE(SUM(size),0)::bigint FROM messages WHERE id IN (`+in+`))) WHERE id=?`,
 			append(args, userID)...); err != nil {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE blobs SET refs = refs - (SELECT COUNT(*) FROM messages m WHERE m.blob_id=blobs.id AND m.id IN (`+in+`))
 			WHERE id IN (SELECT blob_id FROM messages WHERE id IN (`+in+`))`, append(args, args...)...); err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM messages_fts WHERE rowid IN (`+in+`)`, args...); err != nil {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `DELETE FROM messages WHERE id IN (`+in+`)`, args...); err != nil {
@@ -652,7 +646,7 @@ func (s *Store) KeywordsByMailbox(ctx context.Context, mailboxID int64) (map[int
 
 // ReplaceKeywords sets the exact keyword list of a user's messages.
 func (s *Store) ReplaceKeywords(ctx context.Context, userID int64, ids []int64, kws []string) error {
-	return s.tx(ctx, func(tx *sql.Tx) error {
+	return s.tx(ctx, func(tx *Tx) error {
 		groups, err := groupByMailbox(ctx, tx, userID, ids)
 		if err != nil {
 			return err
@@ -667,7 +661,7 @@ func (s *Store) ReplaceKeywords(ctx context.Context, userID int64, ids []int64, 
 					return err
 				}
 				for _, k := range kws {
-					if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO message_keywords(message_id, keyword) VALUES (?, ?)`, id, k); err != nil {
+					if _, err := tx.ExecContext(ctx, `INSERT INTO message_keywords(message_id, keyword) VALUES (?, ?) ON CONFLICT DO NOTHING`, id, k); err != nil {
 						return err
 					}
 				}

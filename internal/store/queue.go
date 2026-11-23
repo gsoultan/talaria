@@ -45,7 +45,7 @@ type QueueItem struct {
 // caller), and enforces the tenant's daily sending limit.
 func (s *Store) Enqueue(ctx context.Context, tenantID, userID int64, hash []byte, size, storedSize int64, from string, rcpts []string) error {
 	now := s.unix()
-	return s.tx(ctx, func(tx *sql.Tx) error {
+	return s.tx(ctx, func(tx *Tx) error {
 		var limit, sent int64
 		if err := tx.QueryRowContext(ctx, `SELECT daily_send_limit, (SELECT COUNT(*) FROM queue WHERE tenant_id=? AND created_at>?) FROM tenants WHERE id=?`,
 			tenantID, now-86400, tenantID).Scan(&limit, &sent); err != nil {
@@ -56,7 +56,7 @@ func (s *Store) Enqueue(ctx context.Context, tenantID, userID int64, hash []byte
 		}
 		var blobID int64
 		if err := tx.QueryRowContext(ctx, `INSERT INTO blobs(tenant_id, hash, size, stored_size, refs) VALUES (?, ?, ?, ?, ?)
-			ON CONFLICT(tenant_id, hash) DO UPDATE SET refs = refs + excluded.refs RETURNING id`, tenantID, hash, size, storedSize, len(rcpts)).Scan(&blobID); err != nil {
+			ON CONFLICT(tenant_id, hash) DO UPDATE SET refs = blobs.refs + excluded.refs RETURNING id`, tenantID, hash, size, storedSize, len(rcpts)).Scan(&blobID); err != nil {
 			return err
 		}
 		for _, r := range rcpts {
@@ -96,9 +96,9 @@ func scanQueue(rows *sql.Rows) ([]QueueItem, error) {
 func (s *Store) ClaimDue(ctx context.Context, limit int, staleAfter int64) ([]QueueItem, error) {
 	now := s.unix()
 	var out []QueueItem
-	err := s.tx(ctx, func(tx *sql.Tx) error {
+	err := s.tx(ctx, func(tx *Tx) error {
 		rows, err := tx.QueryContext(ctx, `SELECT `+queueCols+` FROM queue q JOIN blobs b ON b.id=q.blob_id
-			WHERE (q.status=0 AND q.next_attempt<=?) OR (q.status=1 AND q.updated_at<=?) ORDER BY q.next_attempt LIMIT ?`, now, now-staleAfter, limit)
+			WHERE (q.status=0 AND q.next_attempt<=?) OR (q.status=1 AND q.updated_at<=?) ORDER BY q.next_attempt LIMIT ? FOR UPDATE OF q SKIP LOCKED`, now, now-staleAfter, limit)
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ func (s *Store) NextDue(ctx context.Context) int64 {
 
 // finishQueue sets a final status and releases the blob reference.
 func (s *Store) finishQueue(ctx context.Context, id int64, status int, msg string) error {
-	return s.tx(ctx, func(tx *sql.Tx) error {
+	return s.tx(ctx, func(tx *Tx) error {
 		var blobID int64
 		if err := tx.QueryRowContext(ctx, `UPDATE queue SET status=?, last_error=?, attempts=attempts+1, updated_at=? WHERE id=? AND status<2 RETURNING blob_id`,
 			status, truncate(msg, 500), s.unix(), id).Scan(&blobID); err != nil {
@@ -170,7 +170,7 @@ func (s *Store) ListQueue(ctx context.Context, tenantID int64, status int, limit
 
 // QueueStats counts a tenant's items by status over the last day.
 func (s *Store) QueueStats(ctx context.Context, tenantID int64) (waiting, sent, bounced int64, err error) {
-	err = s.r.QueryRowContext(ctx, `SELECT COALESCE(SUM(status IN (0,1)),0), COALESCE(SUM(status=2),0), COALESCE(SUM(status=3),0) FROM queue
+	err = s.r.QueryRowContext(ctx, `SELECT COUNT(*) FILTER (WHERE status IN (0,1)), COUNT(*) FILTER (WHERE status=2), COUNT(*) FILTER (WHERE status=3) FROM queue
 		WHERE (?=0 OR tenant_id=?) AND (status IN (0,1) OR updated_at>?)`, tenantID, tenantID, s.unix()-86400).Scan(&waiting, &sent, &bounced)
 	return
 }

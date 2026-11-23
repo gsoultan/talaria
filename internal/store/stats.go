@@ -22,15 +22,15 @@ func (s *Store) Stats(ctx context.Context, tenantID int64) (Stats, error) {
 		(SELECT COUNT(*) FROM tenants WHERE ?=0 OR id=?),
 		(SELECT COUNT(*) FROM domains WHERE ?=0 OR tenant_id=?),
 		(SELECT COUNT(*) FROM users WHERE ?=0 OR tenant_id=?),
-		(SELECT COALESCE(SUM(used_bytes),0) FROM users WHERE ?=0 OR tenant_id=?),
-		(SELECT COALESCE(SUM(stored_size),0) FROM blobs WHERE ?=0 OR tenant_id=?),
-		(SELECT COALESCE(SUM(size),0) FROM blobs WHERE ?=0 OR tenant_id=?)`,
+		(SELECT COALESCE(SUM(used_bytes),0)::bigint FROM users WHERE ?=0 OR tenant_id=?),
+		(SELECT COALESCE(SUM(stored_size),0)::bigint FROM blobs WHERE ?=0 OR tenant_id=?),
+		(SELECT COALESCE(SUM(size),0)::bigint FROM blobs WHERE ?=0 OR tenant_id=?)`,
 		tenantID, tenantID, tenantID, tenantID, tenantID, tenantID, tenantID, tenantID, tenantID, tenantID, tenantID, tenantID).
 		Scan(&st.Tenants, &st.Domains, &st.Users, &st.UsedBytes, &st.StoredBytes, &st.RawBytes)
 	if err != nil {
 		return st, err
 	}
-	err = s.r.QueryRowContext(ctx, `SELECT COALESCE(SUM(b.special_use IN ('\Inbox','\Junk')),0), COALESCE(SUM(b.special_use='\Junk'),0)
+	err = s.r.QueryRowContext(ctx, `SELECT COUNT(*) FILTER (WHERE b.special_use IN ('\Inbox','\Junk')), COUNT(*) FILTER (WHERE b.special_use='\Junk')
 		FROM messages m JOIN mailboxes b ON b.id=m.mailbox_id JOIN users u ON u.id=b.user_id
 		WHERE (?=0 OR u.tenant_id=?) AND b.special_use IN ('\Inbox','\Junk') AND m.internal_date>=?`, tenantID, tenantID, since).
 		Scan(&st.ReceivedToday, &st.JunkToday)

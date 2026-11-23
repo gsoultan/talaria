@@ -11,6 +11,32 @@ behind Cloudflare Tunnel. The three differ only in how traffic reaches it.
 | Mail apps (IMAP 143/993, POP3 110/995, submission 587/465) | yes | yes, L4 TCP routes | no, unless each client runs WARP or `cloudflared access tcp` |
 | Outbound mail | relay (default) or direct on 25 | same | relay |
 
+## PostgreSQL
+
+Talaria keeps tenants, users, mailboxes, message summaries and the search
+index in PostgreSQL 15 or newer; message bodies stay on disk under
+`data_dir`, compressed and stored once per tenant. Most of the database is
+the search index, which stores each message's words once without their
+positions.
+
+On one 2 GB machine running both, install PostgreSQL from the distribution
+and copy [deploy/postgresql-talaria.conf](../deploy/postgresql-talaria.conf)
+into its `conf.d`: it caps PostgreSQL near 600 MB and listens on localhost
+only. Keep `synchronous_commit` on, so mail that was accepted survives a
+crash. A managed PostgreSQL (or one on another host) works the same; use
+`sslmode=require` in the URL.
+
+```sh
+sudo -u postgres createuser -P talaria
+sudo -u postgres createdb -O talaria talaria
+echo 'TALARIA_DATABASE_URL=postgres://talaria:SECRET@localhost:5432/talaria' | sudo tee /etc/talaria/env
+sudo chmod 600 /etc/talaria/env
+```
+
+The systemd unit reads `/etc/talaria/env`. Back up with `pg_dump` together
+with `data_dir/blobs`; a database without its blobs, or the reverse, is
+incomplete.
+
 ## Outbound mail
 
 Most VPS providers block outbound port 25, so `outbound.mode = "relay"` is the

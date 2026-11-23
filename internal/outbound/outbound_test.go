@@ -30,6 +30,7 @@ import (
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/store"
+	"github.com/gsoultan/talaria/internal/store/pgtest"
 )
 
 func selfSigned(t *testing.T) *tls.Config {
@@ -84,7 +85,7 @@ func (s *relaySession) Logout() error { return nil }
 
 func TestSubmitSignRelayBounce(t *testing.T) {
 	dir := t.TempDir()
-	st, _ := store.Open(dir)
+	st, _ := store.Open(context.Background(), pgtest.URL(t), store.Options{})
 	defer st.Close()
 	bl, _ := blob.Open(dir + "/blobs")
 	ctx := context.Background()

@@ -14,11 +14,12 @@ import (
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/store"
+	"github.com/gsoultan/talaria/internal/store/pgtest"
 )
 
 func TestIngest(t *testing.T) {
 	dir := t.TempDir()
-	st, _ := store.Open(dir)
+	st, _ := store.Open(context.Background(), pgtest.URL(t), store.Options{})
 	defer st.Close()
 	bl, _ := blob.Open(dir + "/blobs")
 	ctx := context.Background()

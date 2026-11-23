@@ -48,15 +48,14 @@ func (s *Store) CreateTenant(ctx context.Context, t Tenant) (Tenant, error) {
 		t.DisplayName = t.Name
 	}
 	t.CreatedAt = s.unix()
-	res, err := s.w.ExecContext(ctx, `INSERT INTO tenants(name, display_name, seat_limit, quota_bytes, daily_send_limit, created_at)
-		VALUES (?, ?, ?, ?, ?, ?)`, t.Name, t.DisplayName, t.SeatLimit, t.QuotaBytes, t.DailySendLimit, t.CreatedAt)
+	err := s.w.QueryRowContext(ctx, `INSERT INTO tenants(name, display_name, seat_limit, quota_bytes, daily_send_limit, created_at)
+		VALUES (?, ?, ?, ?, ?, ?) RETURNING id`, t.Name, t.DisplayName, t.SeatLimit, t.QuotaBytes, t.DailySendLimit, t.CreatedAt).Scan(&t.ID)
 	if isUnique(err) {
 		return t, fmt.Errorf("tenant %q: %w", t.Name, ErrExists)
 	}
 	if err != nil {
 		return t, err
 	}
-	t.ID, _ = res.LastInsertId()
 	return t, nil
 }
 
@@ -103,7 +102,7 @@ func (s *Store) ListTenants(ctx context.Context) ([]Tenant, error) {
 	rows, err := s.r.QueryContext(ctx, `SELECT t.id, t.name, t.display_name, t.seat_limit, t.quota_bytes, t.daily_send_limit, t.suspended, t.created_at,
 		(SELECT COUNT(*) FROM domains d WHERE d.tenant_id=t.id),
 		(SELECT COUNT(*) FROM users u WHERE u.tenant_id=t.id),
-		(SELECT COALESCE(SUM(used_bytes),0) FROM users u WHERE u.tenant_id=t.id)
+		(SELECT COALESCE(SUM(used_bytes),0)::bigint FROM users u WHERE u.tenant_id=t.id)
 		FROM tenants t ORDER BY t.name`)
 	if err != nil {
 		return nil, err
@@ -137,14 +136,13 @@ func (s *Store) CreateDomain(ctx context.Context, tenantID int64, name string) (
 		return Domain{}, err
 	}
 	d := Domain{TenantID: tenantID, Name: n, CreatedAt: s.unix()}
-	res, err := s.w.ExecContext(ctx, `INSERT INTO domains(tenant_id, name, created_at) VALUES (?, ?, ?)`, tenantID, n, d.CreatedAt)
+	err = s.w.QueryRowContext(ctx, `INSERT INTO domains(tenant_id, name, created_at) VALUES (?, ?, ?) RETURNING id`, tenantID, n, d.CreatedAt).Scan(&d.ID)
 	if isUnique(err) {
 		return d, fmt.Errorf("domain %q: %w", n, ErrExists)
 	}
 	if err != nil {
 		return d, err
 	}
-	d.ID, _ = res.LastInsertId()
 	return d, nil
 }
 

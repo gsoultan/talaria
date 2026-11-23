@@ -20,8 +20,11 @@ import (
 type Config struct {
 	// Hostname is the server's public FQDN, used in SMTP banners and HELO.
 	Hostname string `toml:"hostname"`
-	// DataDir holds the database and the message blob store.
+	// DataDir holds the message blob store, certificates and temporary
+	// files. Metadata lives in PostgreSQL (see Database).
 	DataDir string `toml:"data_dir"`
+	// Database is the PostgreSQL database for metadata and search.
+	Database Database `toml:"database"`
 	// MemoryLimit is the Go runtime soft memory limit, e.g. "512MiB".
 	MemoryLimit ByteSize `toml:"memory_limit"`
 	Log         Log      `toml:"log"`
@@ -33,6 +36,21 @@ type Config struct {
 	TLS         TLS      `toml:"tls"`
 	Ingest      Ingest   `toml:"ingest"`
 }
+
+// Database configures the PostgreSQL connection.
+type Database struct {
+	// URL is a PostgreSQL connection URL, e.g.
+	// postgres://talaria:secret@localhost:5432/talaria?sslmode=disable.
+	// TALARIA_DATABASE_URL in the environment overrides it, which keeps the
+	// password out of the config file.
+	URL string `toml:"url"`
+	// MaxConns caps open connections. Each one is a PostgreSQL process of
+	// several MB, so keep it small on a small machine. Default 10.
+	MaxConns int `toml:"max_conns"`
+}
+
+// DatabaseURLEnv overrides database.url.
+const DatabaseURLEnv = "TALARIA_DATABASE_URL"
 
 // TLS controls where TLS is terminated. Behind Cloudflare Tunnel or a web
 // gateway the HTTP side is usually terminated upstream ("off"), while SMTP and
@@ -141,6 +159,7 @@ func Default() Config {
 		Hostname:    "localhost",
 		DataDir:     "./data",
 		MemoryLimit: 512 * MiB,
+		Database:    Database{MaxConns: 10},
 		Log:         Log{Level: "info", Format: "text"},
 		HTTP:        HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
 		TLS:         TLS{Mode: "off"},
@@ -169,6 +188,9 @@ func Load(path string) (Config, error) {
 			return cfg, fmt.Errorf("parse config %s: %w", path, err)
 		}
 	}
+	if u := os.Getenv(DatabaseURLEnv); u != "" {
+		cfg.Database.URL = u
+	}
 	return cfg, cfg.Validate()
 }
 
@@ -180,6 +202,14 @@ func (c Config) Validate() error {
 	}
 	if c.DataDir == "" {
 		errs = append(errs, errors.New("data_dir is required"))
+	}
+	if c.Database.URL == "" {
+		errs = append(errs, errors.New("database.url is required (or set "+DatabaseURLEnv+")"))
+	} else if !strings.HasPrefix(c.Database.URL, "postgres://") && !strings.HasPrefix(c.Database.URL, "postgresql://") {
+		errs = append(errs, errors.New("database.url must be a postgres:// URL"))
+	}
+	if c.Database.MaxConns < 0 {
+		errs = append(errs, errors.New("database.max_conns must not be negative"))
 	}
 	switch c.Outbound.Mode {
 	case "direct":

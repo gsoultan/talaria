@@ -1,12 +1,14 @@
 [Unit]
 Description=Talaria mail server
-After=network-online.target
+After=network-online.target postgresql.service
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=talaria
 Group=talaria
+# TALARIA_DATABASE_URL=postgres://talaria:secret@localhost:5432/talaria
+EnvironmentFile=-/etc/talaria/env
 ExecStart=/usr/local/bin/talaria -config /etc/talaria/talaria.toml
 Restart=on-failure
 RestartSec=2s

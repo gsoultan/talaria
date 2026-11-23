@@ -41,7 +41,7 @@ type Mailbox struct {
 	Size          int64
 }
 
-func createDefaultMailboxes(ctx context.Context, tx *sql.Tx, userID, now int64) error {
+func createDefaultMailboxes(ctx context.Context, tx *Tx, userID, now int64) error {
 	for _, m := range defaultMailboxes {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO mailboxes(user_id, name, special_use, uid_validity) VALUES (?, ?, ?, ?)`, userID, m.name, m.use, now); err != nil {
 			return err
@@ -67,7 +67,7 @@ func (s *Store) ListMailboxes(ctx context.Context, userID int64) ([]Mailbox, err
 	rows, err := s.r.QueryContext(ctx, `SELECT `+mailboxCols+`,
 		(SELECT COUNT(*) FROM messages m WHERE m.mailbox_id=b.id),
 		(SELECT COUNT(*) FROM messages m WHERE m.mailbox_id=b.id AND (m.flags & 1)=0),
-		(SELECT COALESCE(SUM(size),0) FROM messages m WHERE m.mailbox_id=b.id)
+		(SELECT COALESCE(SUM(size),0)::bigint FROM messages m WHERE m.mailbox_id=b.id)
 		FROM mailboxes b WHERE b.user_id=?
 		ORDER BY CASE b.name WHEN 'INBOX' THEN 0 ELSE 1 END, CASE b.special_use WHEN '' THEN 1 ELSE 0 END, b.id`, userID)
 	if err != nil {
@@ -118,14 +118,14 @@ func (s *Store) CreateMailbox(ctx context.Context, userID int64, name string) (M
 	if err := validMailboxName(name); err != nil {
 		return Mailbox{}, err
 	}
-	res, err := s.w.ExecContext(ctx, `INSERT INTO mailboxes(user_id, name, uid_validity) VALUES (?, ?, ?)`, userID, name, s.now().UnixNano()/1e6&0x7fffffff)
+	var id int64
+	err := s.w.QueryRowContext(ctx, `INSERT INTO mailboxes(user_id, name, uid_validity) VALUES (?, ?, ?) RETURNING id`, userID, name, s.now().UnixNano()/1e6&0x7fffffff).Scan(&id)
 	if isUnique(err) {
 		return Mailbox{}, fmt.Errorf("folder %q: %w", name, ErrExists)
 	}
 	if err != nil {
 		return Mailbox{}, err
 	}
-	id, _ := res.LastInsertId()
 	return s.Mailbox(ctx, userID, id)
 }
 
@@ -134,7 +134,7 @@ func (s *Store) RenameMailbox(ctx context.Context, userID, id int64, newName str
 	if err := validMailboxName(newName); err != nil {
 		return err
 	}
-	return s.tx(ctx, func(tx *sql.Tx) error {
+	return s.tx(ctx, func(tx *Tx) error {
 		var old string
 		if err := tx.QueryRowContext(ctx, `SELECT name FROM mailboxes WHERE id=? AND user_id=?`, id, userID).Scan(&old); err != nil {
 			return ErrNotFound
@@ -156,7 +156,7 @@ func (s *Store) RenameMailbox(ctx context.Context, userID, id int64, newName str
 
 // DeleteMailbox removes a folder that is not special-use, with its messages.
 func (s *Store) DeleteMailbox(ctx context.Context, userID, id int64) error {
-	return s.tx(ctx, func(tx *sql.Tx) error {
+	return s.tx(ctx, func(tx *Tx) error {
 		var use string
 		if err := tx.QueryRowContext(ctx, `SELECT special_use FROM mailboxes WHERE id=? AND user_id=?`, id, userID).Scan(&use); err != nil {
 			return ErrNotFound

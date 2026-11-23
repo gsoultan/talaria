@@ -24,6 +24,7 @@ import (
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/store"
+	"github.com/gsoultan/talaria/internal/store/pgtest"
 	"github.com/gsoultan/talaria/internal/uploads"
 )
 
@@ -41,7 +42,7 @@ type env struct {
 func setup(t *testing.T) *env {
 	t.Helper()
 	dir := t.TempDir()
-	st, err := store.Open(dir)
+	st, err := store.Open(context.Background(), pgtest.URL(t), store.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

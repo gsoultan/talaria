@@ -69,12 +69,14 @@ type Server struct {
 	acme   *tlsutil.ACME
 }
 
-// OpenStores opens the database and blob store under the data directory.
-func OpenStores(dataDir string) (*store.Store, *blob.Store, error) {
+// OpenStores connects to the database and opens the blob store under the
+// data directory.
+func OpenStores(cfg config.Config) (*store.Store, *blob.Store, error) {
+	dataDir := cfg.DataDir
 	if err := os.MkdirAll(filepath.Join(dataDir, "tmp"), 0o700); err != nil {
 		return nil, nil, err
 	}
-	st, err := store.Open(dataDir)
+	st, err := store.Open(context.Background(), cfg.Database.URL, store.Options{MaxConns: cfg.Database.MaxConns})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,7 +94,7 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	st, bl, err := OpenStores(cfg.DataDir)
+	st, bl, err := OpenStores(cfg)
 	if err != nil {
 		return nil, err
 	}

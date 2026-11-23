@@ -16,11 +16,12 @@ import (
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/store"
+	"github.com/gsoultan/talaria/internal/store/pgtest"
 )
 
 func TestInbound(t *testing.T) {
 	dir := t.TempDir()
-	st, err := store.Open(dir)
+	st, err := store.Open(context.Background(), pgtest.URL(t), store.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
