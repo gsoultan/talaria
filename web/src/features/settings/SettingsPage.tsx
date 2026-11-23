@@ -1,18 +1,16 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { Alert, Anchor, Box, Button, Code, CopyButton, Group, Kbd, NavLink, Paper, PasswordInput, SegmentedControl, Stack, Table, Text, Title, useMantineColorScheme } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useForm } from '@tanstack/react-form'
 import type { ReactNode } from 'react'
-import { AuthService } from '../../gen/talaria/v1/auth_pb'
-import { MailService } from '../../gen/talaria/v1/mail_pb'
 import { errorText } from '../../lib/errors'
 import { bytes } from '../../lib/format'
 import { Link, useLocation } from '../../lib/router'
 import { useMe } from '../auth/useMe'
+import { useApiMutation, useApiQuery } from '../../lib/api'
 
 const sections = [
   { id: 'account', label: 'Account and password' },
@@ -39,7 +37,7 @@ function Section({ title, children, sub }: { title: string; sub?: string; childr
 
 function Account() {
   const me = useMe().data?.user
-  const change = useMutation(AuthService.method.changePassword)
+  const change = useApiMutation('account.ChangePassword')
   const form = useForm({
     defaultValues: { current: '', next: '', confirm: '' },
     onSubmit: async ({ value, formApi }) => {
@@ -61,7 +59,7 @@ function Account() {
         </Text>
         {me && (
           <Text size="sm" c="dimmed">
-            {bytes(me.usedBytes)} used{me.quotaBytes > 0n ? ` of ${bytes(me.quotaBytes)}` : ''}
+            {bytes(me.usedBytes)} used{me.quotaBytes > 0 ? ` of ${bytes(me.quotaBytes)}` : ''}
           </Text>
         )}
       </Stack>
@@ -103,7 +101,7 @@ function Account() {
 }
 
 function Apps() {
-  const q = useQuery(MailService.method.getMailSettings, {}, { staleTime: 60 * 60_000 })
+  const q = useApiQuery('mail.GetMailSettings', {}, { staleTime: 60 * 60_000 })
   const me = useMe().data?.user
   const host = q.data?.hostname ?? window.location.hostname
   const by = (p: string) => (q.data?.endpoints ?? []).filter((e) => e.protocol === p)

@@ -20,14 +20,12 @@ import (
 	"sync"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/emersion/go-imap/v2/imapserver"
 	"github.com/emersion/go-smtp"
 	"golang.org/x/net/netutil"
 
-	talariav1 "github.com/gsoultan/talaria/gen/go/talaria/v1"
-	"github.com/gsoultan/talaria/gen/go/talaria/v1/talariav1connect"
-	"github.com/gsoultan/talaria/internal/api"
+	"github.com/gsoultan/talaria/app"
+	"github.com/gsoultan/talaria/domain"
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/clientip"
 	"github.com/gsoultan/talaria/internal/config"
@@ -41,6 +39,7 @@ import (
 	"github.com/gsoultan/talaria/internal/smtpd"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/tlsutil"
+	"github.com/gsoultan/talaria/internal/uploads"
 	"github.com/gsoultan/talaria/internal/webui"
 )
 
@@ -130,22 +129,20 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 	s.Submit = &outbound.Submitter{Store: st, Blobs: bl, Deliver: s.Deliver, Keys: s.Keys, Queue: s.Queue, Hostname: cfg.Hostname,
 		TmpDir: s.Deliver.TmpDir, MaxSize: int64(cfg.SMTP.MaxMessageSize), Log: log}
 
-	authn := api.NewAuth(st)
-	maxRead := int(cfg.SMTP.MaxMessageSize)*2 + 1<<20
-	opts := connect.WithHandlerOptions(connect.WithInterceptors(authn), connect.WithReadMaxBytes(maxRead))
-	mailSrv := &api.MailServer{Store: st, Blobs: bl, Hub: s.Hub, Submit: s.Submit, Deliver: s.Deliver, Hostname: cfg.Hostname,
-		MaxSize: int64(cfg.SMTP.MaxMessageSize), Endpoints: mailEndpoints(cfg)}
-	adminSrv := &api.AdminServer{Store: st, Keys: s.Keys, Hostname: cfg.Hostname, Route: route, Wake: s.Queue.Wake}
+	ups, err := uploads.New(filepath.Join(cfg.DataDir, "tmp", "uploads"), int64(cfg.SMTP.MaxMessageSize))
+	if err != nil {
+		st.Close()
+		return nil, err
+	}
+	deps := app.Deps{Store: st, Blobs: bl, Hub: s.Hub, Submit: s.Submit, Deliver: s.Deliver, Keys: s.Keys, Uploads: ups,
+		Hostname: cfg.Hostname, MaxSize: int64(cfg.SMTP.MaxMessageSize), Endpoints: mailEndpoints(cfg),
+		Route: route, Wake: s.Queue.Wake, Logger: log}
 	if cfg.Outbound.Mode == "relay" {
-		adminSrv.RelayHost = cfg.Outbound.Relay.Host
+		deps.RelayHost = cfg.Outbound.Relay.Host
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(talariav1connect.NewSystemServiceHandler(api.NewSystemServer()))
-	mux.Handle(talariav1connect.NewAuthServiceHandler(api.NewAuthServer(authn), opts))
-	mux.Handle(talariav1connect.NewMailServiceHandler(mailSrv, opts))
-	mux.Handle(talariav1connect.NewAdminServiceHandler(adminSrv, opts))
-	(&api.Downloads{Auth: authn, Mail: mailSrv}).Register(mux)
+	mux.Handle("/api/", app.Build(deps))
 	if cfg.Ingest.Enabled {
 		tok, err := os.ReadFile(cfg.Ingest.TokenFile)
 		if err != nil {
@@ -367,10 +364,10 @@ func (s *Server) Run(ctx context.Context) error {
 // mailEndpoints lists the mail-app listeners that will start, for the
 // webmail's setup screen. Mail apps need TLS, so listeners without it are
 // left out, as mailListener and serveSubmission skip them too.
-func mailEndpoints(cfg config.Config) []*talariav1.MailEndpoint {
+func mailEndpoints(cfg config.Config) []domain.MailEndpoint {
 	certs := cfg.TLS.Mode != "off"
 	secure := func(pp config.ProxyProtocol) bool { return certs || pp.UpstreamTLS }
-	var out []*talariav1.MailEndpoint
+	var out []domain.MailEndpoint
 	add := func(proto, addr, sec string, ok bool) {
 		if addr == "" || !ok {
 			return
@@ -380,7 +377,7 @@ func mailEndpoints(cfg config.Config) []*talariav1.MailEndpoint {
 		if err != nil || perr != nil {
 			return
 		}
-		out = append(out, &talariav1.MailEndpoint{Protocol: proto, Port: int32(port), Security: sec})
+		out = append(out, domain.MailEndpoint{Protocol: proto, Port: port, Security: sec})
 	}
 	add("IMAP", cfg.IMAP.ListenTLS, "TLS", secure(cfg.IMAP.ProxyProtocol))
 	add("IMAP", cfg.IMAP.Listen, "STARTTLS", certs)

@@ -1,12 +1,10 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { Anchor, Avatar, Box, Button, Center, Group, Loader, Paper, ScrollArea, Stack, Text, Textarea, Title, UnstyledButton } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { MailService, type MessageSummary } from '../../gen/talaria/v1/mail_pb'
 import { errorText, isNetworkError } from '../../lib/errors'
 import { avatarColor, fullDate, initials, listDate, plural, splitAddresses } from '../../lib/format'
 import { queueOffline } from '../../lib/outbox'
@@ -16,9 +14,10 @@ import { Attachments } from './Reader'
 import { reply } from './reply'
 import { Icon, icons } from './Shell'
 import { useMyAddresses } from './MailPage'
+import { type MessageSummary, ofOps, useApiMutation, useApiQuery } from '../../lib/api'
 
 function Expanded({ m }: { m: MessageSummary }) {
-  const q = useQuery(MailService.method.getMessage, { id: m.id }, { staleTime: 10 * 60_000 })
+  const q = useApiQuery('mail.GetMessage', { id: m.id }, { staleTime: 10 * 60_000 })
   const d = q.data?.message
   return (
     <Box>
@@ -65,8 +64,8 @@ function Expanded({ m }: { m: MessageSummary }) {
 
 function QuickReply({ last, me }: { last: MessageSummary; me: string[] }) {
   const qc = useQueryClient()
-  const detail = useQuery(MailService.method.getMessage, { id: last.id }, { staleTime: 10 * 60_000 }).data?.message
-  const send = useMutation(MailService.method.sendMessage)
+  const detail = useApiQuery('mail.GetMessage', { id: last.id }, { staleTime: 10 * 60_000 }).data?.message
+  const send = useApiMutation('mail.SendMessage')
   const [text, setText] = useState('')
   const mine = new Set(me.map((a) => a.toLowerCase()))
   const others = [...new Set([last.fromAddr, ...splitAddresses(last.to), ...splitAddresses(last.cc)].map((a) => (/<([^>]+)>/.exec(a)?.[1] ?? a).trim().toLowerCase()))].filter((a) => a && !mine.has(a))
@@ -88,7 +87,7 @@ function QuickReply({ last, me }: { last: MessageSummary; me: string[] }) {
       await send.mutateAsync({ message: msg })
       setText('')
       notifications.show({ color: 'green', message: 'Sent', autoClose: 2500 })
-      void qc.invalidateQueries({ predicate: (q) => ['GetThread', 'ListMailboxes'].includes((q.queryKey[1] as { methodName?: string })?.methodName ?? '') })
+      void qc.invalidateQueries({ predicate: ofOps('mail.GetThread', 'mail.ListMailboxes') })
     } catch (err) {
       if (isNetworkError(err)) {
         await queueOffline(msg)
@@ -133,11 +132,11 @@ function QuickReply({ last, me }: { last: MessageSummary; me: string[] }) {
 }
 
 export function ThreadPage({ id }: { id: string }) {
-  const q = useQuery(MailService.method.getThread, { threadId: BigInt(id) })
+  const q = useApiQuery('mail.GetThread', { threadId: Number(id) })
   const me = useMyAddresses()
   const act = useMailActions()
   const msgs = q.data?.messages ?? []
-  const [open, setOpen] = useState<Set<bigint>>(new Set())
+  const [open, setOpen] = useState<Set<number>>(new Set())
   const last = msgs[msgs.length - 1]
 
   useEffect(() => {

@@ -3,7 +3,7 @@
 
 const units = ['B', 'KB', 'MB', 'GB', 'TB']
 
-export function bytes(n: bigint | number): string {
+export function bytes(n: number): string {
   let v = Number(n)
   let i = 0
   while (v >= 1024 && i < units.length - 1) {
@@ -19,7 +19,7 @@ const full = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle
 const yearly = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 
 /** Short list date: time today, weekday this week, date otherwise. */
-export function listDate(unix: bigint | number): string {
+export function listDate(unix: number): string {
   const d = new Date(Number(unix) * 1000)
   const now = new Date()
   if (d.toDateString() === now.toDateString()) return time.format(d)
@@ -30,7 +30,7 @@ export function listDate(unix: bigint | number): string {
   return yearly.format(d)
 }
 
-export function fullDate(unix: bigint | number): string {
+export function fullDate(unix: number): string {
   return full.format(new Date(Number(unix) * 1000))
 }
 
@@ -42,7 +42,7 @@ export function initials(name: string, addr = ''): string {
   return (a + b).toUpperCase()
 }
 
-export function plural(n: number | bigint, one: string, many = one + 's'): string {
+export function plural(n: number, one: string, many = one + 's'): string {
   const v = Number(n)
   return `${v.toLocaleString()} ${v === 1 ? one : many}`
 }

@@ -14,12 +14,24 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/gsoultan/talaria/internal/api"
+	"github.com/gsoultan/talaria/app"
 	"github.com/gsoultan/talaria/internal/config"
 	"github.com/gsoultan/talaria/internal/server"
+	"github.com/gsoultan/talaria/usecase"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "openapi" {
+		// The webmail API's OpenAPI document; the web client's types are
+		// generated from it (make gen).
+		b, err := app.OpenAPI()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "talaria:", err)
+			os.Exit(1)
+		}
+		os.Stdout.Write(append(b, '\n'))
+		return
+	}
 	if handled, err := runAdmin(os.Args[1:]); handled {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "talaria:", err)
@@ -32,7 +44,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("talaria %s (%s)\n", api.Version, api.Commit)
+		fmt.Printf("talaria %s (%s)\n", usecase.Version, usecase.Commit)
 		return
 	}
 	if err := run(*configPath); err != nil {
@@ -52,7 +64,7 @@ func run(configPath string) error {
 	if os.Getenv("GOMEMLIMIT") == "" && cfg.MemoryLimit > 0 {
 		debug.SetMemoryLimit(int64(cfg.MemoryLimit))
 	}
-	log.Info("starting talaria", "version", api.Version, "hostname", cfg.Hostname,
+	log.Info("starting talaria", "version", usecase.Version, "hostname", cfg.Hostname,
 		"memory_limit", debug.SetMemoryLimit(-1), "outbound", cfg.Outbound.Mode, "tls", cfg.TLS.Mode)
 
 	srv, err := server.New(cfg, log)

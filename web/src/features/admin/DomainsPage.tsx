@@ -1,27 +1,26 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { Alert, Badge, Button, Code, CopyButton, Group, Paper, Stack, Table, Text, TextInput, Title, Tooltip } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { AdminService, type Domain } from '../../gen/talaria/v1/admin_pb'
 import { errorText } from '../../lib/errors'
 import { Health, PageTitle, useTenant } from './AdminShell'
 import { ConfirmButton } from './confirm'
+import { type Domain, useApiMutation, useApiQuery , ofOps, type OpName } from '../../lib/api'
 
 function invalidate(qc: ReturnType<typeof useQueryClient>, ...methods: string[]) {
-  void qc.invalidateQueries({ predicate: (q) => methods.includes((q.queryKey[1] as { methodName?: string })?.methodName ?? '') })
+  void qc.invalidateQueries({ predicate: ofOps(...methods.map((m) => `admin.${m}` as OpName)) })
 }
 export { invalidate }
 
-function DnsRecords({ tenant, domain }: { tenant: bigint; domain: Domain }) {
+function DnsRecords({ tenant, domain }: { tenant: number; domain: Domain }) {
   const qc = useQueryClient()
   const [check, setCheck] = useState(false)
-  const q = useQuery(AdminService.method.getDomainSetup, { tenantId: tenant, domainId: domain.id, check }, { staleTime: check ? 0 : 60_000 })
-  const rotate = useMutation(AdminService.method.rotateDKIM, {
+  const q = useApiQuery('admin.GetDomainSetup', { tenantId: tenant, domainId: domain.id, check }, { staleTime: check ? 0 : 60_000 })
+  const rotate = useApiMutation('admin.RotateDKIM', {
     onSuccess: () => {
       invalidate(qc, 'GetDomainSetup')
       notifications.show({ message: 'New DKIM key made. Publish its record, then mail is signed with it.' })
@@ -128,9 +127,9 @@ function DnsRecords({ tenant, domain }: { tenant: bigint; domain: Domain }) {
   )
 }
 
-function AddDomain({ tenant }: { tenant: bigint }) {
+function AddDomain({ tenant }: { tenant: number }) {
   const qc = useQueryClient()
-  const create = useMutation(AdminService.method.createDomain)
+  const create = useApiMutation('admin.CreateDomain')
   const form = useForm({
     defaultValues: { name: '' },
     onSubmit: async ({ value, formApi }) => {
@@ -165,9 +164,9 @@ function AddDomain({ tenant }: { tenant: bigint }) {
 export function DomainsPage() {
   const qc = useQueryClient()
   const tenant = useTenant()
-  const q = useQuery(AdminService.method.listDomains, { tenantId: tenant })
-  const del = useMutation(AdminService.method.deleteDomain, { onSuccess: () => invalidate(qc, 'ListDomains', 'GetStats', 'ListUsers') })
-  const [sel, setSel] = useState<bigint | null>(null)
+  const q = useApiQuery('admin.ListDomains', { tenantId: tenant })
+  const del = useApiMutation('admin.DeleteDomain', { onSuccess: () => invalidate(qc, 'ListDomains', 'GetStats', 'ListUsers') })
+  const [sel, setSel] = useState<number | null>(null)
   const domains = q.data?.domains ?? []
   const open = domains.find((d) => d.id === sel) ?? domains[0]
   return (

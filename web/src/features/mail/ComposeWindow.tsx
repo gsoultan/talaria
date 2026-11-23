@@ -1,23 +1,23 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import type { MessageInitShape } from '@bufbuild/protobuf'
-import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { ActionIcon, Alert, Anchor, Box, Button, CloseButton, Group, Paper, Portal, Select, Stack, TagsInput, Text, TextInput, Textarea, Tooltip } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useForm, useStore } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { MailService, type ComposeSchema } from '../../gen/talaria/v1/mail_pb'
 import { errorText, isNetworkError } from '../../lib/errors'
 import { bytes } from '../../lib/format'
 import { queueOffline } from '../../lib/outbox'
 import { useMe } from '../auth/useMe'
 import { closeCompose, useCompose, type Draft } from './composeStore'
 import { Icon, icons } from './Shell'
+import { type Compose, ofOps, upload, useApiMutation, useApiQuery } from '../../lib/api'
 
-type File_ = { name: string; type: string; size: number; data: Uint8Array }
+// A file being attached. It is uploaded as soon as it is added, so sending
+// only waits for files still on their way.
+type Att = { key: string; file: File; name: string; size: number; uploadId?: string; failed?: string }
 
 const MAX_TOTAL = 25 * 1024 * 1024
 const emailish = /^(?:[^<>@]*<)?[^<>@\s]+@[^<>@\s]+\.[^<>@\s]+>?$/
@@ -30,12 +30,13 @@ function invalid(list: string[]): string | undefined {
 function Composer({ draft }: { draft: Draft }) {
   const qc = useQueryClient()
   const me = useMe().data?.user
-  const identities = useQuery(MailService.method.listIdentities, {}, { staleTime: 10 * 60_000 }).data?.identities ?? []
-  const send = useMutation(MailService.method.sendMessage)
-  const save = useMutation(MailService.method.saveDraft)
-  const [files, setFiles] = useState<File_[]>([])
+  const identities = useApiQuery('mail.ListIdentities', {}, { staleTime: 10 * 60_000 }).data?.identities ?? []
+  const send = useApiMutation('mail.SendMessage')
+  const save = useApiMutation('mail.SaveDraft')
+  const [files, setFiles] = useState<Att[]>([])
+  const uploads = useRef(new Map<string, Promise<string>>())
   const [showCc, setShowCc] = useState(draft.cc.length > 0 || draft.bcc.length > 0)
-  const [draftId, setDraftId] = useState(draft.draftId ?? 0n)
+  const [draftId, setDraftId] = useState(draft.draftId ?? 0)
   const [savedAt, setSavedAt] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -53,19 +54,22 @@ function Composer({ draft }: { draft: Draft }) {
     },
     onSubmit: async ({ value }) => {
       setError(null)
-      const msg = build(value)
+      let msg = build(value)
       try {
+        msg = await withUploads(msg)
         const res = await send.mutateAsync({ message: msg })
         notifications.show({
           color: 'green',
           message: res.queued > 0 ? 'Sent. Outside recipients get it in a moment.' : 'Sent',
           autoClose: 3000,
         })
-        void qc.invalidateQueries({ predicate: (q) => ['ListMailboxes', 'ListMessages'].includes((q.queryKey[1] as { methodName?: string })?.methodName ?? '') })
+        void qc.invalidateQueries({ predicate: ofOps('mail.ListMailboxes', 'mail.ListMessages') })
         closeCompose()
       } catch (err) {
         if (isNetworkError(err)) {
-          await queueOffline(msg)
+          const done = new Set(msg.attachments?.map((a) => a.uploadId))
+          const pending = files.filter((f) => !f.uploadId || !done.has(f.uploadId)).map((f) => ({ file: f.file }))
+          await queueOffline({ ...msg, attachments: msg.attachments?.filter((a) => done.has(a.uploadId)) }, pending)
           notifications.show({ color: 'orange', message: 'You’re offline. It’s in the outbox and sends when you reconnect.' })
           closeCompose()
           return
@@ -75,7 +79,29 @@ function Composer({ draft }: { draft: Draft }) {
     },
   })
 
-  const build = (v: typeof form.state.values, id = draftId): MessageInitShape<typeof ComposeSchema> => ({
+  const startUpload = (a: Att): Promise<string> => {
+    let p = uploads.current.get(a.key)
+    if (!p) {
+      p = upload(a.file, a.name).then((u) => {
+        setFiles((cur) => cur.map((f) => (f.key === a.key ? { ...f, uploadId: u.id, failed: undefined } : f)))
+        return u.id
+      })
+      p.catch((err: unknown) => {
+        uploads.current.delete(a.key)
+        if (!isNetworkError(err)) setFiles((cur) => cur.map((f) => (f.key === a.key ? { ...f, failed: errorText(err) } : f)))
+      })
+      uploads.current.set(a.key, p)
+    }
+    return p
+  }
+
+  // Waits for every attached file to be uploaded and lists them all.
+  const withUploads = async (m: Compose): Promise<Compose> => {
+    const ids = await Promise.all(files.map((f) => f.uploadId ?? startUpload(f)))
+    return { ...m, attachments: ids.map((uploadId) => ({ uploadId })) }
+  }
+
+  const build = (v: typeof form.state.values, id = draftId): Compose => ({
     from: v.from,
     to: v.to,
     cc: v.cc,
@@ -84,7 +110,7 @@ function Composer({ draft }: { draft: Draft }) {
     textBody: v.body,
     inReplyTo: draft.inReplyTo ?? '',
     references: draft.references ?? [],
-    attachments: files.map((f) => ({ filename: f.name, contentType: f.type || 'application/octet-stream', data: f.data })),
+    attachments: files.flatMap((f) => (f.uploadId ? [{ uploadId: f.uploadId }] : [])),
     draftId: id,
   })
 
@@ -111,9 +137,9 @@ function Composer({ draft }: { draft: Draft }) {
   const total = files.reduce((n, f) => n + f.size, 0)
   const addFiles = async (list: FileList | null) => {
     if (!list) return
-    const add: File_[] = []
-    for (const f of Array.from(list)) add.push({ name: f.name, type: f.type, size: f.size, data: new Uint8Array(await f.arrayBuffer()) })
+    const add: Att[] = Array.from(list, (f) => ({ key: crypto.randomUUID(), file: f, name: f.name, size: f.size }))
     setFiles((cur) => [...cur, ...add])
+    if (navigator.onLine) for (const a of add) startUpload(a).catch(() => {})
   }
 
   return (
@@ -205,16 +231,16 @@ function Composer({ draft }: { draft: Draft }) {
         </form.Field>
         {files.length > 0 && (
           <Group gap="xs">
-            {files.map((f, i) => (
-              <Paper key={i} withBorder px="xs" py={4} radius="md" style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 260 }}>
+            {files.map((f) => (
+              <Paper key={f.key} withBorder px="xs" py={4} radius="md" style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: 260 }}>
                 <Icon d={icons.paperclip} size={14} />
                 <Text size="xs" truncate>
                   {f.name}
                 </Text>
-                <Text size="xs" c="dimmed">
-                  {bytes(f.size)}
+                <Text size="xs" c={f.failed ? 'red' : 'dimmed'} title={f.failed}>
+                  {f.failed ? 'Failed' : f.uploadId ? bytes(f.size) : 'Uploading…'}
                 </Text>
-                <CloseButton size="xs" aria-label={`Remove ${f.name}`} onClick={() => setFiles((cur) => cur.filter((_, j) => j !== i))} />
+                <CloseButton size="xs" aria-label={`Remove ${f.name}`} onClick={() => setFiles((cur) => cur.filter((x) => x.key !== f.key))} />
               </Paper>
             ))}
           </Group>
@@ -243,7 +269,10 @@ function Composer({ draft }: { draft: Draft }) {
             <Icon d={icons.paperclip} />
           </ActionIcon>
         </Tooltip>
-        <input ref={fileInput} type="file" multiple hidden onChange={(e) => void addFiles(e.currentTarget.files).then(() => (e.currentTarget.value = ''))} />
+        <input ref={fileInput} type="file" multiple hidden onChange={(e) => {
+            const el = e.currentTarget
+            void addFiles(el.files).then(() => (el.value = ''))
+          }} />
         {!phone && (
           <Text size="xs" c="dimmed" ml="auto">
             Ctrl + Enter sends. Offline? It goes in the outbox and sends when you reconnect.

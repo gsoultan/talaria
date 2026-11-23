@@ -1,12 +1,11 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useMutation } from '@connectrpc/connect-query'
 import { Alert, Anchor, Box, Button, Checkbox, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core'
 import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { LogoMark } from '../../components/Logo'
-import { AuthService } from '../../gen/talaria/v1/auth_pb'
+import { ofOps, useApiMutation } from '../../lib/api'
 import { errorText } from '../../lib/errors'
 
 function Envelope({ style }: { style: React.CSSProperties }) {
@@ -49,8 +48,8 @@ function BrandPanel() {
 
 export function LoginPage() {
   const qc = useQueryClient()
-  const login = useMutation(AuthService.method.login, {
-    onSuccess: () => qc.refetchQueries({ predicate: (q) => (q.queryKey[1] as { methodName?: string } | undefined)?.methodName === 'Me' }),
+  const login = useApiMutation('session.Login', {
+    onSuccess: () => qc.refetchQueries({ predicate: ofOps('account.Me') }),
   })
   const form = useForm({
     defaultValues: { email: '', password: '', remember: true },

@@ -14,7 +14,7 @@ COPY . .
 COPY --from=web /src/web/dist/ internal/webui/dist/
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath \
-    -ldflags "-s -w -X github.com/gsoultan/talaria/internal/api.Version=${VERSION}" \
+    -ldflags "-s -w -X github.com/gsoultan/talaria/usecase.Version=${VERSION}" \
     -o /out/talaria ./cmd/talaria
 
 FROM gcr.io/distroless/static-debian12:nonroot

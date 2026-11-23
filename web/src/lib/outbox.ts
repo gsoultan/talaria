@@ -1,19 +1,19 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { create, type MessageInitShape } from '@bufbuild/protobuf'
-import { createClient } from '@connectrpc/connect'
 import { createStore, del, entries, set } from 'idb-keyval'
-import { ComposeSchema, MailService } from '../gen/talaria/v1/mail_pb'
+import { type Compose, call, upload } from './api'
 import { isNetworkError } from './errors'
-import { transport } from './transport'
 
-// Mail written while offline waits here and goes out on reconnect.
+// Mail written while offline waits here and goes out on reconnect. Files
+// can't be uploaded offline, so they wait too, and are uploaded first.
 
-type Item = { id: string; compose: MessageInitShape<typeof ComposeSchema>; at: number }
+/** A file to attach that has not been uploaded yet. */
+export type PendingFile = { file: File; contentId?: string }
+
+type Item = { id: string; compose: Compose; files: PendingFile[]; at: number }
 
 const store = createStore('talaria-outbox', 'outbox')
-const client = createClient(MailService, transport)
 const listeners = new Set<(n: number) => void>()
 
 async function count(): Promise<number> {
@@ -31,10 +31,21 @@ export function onOutboxChange(fn: (n: number) => void): () => void {
   return () => listeners.delete(fn)
 }
 
-export async function queueOffline(compose: MessageInitShape<typeof ComposeSchema>) {
+export async function queueOffline(compose: Compose, files: PendingFile[] = []) {
   const id = crypto.randomUUID()
-  await set(id, { id, compose, at: Date.now() } satisfies Item, store)
+  await set(id, { id, compose, files, at: Date.now() } satisfies Item, store)
   await notify()
+}
+
+/** Uploads the files and adds them to the message's attachments. */
+export async function withFiles(compose: Compose, files: PendingFile[]): Promise<Compose> {
+  if (files.length === 0) return compose
+  const added = []
+  for (const f of files) {
+    const u = await upload(f.file, f.file.name)
+    added.push({ uploadId: u.id, contentId: f.contentId })
+  }
+  return { ...compose, attachments: [...(compose.attachments ?? []), ...added] }
 }
 
 let flushing = false
@@ -47,15 +58,17 @@ export async function flushOutbox(): Promise<number> {
   try {
     const items = (await entries<string, Item>(store)).map(([, v]) => v).sort((a, b) => a.at - b.at)
     for (const it of items) {
+      let message = it.compose
       try {
-        await client.sendMessage({ message: create(ComposeSchema, it.compose) })
+        message = await withFiles(it.compose, it.files ?? [])
+        await call('mail.SendMessage', { message })
         await del(it.id, store)
         sent++
       } catch (err) {
         if (isNetworkError(err)) break
         // A permanent error (bad address, quota): file it as a draft so
         // nothing is lost and the person can fix it.
-        await client.saveDraft({ message: create(ComposeSchema, it.compose) }).catch(() => {})
+        await call('mail.SaveDraft', { message }).catch(() => {})
         await del(it.id, store)
       }
     }

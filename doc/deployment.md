@@ -36,7 +36,8 @@ through a relay, add the relay's SPF include to the SPF record.
 ## Behind a web gateway (HTTP)
 
 Point the gateway at `http.listen` (default `:8080`). Talaria speaks HTTP/1.1
-and cleartext HTTP/2 (h2c), so gRPC, gRPC-Web and Connect all pass. Tell
+and cleartext HTTP/2 (h2c). The API is plain JSON over HTTP, and live
+updates are server-sent events, so any HTTP gateway passes them. Tell
 Talaria which addresses are the gateway, so it believes their client-IP header
 and nobody else's:
 
@@ -167,8 +168,10 @@ client_ip_header = "CF-Connecting-IP"
 mode = "off"   # Cloudflare terminates HTTPS
 ```
 
-The webmail uses the Connect protocol over plain HTTP POST/GET, not raw gRPC,
-so it does not depend on end-to-end HTTP/2 trailers through the tunnel.
+The webmail uses plain JSON over HTTP and server-sent events for live
+updates, so it does not depend on end-to-end HTTP/2 through the tunnel. The
+server sends a heartbeat every 25 seconds, which keeps the event stream open
+through Cloudflare's idle timeout.
 
 A public tunnel does **not** accept raw TCP from the internet, so port 25 and
 IMAP need another path:

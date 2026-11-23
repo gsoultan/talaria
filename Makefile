@@ -1,15 +1,21 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
-LDFLAGS := -s -w -X github.com/gsoultan/talaria/internal/api.Version=$(VERSION) -X github.com/gsoultan/talaria/internal/api.Commit=$(COMMIT)
+LDFLAGS := -s -w -X github.com/gsoultan/talaria/usecase.Version=$(VERSION) -X github.com/gsoultan/talaria/usecase.Commit=$(COMMIT)
 
-.PHONY: all gen web build test lint run clean
+.PHONY: all gen check web build test run clean
 
 all: build
 
-## gen: regenerate Go and TypeScript code from proto/
+## gen: regenerate the kakarot endpoints and transport, the OpenAPI
+## document, and the webmail's TypeScript client
 gen:
-	buf lint
-	buf generate
+	scripts/kakarot.sh gen
+	go run ./cmd/talaria openapi > api/openapi.json
+	cd web && bun run gen
+
+## check: kakarot's layer rules, and generated code up to date
+check:
+	scripts/kakarot.sh check
 
 ## web: build the webmail and copy it into the Go embed directory
 web:

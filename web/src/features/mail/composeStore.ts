@@ -14,7 +14,7 @@ export type Draft = {
   body: string
   inReplyTo?: string
   references?: string[]
-  draftId?: bigint
+  draftId?: number
 }
 
 let state: Draft | null = null

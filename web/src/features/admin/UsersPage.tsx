@@ -1,24 +1,22 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { Alert, Avatar, Badge, Button, CloseButton, Divider, Drawer, Group, Modal, NumberInput, Paper, PasswordInput, Select, Stack, Switch, Table, Text, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { AdminService } from '../../gen/talaria/v1/admin_pb'
-import { Role, type User } from '../../gen/talaria/v1/auth_pb'
 import { errorText } from '../../lib/errors'
 import { avatarColor, bytes, initials } from '../../lib/format'
-import { isPlatformAdmin, useMe } from '../auth/useMe'
+import { isPlatformAdmin, Role, useMe } from '../auth/useMe'
 import { PageTitle, useTenant } from './AdminShell'
 import { ConfirmButton } from './confirm'
 import { invalidate } from './DomainsPage'
+import { useApiMutation, useApiQuery, type User } from '../../lib/api'
 
-const GB = 1024n * 1024n * 1024n
+const GB = 1024 * 1024 * 1024
 
-function roleLabel(r: Role): string {
+function roleLabel(r: string): string {
   return r === Role.PLATFORM_ADMIN ? 'Platform admin' : r === Role.TENANT_ADMIN ? 'Tenant admin' : 'User'
 }
 
@@ -30,18 +28,18 @@ function roleOptions(platform: boolean) {
   ]
 }
 
-const toGB = (b: bigint) => (b === 0n ? 0 : Number(b) / Number(GB))
-const fromGB = (g: number | string) => BigInt(Math.round(Number(g || 0) * Number(GB)))
+const toGB = (b: number) => b / GB
+const fromGB = (g: number | string) => Math.round(Number(g || 0) * GB)
 
-function AddUser({ tenant, onClose }: { tenant: bigint; onClose: () => void }) {
+function AddUser({ tenant, onClose }: { tenant: number; onClose: () => void }) {
   const qc = useQueryClient()
   const me = useMe().data?.user
-  const create = useMutation(AdminService.method.createUser)
+  const create = useApiMutation('admin.CreateUser')
   const form = useForm({
     defaultValues: { email: '', name: '', password: '', role: String(Role.USER), quota: 0 as number | string },
     onSubmit: async ({ value }) => {
       try {
-        await create.mutateAsync({ tenantId: tenant, email: value.email.trim(), displayName: value.name.trim(), password: value.password, role: Number(value.role) as Role, quotaBytes: fromGB(value.quota) })
+        await create.mutateAsync({ tenantId: tenant, email: value.email.trim(), displayName: value.name.trim(), password: value.password, role: value.role, quotaBytes: fromGB(value.quota) })
         invalidate(qc, 'ListUsers', 'GetStats')
         notifications.show({ color: 'green', message: `${value.email} can sign in now.` })
         onClose()
@@ -87,11 +85,11 @@ function AddUser({ tenant, onClose }: { tenant: bigint; onClose: () => void }) {
   )
 }
 
-function Aliases({ tenant, user }: { tenant: bigint; user: User }) {
+function Aliases({ tenant, user }: { tenant: number; user: User }) {
   const qc = useQueryClient()
-  const list = useQuery(AdminService.method.listAliases, { tenantId: tenant, userId: user.id }).data?.aliases ?? []
-  const add = useMutation(AdminService.method.createAlias, { onSuccess: () => invalidate(qc, 'ListAliases') })
-  const del = useMutation(AdminService.method.deleteAlias, { onSuccess: () => invalidate(qc, 'ListAliases') })
+  const list = useApiQuery('admin.ListAliases', { tenantId: tenant, userId: user.id }).data?.aliases ?? []
+  const add = useApiMutation('admin.CreateAlias', { onSuccess: () => invalidate(qc, 'ListAliases') })
+  const del = useApiMutation('admin.DeleteAlias', { onSuccess: () => invalidate(qc, 'ListAliases') })
   const [addr, setAddr] = useState('')
   return (
     <Stack gap="xs">
@@ -125,19 +123,19 @@ function Aliases({ tenant, user }: { tenant: bigint; user: User }) {
   )
 }
 
-function EditUser({ tenant, user, onClose }: { tenant: bigint; user: User; onClose: () => void }) {
+function EditUser({ tenant, user, onClose }: { tenant: number; user: User; onClose: () => void }) {
   const qc = useQueryClient()
   const me = useMe().data?.user
-  const update = useMutation(AdminService.method.updateUser)
-  const setPw = useMutation(AdminService.method.setUserPassword)
-  const del = useMutation(AdminService.method.deleteUser)
+  const update = useApiMutation('admin.UpdateUser')
+  const setPw = useApiMutation('admin.SetUserPassword')
+  const del = useApiMutation('admin.DeleteUser')
   const [pw, setPwValue] = useState('')
   const self = me?.id === user.id
   const form = useForm({
     defaultValues: { name: user.displayName, role: String(user.role), quota: toGB(user.quotaBytes) as number | string, suspended: user.suspended },
     onSubmit: async ({ value }) => {
       try {
-        await update.mutateAsync({ id: user.id, displayName: value.name, role: Number(value.role) as Role, quotaBytes: fromGB(value.quota), suspended: value.suspended })
+        await update.mutateAsync({ id: user.id, displayName: value.name, role: value.role, quotaBytes: fromGB(value.quota), suspended: value.suspended })
         invalidate(qc, 'ListUsers')
         notifications.show({ color: 'green', message: 'Saved' })
       } catch {
@@ -236,13 +234,13 @@ function EditUser({ tenant, user, onClose }: { tenant: bigint; user: User; onClo
 
 export function UsersPage() {
   const tenant = useTenant()
-  const q = useQuery(AdminService.method.listUsers, { tenantId: tenant })
-  const stats = useQuery(AdminService.method.getStats, { tenantId: tenant }).data
+  const q = useApiQuery('admin.ListUsers', { tenantId: tenant })
+  const stats = useApiQuery('admin.GetStats', { tenantId: tenant }).data
   const [adding, setAdding] = useState(false)
-  const [edit, setEdit] = useState<bigint | null>(null)
+  const [edit, setEdit] = useState<number | null>(null)
   const users = q.data?.users ?? []
   const editing = users.find((u) => u.id === edit)
-  const sub = stats ? `${stats.users}${stats.seatLimit > 0n ? ` of ${stats.seatLimit}` : ''} seats · ${bytes(stats.usedBytes)}${stats.quotaBytes > 0n ? ` of ${bytes(stats.quotaBytes)}` : ''} tenant storage` : undefined
+  const sub = stats ? `${stats.users}${stats.seatLimit > 0 ? ` of ${stats.seatLimit}` : ''} seats · ${bytes(stats.usedBytes)}${stats.quotaBytes > 0 ? ` of ${bytes(stats.quotaBytes)}` : ''} tenant storage` : undefined
   return (
     <>
       <PageTitle title="Users" sub={sub} right={<Button onClick={() => setAdding(true)}>Add user</Button>} />
@@ -281,7 +279,7 @@ export function UsersPage() {
                   <Table.Td>
                     <Text size="sm">
                       {bytes(u.usedBytes)}
-                      {u.quotaBytes > 0n ? ` of ${bytes(u.quotaBytes)}` : ''}
+                      {u.quotaBytes > 0 ? ` of ${bytes(u.quotaBytes)}` : ''}
                     </Text>
                   </Table.Td>
                   <Table.Td>

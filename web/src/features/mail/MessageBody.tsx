@@ -3,8 +3,8 @@
 
 import { Alert, Button, Group, Text } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
-import type { MessageDetail } from '../../gen/talaria/v1/mail_pb'
 import { prepareHtml } from '../../lib/mimeWorker'
+import { type MessageDetail } from '../../lib/api'
 
 // Remote images are blocked until the person allows them, per sender.
 const allowKey = 'talaria.remote-images'
@@ -84,14 +84,14 @@ function HtmlFrame({ html }: { html: string }) {
   )
 }
 
-export function MessageBody({ id, detail, sender }: { id: bigint; detail: MessageDetail; sender: string }) {
+export function MessageBody({ id, detail, sender }: { id: number; detail: MessageDetail; sender: string }) {
   const [allow, setAllow] = useState(() => allowedSenders().has(sender.toLowerCase()))
   const [prepared, setPrepared] = useState<{ html: string; hasRemote: boolean } | null>(null)
 
   useEffect(() => {
     if (!detail.htmlBody) return
     const cids: Record<string, string> = {}
-    for (const a of detail.attachments) if (a.contentId) cids[a.contentId] = `/api/messages/${id}/parts/${a.part}?inline=1`
+    for (const a of detail.attachments) if (a.contentId) cids[a.contentId] = `/api/v1/messages/${id}/parts/${a.part}?inline=1`
     let live = true
     void prepareHtml(detail.htmlBody, cids, allow).then((r) => live && setPrepared(r))
     return () => {

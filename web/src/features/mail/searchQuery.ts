@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import type { Mailbox } from '../../gen/talaria/v1/mail_pb'
+import type { Mailbox } from '../../lib/api'
 import { displayName } from './mailboxes'
 
 export type Parsed = {
@@ -10,19 +10,19 @@ export type Parsed = {
   unread: boolean
   flagged: boolean
   hasAttachments: boolean
-  after: bigint
-  before: bigint
+  after: number
+  before: number
   mailbox: string
 }
 
-function toUnix(s: string): bigint {
+function toUnix(s: string): number {
   const t = Date.parse(s)
-  return Number.isNaN(t) ? 0n : BigInt(Math.floor(t / 1000))
+  return Number.isNaN(t) ? 0 : Math.floor(t / 1000)
 }
 
 /** Parses Gmail-style operators: from: is:unread is:starred has:attachment before: after: in: */
 export function parseQuery(q: string): Parsed {
-  const out: Parsed = { text: '', from: '', unread: false, flagged: false, hasAttachments: false, after: 0n, before: 0n, mailbox: '' }
+  const out: Parsed = { text: '', from: '', unread: false, flagged: false, hasAttachments: false, after: 0, before: 0, mailbox: '' }
   const words: string[] = []
   for (const tok of q.match(/(?:[^\s"]+|"[^"]*")+/g) ?? []) {
     const m = /^(from|is|has|before|after|in):(.+)$/i.exec(tok)

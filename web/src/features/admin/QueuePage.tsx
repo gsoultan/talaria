@@ -1,18 +1,19 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { Alert, Badge, Button, Group, Paper, SegmentedControl, Table, Text, Tooltip } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { AdminService, QueueStatus, type QueueItem } from '../../gen/talaria/v1/admin_pb'
 import { errorText } from '../../lib/errors'
 import { bytes, fullDate, listDate } from '../../lib/format'
 import { PageTitle, useTenant } from './AdminShell'
 import { invalidate } from './DomainsPage'
+import { type QueueItem, useApiMutation, useApiQuery } from '../../lib/api'
 
-function StatusBadge({ s }: { s: QueueStatus }) {
+const QueueStatus = { UNSPECIFIED: '', WAITING: 'waiting', SENDING: 'sending', SENT: 'sent', BOUNCED: 'bounced' } as const
+
+function StatusBadge({ s }: { s: string }) {
   switch (s) {
     case QueueStatus.WAITING:
       return (
@@ -54,10 +55,10 @@ export function QueuePage() {
   const qc = useQueryClient()
   const tenant = useTenant()
   const [filter, setFilter] = useState(String(QueueStatus.UNSPECIFIED))
-  const q = useQuery(AdminService.method.listQueue, { tenantId: tenant, status: Number(filter) as QueueStatus, limit: 200 }, { refetchInterval: 15_000 })
+  const q = useApiQuery('admin.ListQueue', { tenantId: tenant, status: filter, limit: 200 }, { refetchInterval: 15_000 })
   const done = { onSuccess: () => invalidate(qc, 'ListQueue', 'GetStats'), onError: (e: unknown) => notifications.show({ color: 'red', message: errorText(e) }) }
-  const retry = useMutation(AdminService.method.retryQueue, done)
-  const cancel = useMutation(AdminService.method.cancelQueue, done)
+  const retry = useApiMutation('admin.RetryQueue', done)
+  const cancel = useApiMutation('admin.CancelQueue', done)
   const d = q.data
   const noRelay = d?.route.startsWith('not configured')
   return (
@@ -66,7 +67,7 @@ export function QueuePage() {
         title="Outbound queue"
         sub={d ? `${d.waiting} waiting · ${d.sentToday.toLocaleString()} delivered today · ${d.bouncedToday} bounced` : undefined}
         right={
-          <Button variant="default" disabled={!d || d.waiting === 0n} loading={retry.isPending} onClick={() => retry.mutate({ tenantId: tenant, id: 0n })}>
+          <Button variant="default" disabled={!d || d.waiting === 0} loading={retry.isPending} onClick={() => retry.mutate({ tenantId: tenant, id: 0 })}>
             Retry all now
           </Button>
         }

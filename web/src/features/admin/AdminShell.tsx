@@ -1,26 +1,25 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useQuery } from '@connectrpc/connect-query'
 import { Anchor, Badge, Box, Group, NavLink, Paper, ScrollArea, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import type { ReactNode } from 'react'
 import { LogoMark } from '../../components/Logo'
-import { AdminService } from '../../gen/talaria/v1/admin_pb'
 import { bytes } from '../../lib/format'
 import { Link, navigate, useLocation } from '../../lib/router'
 import { isPlatformAdmin, useMe } from '../auth/useMe'
+import { useApiQuery } from '../../lib/api'
 
 /** The tenant being administered: ?tenant= for platform admins, else their own. */
-export function useTenant(): bigint {
+export function useTenant(): number {
   const { query } = useLocation()
   const me = useMe().data?.user
   const t = query.get('tenant')
-  if (t && isPlatformAdmin(me)) return BigInt(t)
-  return me?.tenantId ?? 0n
+  if (t && isPlatformAdmin(me)) return Number(t)
+  return me?.tenantId ?? 0
 }
 
-export function withTenant(path: string, tenant: bigint, own: bigint): string {
+export function withTenant(path: string, tenant: number, own: number): string {
   return tenant === own ? path : `${path}?tenant=${tenant}`
 }
 
@@ -28,7 +27,7 @@ function TenantPicker() {
   const me = useMe().data?.user
   const { path } = useLocation()
   const tenant = useTenant()
-  const list = useQuery(AdminService.method.listTenants, {}, { enabled: isPlatformAdmin(me) }).data?.tenants ?? []
+  const list = useApiQuery('admin.ListTenants', {}, { enabled: isPlatformAdmin(me) }).data?.tenants ?? []
   if (!isPlatformAdmin(me) || list.length < 2) return null
   return (
     <Select
@@ -38,7 +37,7 @@ function TenantPicker() {
       value={tenant.toString()}
       allowDeselect={false}
       data={list.map((t) => ({ value: t.id.toString(), label: t.displayName }))}
-      onChange={(v) => v && navigate(withTenant(path, BigInt(v), me!.tenantId))}
+      onChange={(v) => v && navigate(withTenant(path, Number(v), me!.tenantId))}
     />
   )
 }
@@ -65,17 +64,17 @@ export function Health() {
   const me = useMe().data?.user
   const tenant = useTenant()
   const server = isPlatformAdmin(me) && tenant === me?.tenantId
-  const s = useQuery(AdminService.method.getStats, { tenantId: tenant, server }, { refetchInterval: 30_000 }).data
+  const s = useApiQuery('admin.GetStats', { tenantId: tenant, server }, { refetchInterval: 30_000 }).data
   if (!s) return <SimpleGrid cols={{ base: 2, md: 4 }} h={92} />
-  const saved = s.rawBytes > 0n ? Math.round((1 - Number(s.storedBytes) / Number(s.rawBytes)) * 100) : 0
+  const saved = s.rawBytes > 0 ? Math.round((1 - Number(s.storedBytes) / Number(s.rawBytes)) * 100) : 0
   return (
     <SimpleGrid cols={{ base: 2, md: 4 }}>
       {server ? (
-        <StatCard label="Memory" value={bytes(s.heapBytes)} sub={s.memoryLimitBytes > 0n && s.memoryLimitBytes < 1n << 60n ? `of ${bytes(s.memoryLimitBytes)} limit` : 'no limit set'} />
+        <StatCard label="Memory" value={bytes(s.heapBytes)} sub={s.memoryLimitBytes > 0 && s.memoryLimitBytes < 1 << 60 ? `of ${bytes(s.memoryLimitBytes)} limit` : 'no limit set'} />
       ) : (
-        <StatCard label="Seats" value={`${s.users}${s.seatLimit > 0n ? ` of ${s.seatLimit}` : ''}`} sub={`${s.domains} domains`} />
+        <StatCard label="Seats" value={`${s.users}${s.seatLimit > 0 ? ` of ${s.seatLimit}` : ''}`} sub={`${s.domains} domains`} />
       )}
-      <StatCard label="Disk" value={bytes(s.storedBytes)} sub={s.rawBytes > 0n ? `from ${bytes(s.rawBytes)} raw mail, ${saved}% saved` : 'no mail yet'} />
+      <StatCard label="Disk" value={bytes(s.storedBytes)} sub={s.rawBytes > 0 ? `from ${bytes(s.rawBytes)} raw mail, ${saved}% saved` : 'no mail yet'} />
       <StatCard label="Queue" value={s.queueWaiting.toString()} sub={`${s.sentToday.toLocaleString()} sent today, ${s.bouncedToday} bounced`} />
       <StatCard label="Today" value={s.receivedToday.toLocaleString()} sub={`received, ${s.junkToday.toLocaleString()} spam`} />
     </SimpleGrid>
@@ -87,7 +86,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const { path } = useLocation()
   const tenant = useTenant()
   const narrow = useMediaQuery('(max-width: 62em)', false)
-  const own = me?.tenantId ?? 0n
+  const own = me?.tenantId ?? 0
   const items = [
     { to: '/admin/domains', label: 'Domains' },
     { to: '/admin/users', label: 'Users' },

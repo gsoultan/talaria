@@ -1,11 +1,10 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useInfiniteQuery, useQuery } from '@connectrpc/connect-query'
 import { Box, Center, Group, SegmentedControl, Stack, Text } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
-import { MailService, type MessageSummary } from '../../gen/talaria/v1/mail_pb'
 import { plural } from '../../lib/format'
 import { navigate } from '../../lib/router'
 import { useMe } from '../auth/useMe'
@@ -13,9 +12,10 @@ import { displayName, findMailbox, useMailboxes } from './mailboxes'
 import { MessageList } from './MessageList'
 import { Reader } from './Reader'
 import { Icon, icons } from './Shell'
+import { call, keyOf, type MessageSummary, useApiQuery } from '../../lib/api'
 
 function useMyAddresses(): string[] {
-  const ids = useQuery(MailService.method.listIdentities, {}, { staleTime: 10 * 60_000 }).data?.identities ?? []
+  const ids = useApiQuery('mail.ListIdentities', {}, { staleTime: 10 * 60_000 }).data?.identities ?? []
   const me = useMe().data?.user?.email
   return [...ids.map((i) => i.address), ...(me ? [me] : [])]
 }
@@ -83,11 +83,14 @@ export function MailboxPage({ slug, messageId }: { slug: string; messageId?: str
   const box = findMailbox(boxes.data?.mailboxes, slug)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
   const me = useMyAddresses()
-  const q = useInfiniteQuery(
-    MailService.method.listMessages,
-    { mailboxId: box?.id ?? 0n, limit: 100, cursor: '', unreadOnly: filter === 'unread' },
-    { pageParamKey: 'cursor', getNextPageParam: (p) => p.nextCursor || undefined, enabled: !!box },
-  )
+  const input = { mailboxId: box?.id ?? 0, limit: 100, unreadOnly: filter === 'unread' }
+  const q = useInfiniteQuery({
+    queryKey: keyOf('mail.ListMessages', input),
+    queryFn: ({ pageParam, signal }) => call('mail.ListMessages', { ...input, cursor: pageParam }, signal),
+    initialPageParam: '',
+    getNextPageParam: (p) => p.nextCursor || undefined,
+    enabled: !!box,
+  })
   const messages = q.data?.pages.flatMap((p) => p.messages) ?? []
   const open = messageId ? messages.find((m) => m.id.toString() === messageId) : undefined
   const sent = box?.specialUse === '\\Sent' || box?.specialUse === '\\Drafts'
@@ -107,7 +110,7 @@ export function MailboxPage({ slug, messageId }: { slug: string; messageId?: str
       header={
         <ListHeader
           title={box ? displayName(box) : ''}
-          sub={box ? `${plural(box.total, 'message')}${box.unread > 0n ? `, ${box.unread.toLocaleString()} unread` : ''}` : undefined}
+          sub={box ? `${plural(box.total, 'message')}${box.unread > 0 ? `, ${box.unread.toLocaleString()} unread` : ''}` : undefined}
           right={
             !sent && (
               <SegmentedControl
@@ -141,7 +144,7 @@ export function MailboxPage({ slug, messageId }: { slug: string; messageId?: str
 
 export function StarredPage({ messageId }: { messageId?: string }) {
   const me = useMyAddresses()
-  const q = useQuery(MailService.method.search, { query: '', flagged: true, limit: 200 })
+  const q = useApiQuery('mail.Search', { query: '', flagged: true, limit: 200 })
   const messages = q.data?.messages ?? []
   const open = messageId ? messages.find((m) => m.id.toString() === messageId) : undefined
   return (

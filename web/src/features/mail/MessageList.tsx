@@ -5,13 +5,13 @@ import { Avatar, Box, Center, Group, Loader, Text } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, type ReactNode } from 'react'
-import type { MessageSummary } from '../../gen/talaria/v1/mail_pb'
 import { avatarColor, initials, listDate } from '../../lib/format'
 import { Icon, icons } from './Shell'
+import { type MessageSummary } from '../../lib/api'
 
 type Props = {
   messages: MessageSummary[]
-  selectedId?: bigint
+  selectedId?: number
   onOpen: (m: MessageSummary) => void
   hasMore?: boolean
   loadMore?: () => void

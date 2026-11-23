@@ -1,11 +1,9 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useQuery } from '@connectrpc/connect-query'
 import { ActionIcon, Anchor, Avatar, Badge, Box, Button, Center, Group, Loader, Menu, Paper, ScrollArea, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
 import { useEffect } from 'react'
-import { MailService, type Attachment, type MessageSummary } from '../../gen/talaria/v1/mail_pb'
 import { errorText } from '../../lib/errors'
 import { avatarColor, bytes, fullDate, initials } from '../../lib/format'
 import { Link } from '../../lib/router'
@@ -15,6 +13,7 @@ import { bySpecial, displayName, sortMailboxes, useMailboxes } from './mailboxes
 import { MessageBody } from './MessageBody'
 import { forward, reply } from './reply'
 import { Icon, icons } from './Shell'
+import { type Attachment, type MessageSummary, useApiQuery } from '../../lib/api'
 
 function ext(a: Attachment): string {
   const e = a.filename.split('.').pop()
@@ -38,7 +37,7 @@ function AuthBadges({ m }: { m: MessageSummary }) {
   )
 }
 
-export function Attachments({ id, list }: { id: bigint; list: Attachment[] }) {
+export function Attachments({ id, list }: { id: number; list: Attachment[] }) {
   const files = list.filter((a) => !(a.inline && a.contentId))
   if (files.length === 0) return null
   return (
@@ -50,7 +49,7 @@ export function Attachments({ id, list }: { id: bigint; list: Attachment[] }) {
           p="xs"
           radius="md"
           component="a"
-          href={`/api/messages/${id}/parts/${a.part}`}
+          href={`/api/v1/messages/${id}/parts/${a.part}`}
           download={a.filename || true}
           className="t-plain"
           style={{ display: 'flex', alignItems: 'center', gap: 10, maxWidth: 280 }}
@@ -74,7 +73,7 @@ export function Attachments({ id, list }: { id: bigint; list: Attachment[] }) {
 
 /** One open message, with its actions. onClose returns to the list on phones. */
 export function Reader({ summary, onClose, me }: { summary: MessageSummary; onClose?: () => void; me: string[] }) {
-  const q = useQuery(MailService.method.getMessage, { id: summary.id }, { staleTime: 10 * 60_000 })
+  const q = useApiQuery('mail.GetMessage', { id: summary.id }, { staleTime: 10 * 60_000 })
   const boxes = useMailboxes().data?.mailboxes
   const act = useMailActions()
   // Opening marks read with a POST, so GetMessage stays free of side effects.
@@ -182,12 +181,12 @@ export function Reader({ summary, onClose, me }: { summary: MessageSummary; onCl
                   Report junk
                 </Menu.Item>
               )}
-              {summary.threadId > 0n && (
+              {summary.threadId > 0 && (
                 <Menu.Item component={Link} to={`/thread/${summary.threadId}`}>
                   Show conversation
                 </Menu.Item>
               )}
-              <Menu.Item component="a" href={`/api/messages/${summary.id}/raw`} download>
+              <Menu.Item component="a" href={`/api/v1/messages/${summary.id}/raw`} download>
                 Download original
               </Menu.Item>
               <Menu.Divider />

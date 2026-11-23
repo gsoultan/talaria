@@ -1,13 +1,10 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { ActionIcon, Avatar, Badge, Box, Burger, Button, Drawer, Group, Kbd, Menu, Progress, ScrollArea, Stack, Text, TextInput, Tooltip, UnstyledButton } from '@mantine/core'
 import { useDisclosure, useHotkeys, useMediaQuery } from '@mantine/hooks'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { LogoMark } from '../../components/Logo'
-import { AuthService } from '../../gen/talaria/v1/auth_pb'
-import { MailService } from '../../gen/talaria/v1/mail_pb'
 import { bytes, initials } from '../../lib/format'
 import type { LiveState } from '../../lib/live'
 import { onOutboxChange } from '../../lib/outbox'
@@ -16,6 +13,7 @@ import { Link, navigate, useLocation } from '../../lib/router'
 import { isAdmin, useMe } from '../auth/useMe'
 import { openCompose } from './composeStore'
 import { displayName, slugOf, sortMailboxes, useMailboxes } from './mailboxes'
+import { useApiMutation, useApiQuery } from '../../lib/api'
 
 function Icon({ d, size = 18 }: { d: string; size?: number }) {
   return (
@@ -119,7 +117,7 @@ function SearchBox({ onDone }: { onDone?: () => void }) {
 
 function AccountMenu() {
   const me = useMe().data?.user
-  const logout = useMutation(AuthService.method.logout)
+  const logout = useApiMutation('account.Logout')
   return (
     <Menu position="bottom-end" width={240}>
       <Menu.Target>
@@ -161,7 +159,7 @@ function AccountMenu() {
 }
 
 function Identities() {
-  const { data } = useQuery(MailService.method.listIdentities, {}, { staleTime: 10 * 60_000 })
+  const { data } = useApiQuery('mail.ListIdentities', {}, { staleTime: 10 * 60_000 })
   const ids = data?.identities ?? []
   if (ids.length < 2) return null
   return (
@@ -205,7 +203,7 @@ export function Folders({ onPick }: { onPick?: () => void }) {
             <Link key={m.id.toString()} to={`/mail/${slugOf(m)}`} className="t-folder" data-active={path.startsWith('/mail/') && active === slugOf(m)} onClick={onPick}>
               <Icon d={folderIcon[m.specialUse] ?? icons.folder} size={16} />
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(m)}</span>
-              {m.unread > 0n && m.specialUse !== '\\Sent' && m.specialUse !== '\\Trash' && (
+              {m.unread > 0 && m.specialUse !== '\\Sent' && m.specialUse !== '\\Trash' && (
                 <Text size="xs" fw={600}>
                   {m.unread.toLocaleString()}
                 </Text>

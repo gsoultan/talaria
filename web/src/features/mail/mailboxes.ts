@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useQuery } from '@connectrpc/connect-query'
-import { MailService, type Mailbox } from '../../gen/talaria/v1/mail_pb'
+import { type Mailbox, useApiQuery } from '../../lib/api'
 
 export const specialOrder = ['\\Inbox', '\\Drafts', '\\Sent', '\\Archive', '\\Junk', '\\Trash']
 
@@ -16,7 +15,7 @@ export const specialSlug: Record<string, string> = {
 }
 
 export function useMailboxes() {
-  return useQuery(MailService.method.listMailboxes, {}, { staleTime: 60_000 })
+  return useApiQuery('mail.ListMailboxes', {}, { staleTime: 60_000 })
 }
 
 /** Folders in display order: special ones first, then by name. */

@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import type { MessageDetail, MessageSummary } from '../../gen/talaria/v1/mail_pb'
+import type { MessageDetail, MessageSummary } from '../../lib/api'
 import { fullDate, splitAddresses } from '../../lib/format'
 import { openCompose } from './composeStore'
 

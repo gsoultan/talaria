@@ -1,19 +1,18 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useMutation, useQuery } from '@connectrpc/connect-query'
 import { Alert, Avatar, Badge, Button, Group, Modal, NumberInput, Paper, Stack, Switch, Table, Text, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { AdminService, type Tenant } from '../../gen/talaria/v1/admin_pb'
 import { errorText } from '../../lib/errors'
 import { avatarColor, bytes } from '../../lib/format'
 import { navigate } from '../../lib/router'
 import { Health, PageTitle } from './AdminShell'
 import { ConfirmButton } from './confirm'
 import { invalidate } from './DomainsPage'
+import { type Tenant, useApiMutation, useApiQuery } from '../../lib/api'
 
 const GB = 1024 ** 3
 
@@ -21,29 +20,32 @@ type Values = { name: string; displayName: string; seats: number | string; quota
 
 function TenantForm({ tenant, onClose }: { tenant?: Tenant; onClose: () => void }) {
   const qc = useQueryClient()
-  const create = useMutation(AdminService.method.createTenant)
-  const update = useMutation(AdminService.method.updateTenant)
-  const del = useMutation(AdminService.method.deleteTenant)
+  const create = useApiMutation('admin.CreateTenant')
+  const update = useApiMutation('admin.UpdateTenant')
+  const del = useApiMutation('admin.DeleteTenant')
   const err = create.error ?? update.error
   const form = useForm({
     defaultValues: {
       name: tenant?.name ?? '',
       displayName: tenant?.displayName ?? '',
-      seats: Number(tenant?.seatLimit ?? 25n),
-      quotaGB: Math.round(Number(tenant?.quotaBytes ?? BigInt(50 * GB)) / GB),
-      daily: Number(tenant?.dailySendLimit ?? 2000n),
+      seats: Number(tenant?.seatLimit ?? 25),
+      quotaGB: Math.round(tenant?.quotaBytes ?? 50 * GB / GB),
+      daily: Number(tenant?.dailySendLimit ?? 2000),
       suspended: tenant?.suspended ?? false,
     } as Values,
     onSubmit: async ({ value }) => {
       const t = {
         name: value.name.trim(),
         displayName: value.displayName.trim() || value.name.trim(),
-        seatLimit: BigInt(Number(value.seats || 0)),
-        quotaBytes: BigInt(Math.round(Number(value.quotaGB || 0) * GB)),
-        dailySendLimit: BigInt(Number(value.daily || 0)),
+        seatLimit: Number(value.seats || 0),
+        quotaBytes: Math.round(Number(value.quotaGB || 0) * GB),
+        dailySendLimit: Number(value.daily || 0),
       }
       try {
-        if (tenant) await update.mutateAsync({ tenant: { ...tenant, ...t, suspended: value.suspended } })
+        if (tenant) {
+          const { name: _, ...rest } = t
+          await update.mutateAsync({ id: tenant.id, ...rest, suspended: value.suspended })
+        }
         else await create.mutateAsync(t)
         invalidate(qc, 'ListTenants', 'GetStats')
         onClose()
@@ -117,7 +119,7 @@ function TenantForm({ tenant, onClose }: { tenant?: Tenant; onClose: () => void 
 }
 
 export function TenantsPage() {
-  const q = useQuery(AdminService.method.listTenants, {})
+  const q = useApiQuery('admin.ListTenants', {})
   const [edit, setEdit] = useState<Tenant | 'new' | null>(null)
   const list = q.data?.tenants ?? []
   return (
@@ -159,13 +161,13 @@ export function TenantsPage() {
                   <Table.Td>{t.domains.toString()}</Table.Td>
                   <Table.Td>
                     {t.users.toString()}
-                    {t.seatLimit > 0n ? ` of ${t.seatLimit}` : ''}
+                    {t.seatLimit > 0 ? ` of ${t.seatLimit}` : ''}
                   </Table.Td>
                   <Table.Td>
                     {bytes(t.usedBytes)}
-                    {t.quotaBytes > 0n ? ` of ${bytes(t.quotaBytes)}` : ''}
+                    {t.quotaBytes > 0 ? ` of ${bytes(t.quotaBytes)}` : ''}
                   </Table.Td>
-                  <Table.Td>{t.dailySendLimit > 0n ? `${t.dailySendLimit.toLocaleString()} per day` : 'No limit'}</Table.Td>
+                  <Table.Td>{t.dailySendLimit > 0 ? `${t.dailySendLimit.toLocaleString()} per day` : 'No limit'}</Table.Td>
                   <Table.Td>
                     <Badge color={t.suspended ? 'red' : 'green'} variant="light" tt="none">
                       {t.suspended ? 'Suspended' : 'Active'}

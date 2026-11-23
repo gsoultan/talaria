@@ -1,33 +1,30 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useMutation } from '@connectrpc/connect-query'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
-import { Flag, MailService, type MessageSummary } from '../../gen/talaria/v1/mail_pb'
+import { type MessageSummary, ofOps, useApiMutation } from '../../lib/api'
 import { errorText } from '../../lib/errors'
 
 type Lists = { pages?: { messages: MessageSummary[] }[]; messages?: MessageSummary[] }
 
-const listMethods = new Set(['ListMessages', 'Search', 'GetThread'])
+type Flag = 'seen' | 'flagged' | 'answered' | 'deleted' | 'draft'
 
-function methodOf(key: readonly unknown[]): string {
-  return (key[1] as { methodName?: string } | undefined)?.methodName ?? ''
-}
+const isList = ofOps('mail.ListMessages', 'mail.Search', 'mail.GetThread')
 
 /** Mail actions that update the lists at once, then confirm with the server. */
 export function useMailActions() {
   const qc = useQueryClient()
-  const flags = useMutation(MailService.method.updateFlags)
-  const move = useMutation(MailService.method.moveMessages)
-  const remove = useMutation(MailService.method.deleteMessages)
+  const flags = useApiMutation('mail.UpdateFlags')
+  const move = useApiMutation('mail.MoveMessages')
+  const remove = useApiMutation('mail.DeleteMessages')
 
   // Applies fn to every cached list entry with one of ids.
-  const patch = (ids: bigint[], fn: (m: MessageSummary) => MessageSummary | null) => {
+  const patch = (ids: number[], fn: (m: MessageSummary) => MessageSummary | null) => {
     const want = new Set(ids)
     const apply = (list: MessageSummary[]) => list.flatMap((m) => (want.has(m.id) ? (fn(m) ?? []) : [m]))
     for (const q of qc.getQueryCache().getAll()) {
-      if (!listMethods.has(methodOf(q.queryKey))) continue
+      if (!isList(q)) continue
       qc.setQueryData<Lists>(q.queryKey, (old) => {
         if (!old) return old
         if (old.pages) return { ...old, pages: old.pages.map((p) => ({ ...p, messages: apply(p.messages) })) }
@@ -38,24 +35,24 @@ export function useMailActions() {
   }
 
   const settle = () => {
-    void qc.invalidateQueries({ predicate: (q) => methodOf(q.queryKey) === 'ListMailboxes' })
+    void qc.invalidateQueries({ predicate: ofOps('mail.ListMailboxes') })
   }
 
   const fail = (err: unknown) => {
     notifications.show({ color: 'red', title: 'That didn’t work', message: errorText(err) })
-    void qc.invalidateQueries({ predicate: (q) => listMethods.has(methodOf(q.queryKey)) })
+    void qc.invalidateQueries({ predicate: isList })
   }
 
-  const setFlag = (ids: bigint[], flag: Flag, on: boolean) => {
-    const field = flag === Flag.SEEN ? 'seen' : flag === Flag.FLAGGED ? 'flagged' : null
+  const setFlag = (ids: number[], flag: Flag, on: boolean) => {
+    const field = flag === 'seen' || flag === 'flagged' ? flag : null
     if (field) patch(ids, (m) => ({ ...m, [field]: on }))
     flags.mutate({ ids, add: on ? [flag] : [], remove: on ? [] : [flag] }, { onSuccess: settle, onError: fail })
   }
 
   return {
-    markSeen: (ids: bigint[], seen: boolean) => setFlag(ids, Flag.SEEN, seen),
-    star: (ids: bigint[], on: boolean) => setFlag(ids, Flag.FLAGGED, on),
-    move: (ids: bigint[], mailboxId: bigint, label = 'Moved') => {
+    markSeen: (ids: number[], seen: boolean) => setFlag(ids, 'seen', seen),
+    star: (ids: number[], on: boolean) => setFlag(ids, 'flagged', on),
+    move: (ids: number[], mailboxId: number, label = 'Moved') => {
       patch(ids, () => null)
       move.mutate(
         { ids, mailboxId },
@@ -69,7 +66,7 @@ export function useMailActions() {
       )
     },
     /** Moves to Trash; deletes for good from Trash and Junk. */
-    remove: (ids: bigint[], label = 'Moved to Trash') => {
+    remove: (ids: number[], label = 'Moved to Trash') => {
       patch(ids, () => null)
       remove.mutate(
         { ids },

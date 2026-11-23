@@ -1,10 +1,9 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { useQuery } from '@connectrpc/connect-query'
 import { Box, Chip, Code, Group, Paper, Stack, Text } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
-import { MailService } from '../../gen/talaria/v1/mail_pb'
+import { useApiQuery } from '../../lib/api'
 import { errorText } from '../../lib/errors'
 import { plural } from '../../lib/format'
 import { navigate } from '../../lib/router'
@@ -35,9 +34,9 @@ export function SearchPage({ q, messageId }: { q: string; messageId?: string }) 
   const wide = useMediaQuery('(min-width: 88em)', false)
   const p = parseQuery(q)
   const box = resolveMailbox(boxes, p.mailbox)
-  const res = useQuery(
-    MailService.method.search,
-    { query: p.text, from: p.from, unread: p.unread, flagged: p.flagged, hasAttachments: p.hasAttachments, after: p.after, before: p.before, mailboxId: box?.id ?? 0n, limit: 200 },
+  const res = useApiQuery(
+    'mail.Search',
+    { query: p.text, from: p.from, unread: p.unread, flagged: p.flagged, hasAttachments: p.hasAttachments, after: p.after, before: p.before, mailboxId: box?.id ?? 0, limit: 200 },
     { enabled: q.trim() !== '', staleTime: 15_000 },
   )
   const messages = res.data?.messages ?? []
