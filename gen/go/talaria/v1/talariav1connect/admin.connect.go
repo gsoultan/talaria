@@ -69,6 +69,8 @@ const (
 	// AdminServiceCancelQueueProcedure is the fully-qualified name of the AdminService's CancelQueue
 	// RPC.
 	AdminServiceCancelQueueProcedure = "/talaria.v1.AdminService/CancelQueue"
+	// AdminServiceGetStatsProcedure is the fully-qualified name of the AdminService's GetStats RPC.
+	AdminServiceGetStatsProcedure = "/talaria.v1.AdminService/GetStats"
 	// AdminServiceListUsersProcedure is the fully-qualified name of the AdminService's ListUsers RPC.
 	AdminServiceListUsersProcedure = "/talaria.v1.AdminService/ListUsers"
 	// AdminServiceCreateUserProcedure is the fully-qualified name of the AdminService's CreateUser RPC.
@@ -108,6 +110,9 @@ type AdminServiceClient interface {
 	ListQueue(context.Context, *connect.Request[v1.ListQueueRequest]) (*connect.Response[v1.ListQueueResponse], error)
 	RetryQueue(context.Context, *connect.Request[v1.RetryQueueRequest]) (*connect.Response[v1.RetryQueueResponse], error)
 	CancelQueue(context.Context, *connect.Request[v1.CancelQueueRequest]) (*connect.Response[v1.CancelQueueResponse], error)
+	// GetStats summarizes the caller's tenant, or the whole server for a
+	// platform admin who passes no tenant.
+	GetStats(context.Context, *connect.Request[v1.GetStatsRequest]) (*connect.Response[v1.GetStatsResponse], error)
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
 	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
 	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
@@ -204,6 +209,13 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("CancelQueue")),
 			connect.WithClientOptions(opts...),
 		),
+		getStats: connect.NewClient[v1.GetStatsRequest, v1.GetStatsResponse](
+			httpClient,
+			baseURL+AdminServiceGetStatsProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetStats")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
 		listUsers: connect.NewClient[v1.ListUsersRequest, v1.ListUsersResponse](
 			httpClient,
 			baseURL+AdminServiceListUsersProcedure,
@@ -271,6 +283,7 @@ type adminServiceClient struct {
 	listQueue       *connect.Client[v1.ListQueueRequest, v1.ListQueueResponse]
 	retryQueue      *connect.Client[v1.RetryQueueRequest, v1.RetryQueueResponse]
 	cancelQueue     *connect.Client[v1.CancelQueueRequest, v1.CancelQueueResponse]
+	getStats        *connect.Client[v1.GetStatsRequest, v1.GetStatsResponse]
 	listUsers       *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
 	createUser      *connect.Client[v1.CreateUserRequest, v1.CreateUserResponse]
 	updateUser      *connect.Client[v1.UpdateUserRequest, v1.UpdateUserResponse]
@@ -341,6 +354,11 @@ func (c *adminServiceClient) CancelQueue(ctx context.Context, req *connect.Reque
 	return c.cancelQueue.CallUnary(ctx, req)
 }
 
+// GetStats calls talaria.v1.AdminService.GetStats.
+func (c *adminServiceClient) GetStats(ctx context.Context, req *connect.Request[v1.GetStatsRequest]) (*connect.Response[v1.GetStatsResponse], error) {
+	return c.getStats.CallUnary(ctx, req)
+}
+
 // ListUsers calls talaria.v1.AdminService.ListUsers.
 func (c *adminServiceClient) ListUsers(ctx context.Context, req *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error) {
 	return c.listUsers.CallUnary(ctx, req)
@@ -398,6 +416,9 @@ type AdminServiceHandler interface {
 	ListQueue(context.Context, *connect.Request[v1.ListQueueRequest]) (*connect.Response[v1.ListQueueResponse], error)
 	RetryQueue(context.Context, *connect.Request[v1.RetryQueueRequest]) (*connect.Response[v1.RetryQueueResponse], error)
 	CancelQueue(context.Context, *connect.Request[v1.CancelQueueRequest]) (*connect.Response[v1.CancelQueueResponse], error)
+	// GetStats summarizes the caller's tenant, or the whole server for a
+	// platform admin who passes no tenant.
+	GetStats(context.Context, *connect.Request[v1.GetStatsRequest]) (*connect.Response[v1.GetStatsResponse], error)
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
 	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
 	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
@@ -490,6 +511,13 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(adminServiceMethods.ByName("CancelQueue")),
 		connect.WithHandlerOptions(opts...),
 	)
+	adminServiceGetStatsHandler := connect.NewUnaryHandler(
+		AdminServiceGetStatsProcedure,
+		svc.GetStats,
+		connect.WithSchema(adminServiceMethods.ByName("GetStats")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
 	adminServiceListUsersHandler := connect.NewUnaryHandler(
 		AdminServiceListUsersProcedure,
 		svc.ListUsers,
@@ -566,6 +594,8 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceRetryQueueHandler.ServeHTTP(w, r)
 		case AdminServiceCancelQueueProcedure:
 			adminServiceCancelQueueHandler.ServeHTTP(w, r)
+		case AdminServiceGetStatsProcedure:
+			adminServiceGetStatsHandler.ServeHTTP(w, r)
 		case AdminServiceListUsersProcedure:
 			adminServiceListUsersHandler.ServeHTTP(w, r)
 		case AdminServiceCreateUserProcedure:
@@ -637,6 +667,10 @@ func (UnimplementedAdminServiceHandler) RetryQueue(context.Context, *connect.Req
 
 func (UnimplementedAdminServiceHandler) CancelQueue(context.Context, *connect.Request[v1.CancelQueueRequest]) (*connect.Response[v1.CancelQueueResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.AdminService.CancelQueue is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetStats(context.Context, *connect.Request[v1.GetStatsRequest]) (*connect.Response[v1.GetStatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.AdminService.GetStats is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error) {

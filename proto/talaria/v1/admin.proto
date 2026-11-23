@@ -37,6 +37,12 @@ service AdminService {
   rpc RetryQueue(RetryQueueRequest) returns (RetryQueueResponse) {}
   rpc CancelQueue(CancelQueueRequest) returns (CancelQueueResponse) {}
 
+  // GetStats summarizes the caller's tenant, or the whole server for a
+  // platform admin who passes no tenant.
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
@@ -231,3 +237,28 @@ message CancelQueueRequest {
   int64 id = 2;
 }
 message CancelQueueResponse {}
+
+message GetStatsRequest {
+  int64 tenant_id = 1; // 0 = own tenant; for platform admins, the server
+  bool server = 2;     // platform admins: whole server instead of a tenant
+}
+message GetStatsResponse {
+  int64 tenants = 1;
+  int64 domains = 2;
+  int64 users = 3;
+  int64 seat_limit = 4;      // 0 = unlimited (tenant scope only)
+  int64 quota_bytes = 5;     // 0 = unlimited (tenant scope only)
+  int64 used_bytes = 6;
+  int64 stored_bytes = 7;    // on disk, compressed and deduplicated
+  int64 raw_bytes = 8;       // before compression
+  int64 received_today = 9;
+  int64 junk_today = 10;
+  int64 queue_waiting = 11;
+  int64 sent_today = 12;
+  int64 bounced_today = 13;
+  // Server scope only.
+  uint64 heap_bytes = 14;
+  int64 memory_limit_bytes = 15;
+  int64 uptime_seconds = 16;
+  string route = 17;
+}

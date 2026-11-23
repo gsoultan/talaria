@@ -172,3 +172,31 @@ func TestMessageLifecycle(t *testing.T) {
 }
 
 func (u User) withQuota(q int64) User { u.QuotaBytes = q; return u }
+
+func TestStats(t *testing.T) {
+	s := open(t)
+	ctx := context.Background()
+	tnA, ana := seed(t, s, "northwind", "northwind.example", "ana@northwind.example")
+	tnB, bo := seed(t, s, "harbor", "harbor.example", "bo@harbor.example")
+	now := s.unix()
+	for i, nm := range []NewMessage{msg(tnA, ana, "h1", "one"), msg(tnA, ana, "h2", "two"), msg(tnB, bo, "h3", "three")} {
+		nm.InternalDate = now
+		if i == 1 {
+			nm.MailboxUse = UseJunk
+		}
+		if _, err := s.InsertMessage(ctx, nm); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a, err := s.Stats(ctx, tnA.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Tenants != 1 || a.Users != 1 || a.ReceivedToday != 2 || a.JunkToday != 1 || a.RawBytes != 200 || a.StoredBytes != 100 {
+		t.Fatalf("tenant stats: %+v", a)
+	}
+	all, _ := s.Stats(ctx, 0)
+	if all.Tenants != 2 || all.Users != 2 || all.ReceivedToday != 3 {
+		t.Fatalf("server stats: %+v", all)
+	}
+}

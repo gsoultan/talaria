@@ -32,6 +32,12 @@ type MailServer struct {
 	Deliver  *mail.Deliverer
 	Hostname string
 	MaxSize  int64
+	// Endpoints lists the mail-app listeners, for the settings screen.
+	Endpoints []*talariav1.MailEndpoint
+}
+
+func (s *MailServer) GetMailSettings(context.Context, *connect.Request[talariav1.GetMailSettingsRequest]) (*connect.Response[talariav1.GetMailSettingsResponse], error) {
+	return connect.NewResponse(&talariav1.GetMailSettingsResponse{Hostname: s.Hostname, Endpoints: s.Endpoints}), nil
 }
 
 var _ talariav1connect.MailServiceHandler = (*MailServer)(nil)

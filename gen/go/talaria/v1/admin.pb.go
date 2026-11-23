@@ -2486,6 +2486,231 @@ func (*CancelQueueResponse) Descriptor() ([]byte, []int) {
 	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{44}
 }
 
+type GetStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      int64                  `protobuf:"varint,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"` // 0 = own tenant; for platform admins, the server
+	Server        bool                   `protobuf:"varint,2,opt,name=server,proto3" json:"server,omitempty"`                     // platform admins: whole server instead of a tenant
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStatsRequest) Reset() {
+	*x = GetStatsRequest{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStatsRequest) ProtoMessage() {}
+
+func (x *GetStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStatsRequest.ProtoReflect.Descriptor instead.
+func (*GetStatsRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *GetStatsRequest) GetTenantId() int64 {
+	if x != nil {
+		return x.TenantId
+	}
+	return 0
+}
+
+func (x *GetStatsRequest) GetServer() bool {
+	if x != nil {
+		return x.Server
+	}
+	return false
+}
+
+type GetStatsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tenants       int64                  `protobuf:"varint,1,opt,name=tenants,proto3" json:"tenants,omitempty"`
+	Domains       int64                  `protobuf:"varint,2,opt,name=domains,proto3" json:"domains,omitempty"`
+	Users         int64                  `protobuf:"varint,3,opt,name=users,proto3" json:"users,omitempty"`
+	SeatLimit     int64                  `protobuf:"varint,4,opt,name=seat_limit,json=seatLimit,proto3" json:"seat_limit,omitempty"`    // 0 = unlimited (tenant scope only)
+	QuotaBytes    int64                  `protobuf:"varint,5,opt,name=quota_bytes,json=quotaBytes,proto3" json:"quota_bytes,omitempty"` // 0 = unlimited (tenant scope only)
+	UsedBytes     int64                  `protobuf:"varint,6,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
+	StoredBytes   int64                  `protobuf:"varint,7,opt,name=stored_bytes,json=storedBytes,proto3" json:"stored_bytes,omitempty"` // on disk, compressed and deduplicated
+	RawBytes      int64                  `protobuf:"varint,8,opt,name=raw_bytes,json=rawBytes,proto3" json:"raw_bytes,omitempty"`          // before compression
+	ReceivedToday int64                  `protobuf:"varint,9,opt,name=received_today,json=receivedToday,proto3" json:"received_today,omitempty"`
+	JunkToday     int64                  `protobuf:"varint,10,opt,name=junk_today,json=junkToday,proto3" json:"junk_today,omitempty"`
+	QueueWaiting  int64                  `protobuf:"varint,11,opt,name=queue_waiting,json=queueWaiting,proto3" json:"queue_waiting,omitempty"`
+	SentToday     int64                  `protobuf:"varint,12,opt,name=sent_today,json=sentToday,proto3" json:"sent_today,omitempty"`
+	BouncedToday  int64                  `protobuf:"varint,13,opt,name=bounced_today,json=bouncedToday,proto3" json:"bounced_today,omitempty"`
+	// Server scope only.
+	HeapBytes        uint64 `protobuf:"varint,14,opt,name=heap_bytes,json=heapBytes,proto3" json:"heap_bytes,omitempty"`
+	MemoryLimitBytes int64  `protobuf:"varint,15,opt,name=memory_limit_bytes,json=memoryLimitBytes,proto3" json:"memory_limit_bytes,omitempty"`
+	UptimeSeconds    int64  `protobuf:"varint,16,opt,name=uptime_seconds,json=uptimeSeconds,proto3" json:"uptime_seconds,omitempty"`
+	Route            string `protobuf:"bytes,17,opt,name=route,proto3" json:"route,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetStatsResponse) Reset() {
+	*x = GetStatsResponse{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStatsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStatsResponse) ProtoMessage() {}
+
+func (x *GetStatsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStatsResponse.ProtoReflect.Descriptor instead.
+func (*GetStatsResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *GetStatsResponse) GetTenants() int64 {
+	if x != nil {
+		return x.Tenants
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetDomains() int64 {
+	if x != nil {
+		return x.Domains
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetUsers() int64 {
+	if x != nil {
+		return x.Users
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetSeatLimit() int64 {
+	if x != nil {
+		return x.SeatLimit
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetQuotaBytes() int64 {
+	if x != nil {
+		return x.QuotaBytes
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetUsedBytes() int64 {
+	if x != nil {
+		return x.UsedBytes
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetStoredBytes() int64 {
+	if x != nil {
+		return x.StoredBytes
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetRawBytes() int64 {
+	if x != nil {
+		return x.RawBytes
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetReceivedToday() int64 {
+	if x != nil {
+		return x.ReceivedToday
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetJunkToday() int64 {
+	if x != nil {
+		return x.JunkToday
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetQueueWaiting() int64 {
+	if x != nil {
+		return x.QueueWaiting
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetSentToday() int64 {
+	if x != nil {
+		return x.SentToday
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetBouncedToday() int64 {
+	if x != nil {
+		return x.BouncedToday
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetHeapBytes() uint64 {
+	if x != nil {
+		return x.HeapBytes
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetMemoryLimitBytes() int64 {
+	if x != nil {
+		return x.MemoryLimitBytes
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetUptimeSeconds() int64 {
+	if x != nil {
+		return x.UptimeSeconds
+	}
+	return 0
+}
+
+func (x *GetStatsResponse) GetRoute() string {
+	if x != nil {
+		return x.Route
+	}
+	return ""
+}
+
 var File_talaria_v1_admin_proto protoreflect.FileDescriptor
 
 const file_talaria_v1_admin_proto_rawDesc = "" +
@@ -2650,13 +2875,41 @@ const file_talaria_v1_admin_proto_rawDesc = "" +
 	"\x12CancelQueueRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\x03R\btenantId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\x03R\x02id\"\x15\n" +
-	"\x13CancelQueueResponse*\x90\x01\n" +
+	"\x13CancelQueueResponse\"F\n" +
+	"\x0fGetStatsRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\x03R\btenantId\x12\x16\n" +
+	"\x06server\x18\x02 \x01(\bR\x06server\"\xb4\x04\n" +
+	"\x10GetStatsResponse\x12\x18\n" +
+	"\atenants\x18\x01 \x01(\x03R\atenants\x12\x18\n" +
+	"\adomains\x18\x02 \x01(\x03R\adomains\x12\x14\n" +
+	"\x05users\x18\x03 \x01(\x03R\x05users\x12\x1d\n" +
+	"\n" +
+	"seat_limit\x18\x04 \x01(\x03R\tseatLimit\x12\x1f\n" +
+	"\vquota_bytes\x18\x05 \x01(\x03R\n" +
+	"quotaBytes\x12\x1d\n" +
+	"\n" +
+	"used_bytes\x18\x06 \x01(\x03R\tusedBytes\x12!\n" +
+	"\fstored_bytes\x18\a \x01(\x03R\vstoredBytes\x12\x1b\n" +
+	"\traw_bytes\x18\b \x01(\x03R\brawBytes\x12%\n" +
+	"\x0ereceived_today\x18\t \x01(\x03R\rreceivedToday\x12\x1d\n" +
+	"\n" +
+	"junk_today\x18\n" +
+	" \x01(\x03R\tjunkToday\x12#\n" +
+	"\rqueue_waiting\x18\v \x01(\x03R\fqueueWaiting\x12\x1d\n" +
+	"\n" +
+	"sent_today\x18\f \x01(\x03R\tsentToday\x12#\n" +
+	"\rbounced_today\x18\r \x01(\x03R\fbouncedToday\x12\x1d\n" +
+	"\n" +
+	"heap_bytes\x18\x0e \x01(\x04R\theapBytes\x12,\n" +
+	"\x12memory_limit_bytes\x18\x0f \x01(\x03R\x10memoryLimitBytes\x12%\n" +
+	"\x0euptime_seconds\x18\x10 \x01(\x03R\ruptimeSeconds\x12\x14\n" +
+	"\x05route\x18\x11 \x01(\tR\x05route*\x90\x01\n" +
 	"\vQueueStatus\x12\x1c\n" +
 	"\x18QUEUE_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14QUEUE_STATUS_WAITING\x10\x01\x12\x18\n" +
 	"\x14QUEUE_STATUS_SENDING\x10\x02\x12\x15\n" +
 	"\x11QUEUE_STATUS_SENT\x10\x03\x12\x18\n" +
-	"\x14QUEUE_STATUS_BOUNCED\x10\x042\x8e\r\n" +
+	"\x14QUEUE_STATUS_BOUNCED\x10\x042\xda\r\n" +
 	"\fAdminService\x12S\n" +
 	"\vListTenants\x12\x1e.talaria.v1.ListTenantsRequest\x1a\x1f.talaria.v1.ListTenantsResponse\"\x03\x90\x02\x01\x12S\n" +
 	"\fCreateTenant\x12\x1f.talaria.v1.CreateTenantRequest\x1a .talaria.v1.CreateTenantResponse\"\x00\x12S\n" +
@@ -2671,7 +2924,8 @@ const file_talaria_v1_admin_proto_rawDesc = "" +
 	"\tListQueue\x12\x1c.talaria.v1.ListQueueRequest\x1a\x1d.talaria.v1.ListQueueResponse\"\x03\x90\x02\x01\x12M\n" +
 	"\n" +
 	"RetryQueue\x12\x1d.talaria.v1.RetryQueueRequest\x1a\x1e.talaria.v1.RetryQueueResponse\"\x00\x12P\n" +
-	"\vCancelQueue\x12\x1e.talaria.v1.CancelQueueRequest\x1a\x1f.talaria.v1.CancelQueueResponse\"\x00\x12M\n" +
+	"\vCancelQueue\x12\x1e.talaria.v1.CancelQueueRequest\x1a\x1f.talaria.v1.CancelQueueResponse\"\x00\x12J\n" +
+	"\bGetStats\x12\x1b.talaria.v1.GetStatsRequest\x1a\x1c.talaria.v1.GetStatsResponse\"\x03\x90\x02\x01\x12M\n" +
 	"\tListUsers\x12\x1c.talaria.v1.ListUsersRequest\x1a\x1d.talaria.v1.ListUsersResponse\"\x03\x90\x02\x01\x12M\n" +
 	"\n" +
 	"CreateUser\x12\x1d.talaria.v1.CreateUserRequest\x1a\x1e.talaria.v1.CreateUserResponse\"\x00\x12M\n" +
@@ -2697,7 +2951,7 @@ func file_talaria_v1_admin_proto_rawDescGZIP() []byte {
 }
 
 var file_talaria_v1_admin_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_talaria_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
+var file_talaria_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_talaria_v1_admin_proto_goTypes = []any{
 	(QueueStatus)(0),                // 0: talaria.v1.QueueStatus
 	(*Tenant)(nil),                  // 1: talaria.v1.Tenant
@@ -2745,8 +2999,10 @@ var file_talaria_v1_admin_proto_goTypes = []any{
 	(*RetryQueueResponse)(nil),      // 43: talaria.v1.RetryQueueResponse
 	(*CancelQueueRequest)(nil),      // 44: talaria.v1.CancelQueueRequest
 	(*CancelQueueResponse)(nil),     // 45: talaria.v1.CancelQueueResponse
-	(*User)(nil),                    // 46: talaria.v1.User
-	(Role)(0),                       // 47: talaria.v1.Role
+	(*GetStatsRequest)(nil),         // 46: talaria.v1.GetStatsRequest
+	(*GetStatsResponse)(nil),        // 47: talaria.v1.GetStatsResponse
+	(*User)(nil),                    // 48: talaria.v1.User
+	(Role)(0),                       // 49: talaria.v1.Role
 }
 var file_talaria_v1_admin_proto_depIdxs = []int32{
 	1,  // 0: talaria.v1.ListTenantsResponse.tenants:type_name -> talaria.v1.Tenant
@@ -2754,10 +3010,10 @@ var file_talaria_v1_admin_proto_depIdxs = []int32{
 	1,  // 2: talaria.v1.UpdateTenantRequest.tenant:type_name -> talaria.v1.Tenant
 	2,  // 3: talaria.v1.ListDomainsResponse.domains:type_name -> talaria.v1.Domain
 	2,  // 4: talaria.v1.CreateDomainResponse.domain:type_name -> talaria.v1.Domain
-	46, // 5: talaria.v1.ListUsersResponse.users:type_name -> talaria.v1.User
-	47, // 6: talaria.v1.CreateUserRequest.role:type_name -> talaria.v1.Role
-	46, // 7: talaria.v1.CreateUserResponse.user:type_name -> talaria.v1.User
-	47, // 8: talaria.v1.UpdateUserRequest.role:type_name -> talaria.v1.Role
+	48, // 5: talaria.v1.ListUsersResponse.users:type_name -> talaria.v1.User
+	49, // 6: talaria.v1.CreateUserRequest.role:type_name -> talaria.v1.Role
+	48, // 7: talaria.v1.CreateUserResponse.user:type_name -> talaria.v1.User
+	49, // 8: talaria.v1.UpdateUserRequest.role:type_name -> talaria.v1.Role
 	3,  // 9: talaria.v1.ListAliasesResponse.aliases:type_name -> talaria.v1.Alias
 	3,  // 10: talaria.v1.CreateAliasResponse.alias:type_name -> talaria.v1.Alias
 	34, // 11: talaria.v1.GetDomainSetupResponse.records:type_name -> talaria.v1.DNSRecord
@@ -2777,36 +3033,38 @@ var file_talaria_v1_admin_proto_depIdxs = []int32{
 	40, // 25: talaria.v1.AdminService.ListQueue:input_type -> talaria.v1.ListQueueRequest
 	42, // 26: talaria.v1.AdminService.RetryQueue:input_type -> talaria.v1.RetryQueueRequest
 	44, // 27: talaria.v1.AdminService.CancelQueue:input_type -> talaria.v1.CancelQueueRequest
-	18, // 28: talaria.v1.AdminService.ListUsers:input_type -> talaria.v1.ListUsersRequest
-	20, // 29: talaria.v1.AdminService.CreateUser:input_type -> talaria.v1.CreateUserRequest
-	22, // 30: talaria.v1.AdminService.UpdateUser:input_type -> talaria.v1.UpdateUserRequest
-	24, // 31: talaria.v1.AdminService.SetUserPassword:input_type -> talaria.v1.SetUserPasswordRequest
-	26, // 32: talaria.v1.AdminService.DeleteUser:input_type -> talaria.v1.DeleteUserRequest
-	28, // 33: talaria.v1.AdminService.ListAliases:input_type -> talaria.v1.ListAliasesRequest
-	30, // 34: talaria.v1.AdminService.CreateAlias:input_type -> talaria.v1.CreateAliasRequest
-	32, // 35: talaria.v1.AdminService.DeleteAlias:input_type -> talaria.v1.DeleteAliasRequest
-	5,  // 36: talaria.v1.AdminService.ListTenants:output_type -> talaria.v1.ListTenantsResponse
-	7,  // 37: talaria.v1.AdminService.CreateTenant:output_type -> talaria.v1.CreateTenantResponse
-	9,  // 38: talaria.v1.AdminService.UpdateTenant:output_type -> talaria.v1.UpdateTenantResponse
-	11, // 39: talaria.v1.AdminService.DeleteTenant:output_type -> talaria.v1.DeleteTenantResponse
-	13, // 40: talaria.v1.AdminService.ListDomains:output_type -> talaria.v1.ListDomainsResponse
-	15, // 41: talaria.v1.AdminService.CreateDomain:output_type -> talaria.v1.CreateDomainResponse
-	17, // 42: talaria.v1.AdminService.DeleteDomain:output_type -> talaria.v1.DeleteDomainResponse
-	36, // 43: talaria.v1.AdminService.GetDomainSetup:output_type -> talaria.v1.GetDomainSetupResponse
-	38, // 44: talaria.v1.AdminService.RotateDKIM:output_type -> talaria.v1.RotateDKIMResponse
-	41, // 45: talaria.v1.AdminService.ListQueue:output_type -> talaria.v1.ListQueueResponse
-	43, // 46: talaria.v1.AdminService.RetryQueue:output_type -> talaria.v1.RetryQueueResponse
-	45, // 47: talaria.v1.AdminService.CancelQueue:output_type -> talaria.v1.CancelQueueResponse
-	19, // 48: talaria.v1.AdminService.ListUsers:output_type -> talaria.v1.ListUsersResponse
-	21, // 49: talaria.v1.AdminService.CreateUser:output_type -> talaria.v1.CreateUserResponse
-	23, // 50: talaria.v1.AdminService.UpdateUser:output_type -> talaria.v1.UpdateUserResponse
-	25, // 51: talaria.v1.AdminService.SetUserPassword:output_type -> talaria.v1.SetUserPasswordResponse
-	27, // 52: talaria.v1.AdminService.DeleteUser:output_type -> talaria.v1.DeleteUserResponse
-	29, // 53: talaria.v1.AdminService.ListAliases:output_type -> talaria.v1.ListAliasesResponse
-	31, // 54: talaria.v1.AdminService.CreateAlias:output_type -> talaria.v1.CreateAliasResponse
-	33, // 55: talaria.v1.AdminService.DeleteAlias:output_type -> talaria.v1.DeleteAliasResponse
-	36, // [36:56] is the sub-list for method output_type
-	16, // [16:36] is the sub-list for method input_type
+	46, // 28: talaria.v1.AdminService.GetStats:input_type -> talaria.v1.GetStatsRequest
+	18, // 29: talaria.v1.AdminService.ListUsers:input_type -> talaria.v1.ListUsersRequest
+	20, // 30: talaria.v1.AdminService.CreateUser:input_type -> talaria.v1.CreateUserRequest
+	22, // 31: talaria.v1.AdminService.UpdateUser:input_type -> talaria.v1.UpdateUserRequest
+	24, // 32: talaria.v1.AdminService.SetUserPassword:input_type -> talaria.v1.SetUserPasswordRequest
+	26, // 33: talaria.v1.AdminService.DeleteUser:input_type -> talaria.v1.DeleteUserRequest
+	28, // 34: talaria.v1.AdminService.ListAliases:input_type -> talaria.v1.ListAliasesRequest
+	30, // 35: talaria.v1.AdminService.CreateAlias:input_type -> talaria.v1.CreateAliasRequest
+	32, // 36: talaria.v1.AdminService.DeleteAlias:input_type -> talaria.v1.DeleteAliasRequest
+	5,  // 37: talaria.v1.AdminService.ListTenants:output_type -> talaria.v1.ListTenantsResponse
+	7,  // 38: talaria.v1.AdminService.CreateTenant:output_type -> talaria.v1.CreateTenantResponse
+	9,  // 39: talaria.v1.AdminService.UpdateTenant:output_type -> talaria.v1.UpdateTenantResponse
+	11, // 40: talaria.v1.AdminService.DeleteTenant:output_type -> talaria.v1.DeleteTenantResponse
+	13, // 41: talaria.v1.AdminService.ListDomains:output_type -> talaria.v1.ListDomainsResponse
+	15, // 42: talaria.v1.AdminService.CreateDomain:output_type -> talaria.v1.CreateDomainResponse
+	17, // 43: talaria.v1.AdminService.DeleteDomain:output_type -> talaria.v1.DeleteDomainResponse
+	36, // 44: talaria.v1.AdminService.GetDomainSetup:output_type -> talaria.v1.GetDomainSetupResponse
+	38, // 45: talaria.v1.AdminService.RotateDKIM:output_type -> talaria.v1.RotateDKIMResponse
+	41, // 46: talaria.v1.AdminService.ListQueue:output_type -> talaria.v1.ListQueueResponse
+	43, // 47: talaria.v1.AdminService.RetryQueue:output_type -> talaria.v1.RetryQueueResponse
+	45, // 48: talaria.v1.AdminService.CancelQueue:output_type -> talaria.v1.CancelQueueResponse
+	47, // 49: talaria.v1.AdminService.GetStats:output_type -> talaria.v1.GetStatsResponse
+	19, // 50: talaria.v1.AdminService.ListUsers:output_type -> talaria.v1.ListUsersResponse
+	21, // 51: talaria.v1.AdminService.CreateUser:output_type -> talaria.v1.CreateUserResponse
+	23, // 52: talaria.v1.AdminService.UpdateUser:output_type -> talaria.v1.UpdateUserResponse
+	25, // 53: talaria.v1.AdminService.SetUserPassword:output_type -> talaria.v1.SetUserPasswordResponse
+	27, // 54: talaria.v1.AdminService.DeleteUser:output_type -> talaria.v1.DeleteUserResponse
+	29, // 55: talaria.v1.AdminService.ListAliases:output_type -> talaria.v1.ListAliasesResponse
+	31, // 56: talaria.v1.AdminService.CreateAlias:output_type -> talaria.v1.CreateAliasResponse
+	33, // 57: talaria.v1.AdminService.DeleteAlias:output_type -> talaria.v1.DeleteAliasResponse
+	37, // [37:58] is the sub-list for method output_type
+	16, // [16:37] is the sub-list for method input_type
 	16, // [16:16] is the sub-list for extension type_name
 	16, // [16:16] is the sub-list for extension extendee
 	0,  // [0:16] is the sub-list for field type_name
@@ -2824,7 +3082,7 @@ func file_talaria_v1_admin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_talaria_v1_admin_proto_rawDesc), len(file_talaria_v1_admin_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   45,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

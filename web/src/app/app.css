@@ -1,0 +1,53 @@
+/* Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
+   SPDX-License-Identifier: MIT */
+
+:root {
+  --t-canvas: #f4f5f7;
+  --t-surface: #ffffff;
+  --t-border: #dee2e6;
+  --t-hover: #f1f3f5;
+  --t-selected: #e7f5ff;
+  --t-muted: #5c636a;
+}
+[data-mantine-color-scheme='dark'] {
+  --t-canvas: #141517;
+  --t-surface: #1f2023;
+  --t-border: #2e3035;
+  --t-hover: #26282c;
+  --t-selected: #1b2f45;
+  --t-muted: #a6a7ab;
+}
+
+html, body, #root { height: 100%; }
+body { background: var(--t-canvas); }
+
+a.t-plain { color: inherit; text-decoration: none; }
+
+.t-row { cursor: pointer; border-bottom: 1px solid var(--t-border); }
+.t-row:hover { background: var(--t-hover); }
+.t-row[data-selected='true'] { background: var(--t-selected); }
+.t-row:focus-visible { outline: 2px solid var(--mantine-color-blue-6); outline-offset: -2px; }
+
+.t-folder {
+  display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px;
+  border-radius: 8px; color: inherit; text-decoration: none; font-size: 14px;
+}
+.t-folder:hover { background: var(--t-hover); }
+.t-folder[data-active='true'] { background: var(--t-selected); color: var(--mantine-color-blue-8); font-weight: 600; }
+[data-mantine-color-scheme='dark'] .t-folder[data-active='true'] { color: var(--mantine-color-blue-3); }
+
+.t-pane { background: var(--t-surface); border: 1px solid var(--t-border); border-radius: 12px; min-height: 0; overflow: hidden; }
+
+/* Sign-in brand panel: a slow drifting gradient and floating envelopes. */
+.t-brand {
+  position: relative; overflow: hidden; color: #fff;
+  background: linear-gradient(135deg, #1864ab, #1971c2 40%, #3b5bdb 70%, #1864ab);
+  background-size: 300% 300%;
+  animation: t-drift 18s ease-in-out infinite;
+}
+.t-brand .t-env { position: absolute; opacity: .16; animation: t-float 14s ease-in-out infinite; }
+@keyframes t-drift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@keyframes t-float { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-28px) rotate(4deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .t-brand, .t-brand .t-env { animation: none; }
+}

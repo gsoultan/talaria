@@ -12,13 +12,21 @@ A fast, low-footprint mail server with built-in webmail, sized for a
 - Runs on a public IP, behind a gateway such as Gateon (PROXY protocol), or
   behind Cloudflare Tunnel. See [doc/deployment.md](doc/deployment.md).
 
-Status: phase 3 (mail apps). Talaria receives mail on port 25 or through
-the HTTP ingest endpoint, checks SPF, DKIM and DMARC, and files it into
+Status: phase 4 (webmail). Talaria receives mail on port 25 or through the
+HTTP ingest endpoint, checks SPF, DKIM and DMARC, and files it into
 compressed, deduplicated storage with full-text search. Users send from the
-API or from mail apps on 587/465; mail is DKIM-signed and leaves through a
-relay or directly, with retries and bounce reports. Mail apps read mail over
-IMAP (143/993, with IDLE push, MOVE and special folders) or POP3 (110/995).
-The full webmail follows.
+webmail or from mail apps on 587/465; mail is DKIM-signed and leaves through
+a relay or directly, with retries and bounce reports. Mail apps read mail
+over IMAP (143/993, with IDLE push) or POP3 (110/995).
+
+The webmail has a three-pane inbox with live updates, conversations, search
+with operators (`from:`, `is:unread`, `has:attachment`, `before:`, `in:`),
+compose with attachments and autosaved drafts, keyboard shortcuts, and a
+phone layout. It installs as an app, keeps mail you have opened for offline
+reading, and holds mail written offline in an outbox until you reconnect.
+HTML mail renders in a sandboxed frame with scripts off and remote images
+blocked until you allow them. Admins manage domains and DNS records, users
+and aliases, the outbound queue, and (platform admins) tenants.
 
 ## Build
 

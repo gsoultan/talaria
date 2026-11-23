@@ -11,7 +11,7 @@ declare const self: ServiceWorkerGlobalScope
 // offline. API calls are never cached here; TanStack Query owns that data.
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/talaria\.v1\./, /^\/healthz/, /^\/ingest\//] }))
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/talaria\.v1\./, /^\/api\//, /^\/healthz/, /^\/ingest\//] }))
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting()

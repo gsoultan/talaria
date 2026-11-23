@@ -35,6 +35,8 @@ export default defineConfig({
       },
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        // Only Latin fonts are precached; other scripts load when a page needs them.
+        globIgnores: ['**/inter-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2'],
       },
     }),
   ],
@@ -59,6 +61,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/talaria.v1.': { target: apiTarget, changeOrigin: true },
+      '/api/': { target: apiTarget, changeOrigin: true },
     },
   },
 })

@@ -7,8 +7,6 @@ package api
 import (
 	"context"
 	"runtime"
-	"runtime/debug"
-	"runtime/metrics"
 	"time"
 
 	"connectrpc.com/connect"
@@ -32,20 +30,8 @@ var _ talariav1connect.SystemServiceHandler = (*SystemServer)(nil)
 
 func NewSystemServer() *SystemServer { return &SystemServer{started: time.Now()} }
 
+// GetInfo is public, so it reports only the version. Memory and uptime are
+// in AdminService.GetStats, for platform admins.
 func (s *SystemServer) GetInfo(context.Context, *connect.Request[talariav1.GetInfoRequest]) (*connect.Response[talariav1.GetInfoResponse], error) {
-	// runtime/metrics is cheap; ReadMemStats would stop the world.
-	sample := []metrics.Sample{{Name: "/memory/classes/heap/objects:bytes"}}
-	metrics.Read(sample)
-	var heap uint64
-	if sample[0].Value.Kind() == metrics.KindUint64 {
-		heap = sample[0].Value.Uint64()
-	}
-	return connect.NewResponse(&talariav1.GetInfoResponse{
-		Version:          Version,
-		Commit:           Commit,
-		GoVersion:        runtime.Version(),
-		HeapBytes:        heap,
-		MemoryLimitBytes: debug.SetMemoryLimit(-1),
-		UptimeSeconds:    int64(time.Since(s.started).Seconds()),
-	}), nil
+	return connect.NewResponse(&talariav1.GetInfoResponse{Version: Version, Commit: Commit, GoVersion: runtime.Version()}), nil
 }

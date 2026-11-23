@@ -72,6 +72,9 @@ const (
 	MailServiceSendMessageProcedure = "/talaria.v1.MailService/SendMessage"
 	// MailServiceSaveDraftProcedure is the fully-qualified name of the MailService's SaveDraft RPC.
 	MailServiceSaveDraftProcedure = "/talaria.v1.MailService/SaveDraft"
+	// MailServiceGetMailSettingsProcedure is the fully-qualified name of the MailService's
+	// GetMailSettings RPC.
+	MailServiceGetMailSettingsProcedure = "/talaria.v1.MailService/GetMailSettings"
 	// MailServiceWatchProcedure is the fully-qualified name of the MailService's Watch RPC.
 	MailServiceWatchProcedure = "/talaria.v1.MailService/Watch"
 )
@@ -98,6 +101,8 @@ type MailServiceClient interface {
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	// SaveDraft stores the message in Drafts, replacing draft_id if set.
 	SaveDraft(context.Context, *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error)
+	// GetMailSettings tells mail apps where to connect.
+	GetMailSettings(context.Context, *connect.Request[v1.GetMailSettingsRequest]) (*connect.Response[v1.GetMailSettingsResponse], error)
 	// Watch streams a notice whenever the user's mailboxes change.
 	Watch(context.Context, *connect.Request[v1.WatchRequest]) (*connect.ServerStreamForClient[v1.WatchResponse], error)
 }
@@ -203,6 +208,13 @@ func NewMailServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(mailServiceMethods.ByName("SaveDraft")),
 			connect.WithClientOptions(opts...),
 		),
+		getMailSettings: connect.NewClient[v1.GetMailSettingsRequest, v1.GetMailSettingsResponse](
+			httpClient,
+			baseURL+MailServiceGetMailSettingsProcedure,
+			connect.WithSchema(mailServiceMethods.ByName("GetMailSettings")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
 		watch: connect.NewClient[v1.WatchRequest, v1.WatchResponse](
 			httpClient,
 			baseURL+MailServiceWatchProcedure,
@@ -214,21 +226,22 @@ func NewMailServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // mailServiceClient implements MailServiceClient.
 type mailServiceClient struct {
-	listMailboxes  *connect.Client[v1.ListMailboxesRequest, v1.ListMailboxesResponse]
-	createMailbox  *connect.Client[v1.CreateMailboxRequest, v1.CreateMailboxResponse]
-	renameMailbox  *connect.Client[v1.RenameMailboxRequest, v1.RenameMailboxResponse]
-	deleteMailbox  *connect.Client[v1.DeleteMailboxRequest, v1.DeleteMailboxResponse]
-	listMessages   *connect.Client[v1.ListMessagesRequest, v1.ListMessagesResponse]
-	search         *connect.Client[v1.SearchRequest, v1.SearchResponse]
-	getMessage     *connect.Client[v1.GetMessageRequest, v1.GetMessageResponse]
-	getThread      *connect.Client[v1.GetThreadRequest, v1.GetThreadResponse]
-	updateFlags    *connect.Client[v1.UpdateFlagsRequest, v1.UpdateFlagsResponse]
-	moveMessages   *connect.Client[v1.MoveMessagesRequest, v1.MoveMessagesResponse]
-	deleteMessages *connect.Client[v1.DeleteMessagesRequest, v1.DeleteMessagesResponse]
-	listIdentities *connect.Client[v1.ListIdentitiesRequest, v1.ListIdentitiesResponse]
-	sendMessage    *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
-	saveDraft      *connect.Client[v1.SaveDraftRequest, v1.SaveDraftResponse]
-	watch          *connect.Client[v1.WatchRequest, v1.WatchResponse]
+	listMailboxes   *connect.Client[v1.ListMailboxesRequest, v1.ListMailboxesResponse]
+	createMailbox   *connect.Client[v1.CreateMailboxRequest, v1.CreateMailboxResponse]
+	renameMailbox   *connect.Client[v1.RenameMailboxRequest, v1.RenameMailboxResponse]
+	deleteMailbox   *connect.Client[v1.DeleteMailboxRequest, v1.DeleteMailboxResponse]
+	listMessages    *connect.Client[v1.ListMessagesRequest, v1.ListMessagesResponse]
+	search          *connect.Client[v1.SearchRequest, v1.SearchResponse]
+	getMessage      *connect.Client[v1.GetMessageRequest, v1.GetMessageResponse]
+	getThread       *connect.Client[v1.GetThreadRequest, v1.GetThreadResponse]
+	updateFlags     *connect.Client[v1.UpdateFlagsRequest, v1.UpdateFlagsResponse]
+	moveMessages    *connect.Client[v1.MoveMessagesRequest, v1.MoveMessagesResponse]
+	deleteMessages  *connect.Client[v1.DeleteMessagesRequest, v1.DeleteMessagesResponse]
+	listIdentities  *connect.Client[v1.ListIdentitiesRequest, v1.ListIdentitiesResponse]
+	sendMessage     *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
+	saveDraft       *connect.Client[v1.SaveDraftRequest, v1.SaveDraftResponse]
+	getMailSettings *connect.Client[v1.GetMailSettingsRequest, v1.GetMailSettingsResponse]
+	watch           *connect.Client[v1.WatchRequest, v1.WatchResponse]
 }
 
 // ListMailboxes calls talaria.v1.MailService.ListMailboxes.
@@ -301,6 +314,11 @@ func (c *mailServiceClient) SaveDraft(ctx context.Context, req *connect.Request[
 	return c.saveDraft.CallUnary(ctx, req)
 }
 
+// GetMailSettings calls talaria.v1.MailService.GetMailSettings.
+func (c *mailServiceClient) GetMailSettings(ctx context.Context, req *connect.Request[v1.GetMailSettingsRequest]) (*connect.Response[v1.GetMailSettingsResponse], error) {
+	return c.getMailSettings.CallUnary(ctx, req)
+}
+
 // Watch calls talaria.v1.MailService.Watch.
 func (c *mailServiceClient) Watch(ctx context.Context, req *connect.Request[v1.WatchRequest]) (*connect.ServerStreamForClient[v1.WatchResponse], error) {
 	return c.watch.CallServerStream(ctx, req)
@@ -328,6 +346,8 @@ type MailServiceHandler interface {
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
 	// SaveDraft stores the message in Drafts, replacing draft_id if set.
 	SaveDraft(context.Context, *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error)
+	// GetMailSettings tells mail apps where to connect.
+	GetMailSettings(context.Context, *connect.Request[v1.GetMailSettingsRequest]) (*connect.Response[v1.GetMailSettingsResponse], error)
 	// Watch streams a notice whenever the user's mailboxes change.
 	Watch(context.Context, *connect.Request[v1.WatchRequest], *connect.ServerStream[v1.WatchResponse]) error
 }
@@ -429,6 +449,13 @@ func NewMailServiceHandler(svc MailServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(mailServiceMethods.ByName("SaveDraft")),
 		connect.WithHandlerOptions(opts...),
 	)
+	mailServiceGetMailSettingsHandler := connect.NewUnaryHandler(
+		MailServiceGetMailSettingsProcedure,
+		svc.GetMailSettings,
+		connect.WithSchema(mailServiceMethods.ByName("GetMailSettings")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
 	mailServiceWatchHandler := connect.NewServerStreamHandler(
 		MailServiceWatchProcedure,
 		svc.Watch,
@@ -465,6 +492,8 @@ func NewMailServiceHandler(svc MailServiceHandler, opts ...connect.HandlerOption
 			mailServiceSendMessageHandler.ServeHTTP(w, r)
 		case MailServiceSaveDraftProcedure:
 			mailServiceSaveDraftHandler.ServeHTTP(w, r)
+		case MailServiceGetMailSettingsProcedure:
+			mailServiceGetMailSettingsHandler.ServeHTTP(w, r)
 		case MailServiceWatchProcedure:
 			mailServiceWatchHandler.ServeHTTP(w, r)
 		default:
@@ -530,6 +559,10 @@ func (UnimplementedMailServiceHandler) SendMessage(context.Context, *connect.Req
 
 func (UnimplementedMailServiceHandler) SaveDraft(context.Context, *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.MailService.SaveDraft is not implemented"))
+}
+
+func (UnimplementedMailServiceHandler) GetMailSettings(context.Context, *connect.Request[v1.GetMailSettingsRequest]) (*connect.Response[v1.GetMailSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.MailService.GetMailSettings is not implemented"))
 }
 
 func (UnimplementedMailServiceHandler) Watch(context.Context, *connect.Request[v1.WatchRequest], *connect.ServerStream[v1.WatchResponse]) error {

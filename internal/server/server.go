@@ -16,6 +16,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/emersion/go-smtp"
 	"golang.org/x/net/netutil"
 
+	talariav1 "github.com/gsoultan/talaria/gen/go/talaria/v1"
 	"github.com/gsoultan/talaria/gen/go/talaria/v1/talariav1connect"
 	"github.com/gsoultan/talaria/internal/api"
 	"github.com/gsoultan/talaria/internal/blob"
@@ -122,7 +124,7 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 	maxRead := int(cfg.SMTP.MaxMessageSize)*2 + 1<<20
 	opts := connect.WithHandlerOptions(connect.WithInterceptors(authn), connect.WithReadMaxBytes(maxRead))
 	mailSrv := &api.MailServer{Store: st, Blobs: bl, Hub: s.Hub, Submit: s.Submit, Deliver: s.Deliver, Hostname: cfg.Hostname,
-		MaxSize: int64(cfg.SMTP.MaxMessageSize)}
+		MaxSize: int64(cfg.SMTP.MaxMessageSize), Endpoints: mailEndpoints(cfg)}
 	adminSrv := &api.AdminServer{Store: st, Keys: s.Keys, Hostname: cfg.Hostname, Route: route, Wake: s.Queue.Wake}
 	if cfg.Outbound.Mode == "relay" {
 		adminSrv.RelayHost = cfg.Outbound.Relay.Host
@@ -339,6 +341,32 @@ func (s *Server) serveSubmission(addr string, implicit bool, trusted []netip.Pre
 	s.log.Info("submission listening", "addr", addr, "implicit_tls", implicit)
 	go func() { errc <- s.sub.Serve(l) }()
 	return nil
+}
+
+// mailEndpoints lists the mail-app listeners that will start, for the
+// webmail's setup screen. Mail apps need TLS, so listeners without it are
+// left out, as mailListener and serveSubmission skip them too.
+func mailEndpoints(cfg config.Config) []*talariav1.MailEndpoint {
+	secure := func(pp config.ProxyProtocol) bool { return cfg.TLS.Mode != "off" || pp.UpstreamTLS }
+	var out []*talariav1.MailEndpoint
+	add := func(proto, addr, sec string, ok bool) {
+		if addr == "" || !ok {
+			return
+		}
+		_, p, err := net.SplitHostPort(addr)
+		port, perr := strconv.Atoi(p)
+		if err != nil || perr != nil {
+			return
+		}
+		out = append(out, &talariav1.MailEndpoint{Protocol: proto, Port: int32(port), Security: sec})
+	}
+	add("IMAP", cfg.IMAP.ListenTLS, "TLS", secure(cfg.IMAP.ProxyProtocol))
+	add("IMAP", cfg.IMAP.Listen, "STARTTLS", secure(cfg.IMAP.ProxyProtocol))
+	add("POP3", cfg.POP3.ListenTLS, "TLS", secure(cfg.POP3.ProxyProtocol))
+	add("POP3", cfg.POP3.Listen, "STARTTLS", secure(cfg.POP3.ProxyProtocol))
+	add("SMTP", cfg.SMTP.SubmissionTLS, "TLS", secure(cfg.SMTP.ProxyProtocol))
+	add("SMTP", cfg.SMTP.Submission, "STARTTLS", secure(cfg.SMTP.ProxyProtocol))
+	return out
 }
 
 // mailListener opens an IMAP or POP3 listener. Mail apps send passwords, so

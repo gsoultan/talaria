@@ -2321,6 +2321,154 @@ func (x *SaveDraftResponse) GetDraftId() int64 {
 	return 0
 }
 
+type MailEndpoint struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Protocol      string                 `protobuf:"bytes,1,opt,name=protocol,proto3" json:"protocol,omitempty"` // IMAP, POP3, SMTP
+	Port          int32                  `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
+	Security      string                 `protobuf:"bytes,3,opt,name=security,proto3" json:"security,omitempty"` // TLS or STARTTLS
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MailEndpoint) Reset() {
+	*x = MailEndpoint{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MailEndpoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MailEndpoint) ProtoMessage() {}
+
+func (x *MailEndpoint) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MailEndpoint.ProtoReflect.Descriptor instead.
+func (*MailEndpoint) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *MailEndpoint) GetProtocol() string {
+	if x != nil {
+		return x.Protocol
+	}
+	return ""
+}
+
+func (x *MailEndpoint) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *MailEndpoint) GetSecurity() string {
+	if x != nil {
+		return x.Security
+	}
+	return ""
+}
+
+type GetMailSettingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMailSettingsRequest) Reset() {
+	*x = GetMailSettingsRequest{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMailSettingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMailSettingsRequest) ProtoMessage() {}
+
+func (x *GetMailSettingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMailSettingsRequest.ProtoReflect.Descriptor instead.
+func (*GetMailSettingsRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{39}
+}
+
+type GetMailSettingsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Hostname      string                 `protobuf:"bytes,1,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	Endpoints     []*MailEndpoint        `protobuf:"bytes,2,rep,name=endpoints,proto3" json:"endpoints,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMailSettingsResponse) Reset() {
+	*x = GetMailSettingsResponse{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMailSettingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMailSettingsResponse) ProtoMessage() {}
+
+func (x *GetMailSettingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMailSettingsResponse.ProtoReflect.Descriptor instead.
+func (*GetMailSettingsResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *GetMailSettingsResponse) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+func (x *GetMailSettingsResponse) GetEndpoints() []*MailEndpoint {
+	if x != nil {
+		return x.Endpoints
+	}
+	return nil
+}
+
 var File_talaria_v1_mail_proto protoreflect.FileDescriptor
 
 const file_talaria_v1_mail_proto_rawDesc = "" +
@@ -2495,7 +2643,15 @@ const file_talaria_v1_mail_proto_rawDesc = "" +
 	"\x10SaveDraftRequest\x12-\n" +
 	"\amessage\x18\x01 \x01(\v2\x13.talaria.v1.ComposeR\amessage\".\n" +
 	"\x11SaveDraftResponse\x12\x19\n" +
-	"\bdraft_id\x18\x01 \x01(\x03R\adraftId*r\n" +
+	"\bdraft_id\x18\x01 \x01(\x03R\adraftId\"Z\n" +
+	"\fMailEndpoint\x12\x1a\n" +
+	"\bprotocol\x18\x01 \x01(\tR\bprotocol\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\x05R\x04port\x12\x1a\n" +
+	"\bsecurity\x18\x03 \x01(\tR\bsecurity\"\x18\n" +
+	"\x16GetMailSettingsRequest\"m\n" +
+	"\x17GetMailSettingsResponse\x12\x1a\n" +
+	"\bhostname\x18\x01 \x01(\tR\bhostname\x126\n" +
+	"\tendpoints\x18\x02 \x03(\v2\x18.talaria.v1.MailEndpointR\tendpoints*r\n" +
 	"\x04Flag\x12\x14\n" +
 	"\x10FLAG_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tFLAG_SEEN\x10\x01\x12\x11\n" +
@@ -2503,7 +2659,8 @@ const file_talaria_v1_mail_proto_rawDesc = "" +
 	"\fFLAG_FLAGGED\x10\x03\x12\x10\n" +
 	"\fFLAG_DELETED\x10\x04\x12\x0e\n" +
 	"\n" +
-	"FLAG_DRAFT\x10\x052\xef\t\n" +
+	"FLAG_DRAFT\x10\x052\xd0\n" +
+	"\n" +
 	"\vMailService\x12Y\n" +
 	"\rListMailboxes\x12 .talaria.v1.ListMailboxesRequest\x1a!.talaria.v1.ListMailboxesResponse\"\x03\x90\x02\x01\x12V\n" +
 	"\rCreateMailbox\x12 .talaria.v1.CreateMailboxRequest\x1a!.talaria.v1.CreateMailboxResponse\"\x00\x12V\n" +
@@ -2519,7 +2676,8 @@ const file_talaria_v1_mail_proto_rawDesc = "" +
 	"\x0eDeleteMessages\x12!.talaria.v1.DeleteMessagesRequest\x1a\".talaria.v1.DeleteMessagesResponse\"\x00\x12\\\n" +
 	"\x0eListIdentities\x12!.talaria.v1.ListIdentitiesRequest\x1a\".talaria.v1.ListIdentitiesResponse\"\x03\x90\x02\x01\x12P\n" +
 	"\vSendMessage\x12\x1e.talaria.v1.SendMessageRequest\x1a\x1f.talaria.v1.SendMessageResponse\"\x00\x12J\n" +
-	"\tSaveDraft\x12\x1c.talaria.v1.SaveDraftRequest\x1a\x1d.talaria.v1.SaveDraftResponse\"\x00\x12@\n" +
+	"\tSaveDraft\x12\x1c.talaria.v1.SaveDraftRequest\x1a\x1d.talaria.v1.SaveDraftResponse\"\x00\x12_\n" +
+	"\x0fGetMailSettings\x12\".talaria.v1.GetMailSettingsRequest\x1a#.talaria.v1.GetMailSettingsResponse\"\x03\x90\x02\x01\x12@\n" +
 	"\x05Watch\x12\x18.talaria.v1.WatchRequest\x1a\x19.talaria.v1.WatchResponse\"\x000\x01B9Z7github.com/gsoultan/talaria/gen/go/talaria/v1;talariav1b\x06proto3"
 
 var (
@@ -2535,47 +2693,50 @@ func file_talaria_v1_mail_proto_rawDescGZIP() []byte {
 }
 
 var file_talaria_v1_mail_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_talaria_v1_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_talaria_v1_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_talaria_v1_mail_proto_goTypes = []any{
-	(Flag)(0),                      // 0: talaria.v1.Flag
-	(*Mailbox)(nil),                // 1: talaria.v1.Mailbox
-	(*MessageSummary)(nil),         // 2: talaria.v1.MessageSummary
-	(*ListMailboxesRequest)(nil),   // 3: talaria.v1.ListMailboxesRequest
-	(*ListMailboxesResponse)(nil),  // 4: talaria.v1.ListMailboxesResponse
-	(*CreateMailboxRequest)(nil),   // 5: talaria.v1.CreateMailboxRequest
-	(*CreateMailboxResponse)(nil),  // 6: talaria.v1.CreateMailboxResponse
-	(*RenameMailboxRequest)(nil),   // 7: talaria.v1.RenameMailboxRequest
-	(*RenameMailboxResponse)(nil),  // 8: talaria.v1.RenameMailboxResponse
-	(*DeleteMailboxRequest)(nil),   // 9: talaria.v1.DeleteMailboxRequest
-	(*DeleteMailboxResponse)(nil),  // 10: talaria.v1.DeleteMailboxResponse
-	(*ListMessagesRequest)(nil),    // 11: talaria.v1.ListMessagesRequest
-	(*ListMessagesResponse)(nil),   // 12: talaria.v1.ListMessagesResponse
-	(*SearchRequest)(nil),          // 13: talaria.v1.SearchRequest
-	(*SearchResponse)(nil),         // 14: talaria.v1.SearchResponse
-	(*Attachment)(nil),             // 15: talaria.v1.Attachment
-	(*Header)(nil),                 // 16: talaria.v1.Header
-	(*MessageDetail)(nil),          // 17: talaria.v1.MessageDetail
-	(*GetMessageRequest)(nil),      // 18: talaria.v1.GetMessageRequest
-	(*GetMessageResponse)(nil),     // 19: talaria.v1.GetMessageResponse
-	(*GetThreadRequest)(nil),       // 20: talaria.v1.GetThreadRequest
-	(*GetThreadResponse)(nil),      // 21: talaria.v1.GetThreadResponse
-	(*UpdateFlagsRequest)(nil),     // 22: talaria.v1.UpdateFlagsRequest
-	(*UpdateFlagsResponse)(nil),    // 23: talaria.v1.UpdateFlagsResponse
-	(*MoveMessagesRequest)(nil),    // 24: talaria.v1.MoveMessagesRequest
-	(*MoveMessagesResponse)(nil),   // 25: talaria.v1.MoveMessagesResponse
-	(*DeleteMessagesRequest)(nil),  // 26: talaria.v1.DeleteMessagesRequest
-	(*DeleteMessagesResponse)(nil), // 27: talaria.v1.DeleteMessagesResponse
-	(*WatchRequest)(nil),           // 28: talaria.v1.WatchRequest
-	(*WatchResponse)(nil),          // 29: talaria.v1.WatchResponse
-	(*Identity)(nil),               // 30: talaria.v1.Identity
-	(*ListIdentitiesRequest)(nil),  // 31: talaria.v1.ListIdentitiesRequest
-	(*ListIdentitiesResponse)(nil), // 32: talaria.v1.ListIdentitiesResponse
-	(*NewAttachment)(nil),          // 33: talaria.v1.NewAttachment
-	(*Compose)(nil),                // 34: talaria.v1.Compose
-	(*SendMessageRequest)(nil),     // 35: talaria.v1.SendMessageRequest
-	(*SendMessageResponse)(nil),    // 36: talaria.v1.SendMessageResponse
-	(*SaveDraftRequest)(nil),       // 37: talaria.v1.SaveDraftRequest
-	(*SaveDraftResponse)(nil),      // 38: talaria.v1.SaveDraftResponse
+	(Flag)(0),                       // 0: talaria.v1.Flag
+	(*Mailbox)(nil),                 // 1: talaria.v1.Mailbox
+	(*MessageSummary)(nil),          // 2: talaria.v1.MessageSummary
+	(*ListMailboxesRequest)(nil),    // 3: talaria.v1.ListMailboxesRequest
+	(*ListMailboxesResponse)(nil),   // 4: talaria.v1.ListMailboxesResponse
+	(*CreateMailboxRequest)(nil),    // 5: talaria.v1.CreateMailboxRequest
+	(*CreateMailboxResponse)(nil),   // 6: talaria.v1.CreateMailboxResponse
+	(*RenameMailboxRequest)(nil),    // 7: talaria.v1.RenameMailboxRequest
+	(*RenameMailboxResponse)(nil),   // 8: talaria.v1.RenameMailboxResponse
+	(*DeleteMailboxRequest)(nil),    // 9: talaria.v1.DeleteMailboxRequest
+	(*DeleteMailboxResponse)(nil),   // 10: talaria.v1.DeleteMailboxResponse
+	(*ListMessagesRequest)(nil),     // 11: talaria.v1.ListMessagesRequest
+	(*ListMessagesResponse)(nil),    // 12: talaria.v1.ListMessagesResponse
+	(*SearchRequest)(nil),           // 13: talaria.v1.SearchRequest
+	(*SearchResponse)(nil),          // 14: talaria.v1.SearchResponse
+	(*Attachment)(nil),              // 15: talaria.v1.Attachment
+	(*Header)(nil),                  // 16: talaria.v1.Header
+	(*MessageDetail)(nil),           // 17: talaria.v1.MessageDetail
+	(*GetMessageRequest)(nil),       // 18: talaria.v1.GetMessageRequest
+	(*GetMessageResponse)(nil),      // 19: talaria.v1.GetMessageResponse
+	(*GetThreadRequest)(nil),        // 20: talaria.v1.GetThreadRequest
+	(*GetThreadResponse)(nil),       // 21: talaria.v1.GetThreadResponse
+	(*UpdateFlagsRequest)(nil),      // 22: talaria.v1.UpdateFlagsRequest
+	(*UpdateFlagsResponse)(nil),     // 23: talaria.v1.UpdateFlagsResponse
+	(*MoveMessagesRequest)(nil),     // 24: talaria.v1.MoveMessagesRequest
+	(*MoveMessagesResponse)(nil),    // 25: talaria.v1.MoveMessagesResponse
+	(*DeleteMessagesRequest)(nil),   // 26: talaria.v1.DeleteMessagesRequest
+	(*DeleteMessagesResponse)(nil),  // 27: talaria.v1.DeleteMessagesResponse
+	(*WatchRequest)(nil),            // 28: talaria.v1.WatchRequest
+	(*WatchResponse)(nil),           // 29: talaria.v1.WatchResponse
+	(*Identity)(nil),                // 30: talaria.v1.Identity
+	(*ListIdentitiesRequest)(nil),   // 31: talaria.v1.ListIdentitiesRequest
+	(*ListIdentitiesResponse)(nil),  // 32: talaria.v1.ListIdentitiesResponse
+	(*NewAttachment)(nil),           // 33: talaria.v1.NewAttachment
+	(*Compose)(nil),                 // 34: talaria.v1.Compose
+	(*SendMessageRequest)(nil),      // 35: talaria.v1.SendMessageRequest
+	(*SendMessageResponse)(nil),     // 36: talaria.v1.SendMessageResponse
+	(*SaveDraftRequest)(nil),        // 37: talaria.v1.SaveDraftRequest
+	(*SaveDraftResponse)(nil),       // 38: talaria.v1.SaveDraftResponse
+	(*MailEndpoint)(nil),            // 39: talaria.v1.MailEndpoint
+	(*GetMailSettingsRequest)(nil),  // 40: talaria.v1.GetMailSettingsRequest
+	(*GetMailSettingsResponse)(nil), // 41: talaria.v1.GetMailSettingsResponse
 }
 var file_talaria_v1_mail_proto_depIdxs = []int32{
 	1,  // 0: talaria.v1.ListMailboxesResponse.mailboxes:type_name -> talaria.v1.Mailbox
@@ -2593,41 +2754,44 @@ var file_talaria_v1_mail_proto_depIdxs = []int32{
 	33, // 12: talaria.v1.Compose.attachments:type_name -> talaria.v1.NewAttachment
 	34, // 13: talaria.v1.SendMessageRequest.message:type_name -> talaria.v1.Compose
 	34, // 14: talaria.v1.SaveDraftRequest.message:type_name -> talaria.v1.Compose
-	3,  // 15: talaria.v1.MailService.ListMailboxes:input_type -> talaria.v1.ListMailboxesRequest
-	5,  // 16: talaria.v1.MailService.CreateMailbox:input_type -> talaria.v1.CreateMailboxRequest
-	7,  // 17: talaria.v1.MailService.RenameMailbox:input_type -> talaria.v1.RenameMailboxRequest
-	9,  // 18: talaria.v1.MailService.DeleteMailbox:input_type -> talaria.v1.DeleteMailboxRequest
-	11, // 19: talaria.v1.MailService.ListMessages:input_type -> talaria.v1.ListMessagesRequest
-	13, // 20: talaria.v1.MailService.Search:input_type -> talaria.v1.SearchRequest
-	18, // 21: talaria.v1.MailService.GetMessage:input_type -> talaria.v1.GetMessageRequest
-	20, // 22: talaria.v1.MailService.GetThread:input_type -> talaria.v1.GetThreadRequest
-	22, // 23: talaria.v1.MailService.UpdateFlags:input_type -> talaria.v1.UpdateFlagsRequest
-	24, // 24: talaria.v1.MailService.MoveMessages:input_type -> talaria.v1.MoveMessagesRequest
-	26, // 25: talaria.v1.MailService.DeleteMessages:input_type -> talaria.v1.DeleteMessagesRequest
-	31, // 26: talaria.v1.MailService.ListIdentities:input_type -> talaria.v1.ListIdentitiesRequest
-	35, // 27: talaria.v1.MailService.SendMessage:input_type -> talaria.v1.SendMessageRequest
-	37, // 28: talaria.v1.MailService.SaveDraft:input_type -> talaria.v1.SaveDraftRequest
-	28, // 29: talaria.v1.MailService.Watch:input_type -> talaria.v1.WatchRequest
-	4,  // 30: talaria.v1.MailService.ListMailboxes:output_type -> talaria.v1.ListMailboxesResponse
-	6,  // 31: talaria.v1.MailService.CreateMailbox:output_type -> talaria.v1.CreateMailboxResponse
-	8,  // 32: talaria.v1.MailService.RenameMailbox:output_type -> talaria.v1.RenameMailboxResponse
-	10, // 33: talaria.v1.MailService.DeleteMailbox:output_type -> talaria.v1.DeleteMailboxResponse
-	12, // 34: talaria.v1.MailService.ListMessages:output_type -> talaria.v1.ListMessagesResponse
-	14, // 35: talaria.v1.MailService.Search:output_type -> talaria.v1.SearchResponse
-	19, // 36: talaria.v1.MailService.GetMessage:output_type -> talaria.v1.GetMessageResponse
-	21, // 37: talaria.v1.MailService.GetThread:output_type -> talaria.v1.GetThreadResponse
-	23, // 38: talaria.v1.MailService.UpdateFlags:output_type -> talaria.v1.UpdateFlagsResponse
-	25, // 39: talaria.v1.MailService.MoveMessages:output_type -> talaria.v1.MoveMessagesResponse
-	27, // 40: talaria.v1.MailService.DeleteMessages:output_type -> talaria.v1.DeleteMessagesResponse
-	32, // 41: talaria.v1.MailService.ListIdentities:output_type -> talaria.v1.ListIdentitiesResponse
-	36, // 42: talaria.v1.MailService.SendMessage:output_type -> talaria.v1.SendMessageResponse
-	38, // 43: talaria.v1.MailService.SaveDraft:output_type -> talaria.v1.SaveDraftResponse
-	29, // 44: talaria.v1.MailService.Watch:output_type -> talaria.v1.WatchResponse
-	30, // [30:45] is the sub-list for method output_type
-	15, // [15:30] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	39, // 15: talaria.v1.GetMailSettingsResponse.endpoints:type_name -> talaria.v1.MailEndpoint
+	3,  // 16: talaria.v1.MailService.ListMailboxes:input_type -> talaria.v1.ListMailboxesRequest
+	5,  // 17: talaria.v1.MailService.CreateMailbox:input_type -> talaria.v1.CreateMailboxRequest
+	7,  // 18: talaria.v1.MailService.RenameMailbox:input_type -> talaria.v1.RenameMailboxRequest
+	9,  // 19: talaria.v1.MailService.DeleteMailbox:input_type -> talaria.v1.DeleteMailboxRequest
+	11, // 20: talaria.v1.MailService.ListMessages:input_type -> talaria.v1.ListMessagesRequest
+	13, // 21: talaria.v1.MailService.Search:input_type -> talaria.v1.SearchRequest
+	18, // 22: talaria.v1.MailService.GetMessage:input_type -> talaria.v1.GetMessageRequest
+	20, // 23: talaria.v1.MailService.GetThread:input_type -> talaria.v1.GetThreadRequest
+	22, // 24: talaria.v1.MailService.UpdateFlags:input_type -> talaria.v1.UpdateFlagsRequest
+	24, // 25: talaria.v1.MailService.MoveMessages:input_type -> talaria.v1.MoveMessagesRequest
+	26, // 26: talaria.v1.MailService.DeleteMessages:input_type -> talaria.v1.DeleteMessagesRequest
+	31, // 27: talaria.v1.MailService.ListIdentities:input_type -> talaria.v1.ListIdentitiesRequest
+	35, // 28: talaria.v1.MailService.SendMessage:input_type -> talaria.v1.SendMessageRequest
+	37, // 29: talaria.v1.MailService.SaveDraft:input_type -> talaria.v1.SaveDraftRequest
+	40, // 30: talaria.v1.MailService.GetMailSettings:input_type -> talaria.v1.GetMailSettingsRequest
+	28, // 31: talaria.v1.MailService.Watch:input_type -> talaria.v1.WatchRequest
+	4,  // 32: talaria.v1.MailService.ListMailboxes:output_type -> talaria.v1.ListMailboxesResponse
+	6,  // 33: talaria.v1.MailService.CreateMailbox:output_type -> talaria.v1.CreateMailboxResponse
+	8,  // 34: talaria.v1.MailService.RenameMailbox:output_type -> talaria.v1.RenameMailboxResponse
+	10, // 35: talaria.v1.MailService.DeleteMailbox:output_type -> talaria.v1.DeleteMailboxResponse
+	12, // 36: talaria.v1.MailService.ListMessages:output_type -> talaria.v1.ListMessagesResponse
+	14, // 37: talaria.v1.MailService.Search:output_type -> talaria.v1.SearchResponse
+	19, // 38: talaria.v1.MailService.GetMessage:output_type -> talaria.v1.GetMessageResponse
+	21, // 39: talaria.v1.MailService.GetThread:output_type -> talaria.v1.GetThreadResponse
+	23, // 40: talaria.v1.MailService.UpdateFlags:output_type -> talaria.v1.UpdateFlagsResponse
+	25, // 41: talaria.v1.MailService.MoveMessages:output_type -> talaria.v1.MoveMessagesResponse
+	27, // 42: talaria.v1.MailService.DeleteMessages:output_type -> talaria.v1.DeleteMessagesResponse
+	32, // 43: talaria.v1.MailService.ListIdentities:output_type -> talaria.v1.ListIdentitiesResponse
+	36, // 44: talaria.v1.MailService.SendMessage:output_type -> talaria.v1.SendMessageResponse
+	38, // 45: talaria.v1.MailService.SaveDraft:output_type -> talaria.v1.SaveDraftResponse
+	41, // 46: talaria.v1.MailService.GetMailSettings:output_type -> talaria.v1.GetMailSettingsResponse
+	29, // 47: talaria.v1.MailService.Watch:output_type -> talaria.v1.WatchResponse
+	32, // [32:48] is the sub-list for method output_type
+	16, // [16:32] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_talaria_v1_mail_proto_init() }
@@ -2641,7 +2805,7 @@ func file_talaria_v1_mail_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_talaria_v1_mail_proto_rawDesc), len(file_talaria_v1_mail_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   38,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

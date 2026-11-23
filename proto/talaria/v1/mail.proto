@@ -44,6 +44,11 @@ service MailService {
   // SaveDraft stores the message in Drafts, replacing draft_id if set.
   rpc SaveDraft(SaveDraftRequest) returns (SaveDraftResponse) {}
 
+  // GetMailSettings tells mail apps where to connect.
+  rpc GetMailSettings(GetMailSettingsRequest) returns (GetMailSettingsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
   // Watch streams a notice whenever the user's mailboxes change.
   rpc Watch(WatchRequest) returns (stream WatchResponse) {}
 }
@@ -235,3 +240,14 @@ message SendMessageResponse {
 
 message SaveDraftRequest { Compose message = 1; }
 message SaveDraftResponse { int64 draft_id = 1; }
+
+message MailEndpoint {
+  string protocol = 1; // IMAP, POP3, SMTP
+  int32 port = 2;
+  string security = 3; // TLS or STARTTLS
+}
+message GetMailSettingsRequest {}
+message GetMailSettingsResponse {
+  string hostname = 1;
+  repeated MailEndpoint endpoints = 2;
+}
