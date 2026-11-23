@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file talaria/v1/mail.proto.
  */
 export const file_talaria_v1_mail: GenFile = /*@__PURE__*/
-  fileDesc("ChV0YWxhcmlhL3YxL21haWwucHJvdG8SCnRhbGFyaWEudjEieQoHTWFpbGJveBIKCgJpZBgBIAEoAxIMCgRuYW1lGAIgASgJEhMKC3NwZWNpYWxfdXNlGAMgASgJEg0KBXRvdGFsGAQgASgDEg4KBnVucmVhZBgFIAEoAxIMCgRzaXplGAYgASgDEhIKCnN1YnNjcmliZWQYByABKAgi9AIKDk1lc3NhZ2VTdW1tYXJ5EgoKAmlkGAEgASgDEhIKCm1haWxib3hfaWQYAiABKAMSEQoJdGhyZWFkX2lkGAMgASgDEgwKBGRhdGUYBCABKAMSEQoJc2VudF9kYXRlGAUgASgDEgwKBHNpemUYBiABKAMSDwoHc3ViamVjdBgHIAEoCRIRCglmcm9tX25hbWUYCCABKAkSEQoJZnJvbV9hZGRyGAkgASgJEgoKAnRvGAogASgJEgoKAmNjGAsgASgJEg8KB3ByZXZpZXcYDCABKAkSDAoEc2VlbhgNIAEoCBIPCgdmbGFnZ2VkGA4gASgIEhAKCGFuc3dlcmVkGA8gASgIEg0KBWRyYWZ0GBAgASgIEhcKD2hhc19hdHRhY2htZW50cxgRIAEoCBIQCghzcGZfcGFzcxgSIAEoCBIRCglka2ltX3Bhc3MYEyABKAgSEgoKZG1hcmNfcGFzcxgUIAEoCBIOCgZtb2RzZXEYFSABKAMiFgoUTGlzdE1haWxib3hlc1JlcXVlc3QiPwoVTGlzdE1haWxib3hlc1Jlc3BvbnNlEiYKCW1haWxib3hlcxgBIAMoCzITLnRhbGFyaWEudjEuTWFpbGJveCIkChRDcmVhdGVNYWlsYm94UmVxdWVzdBIMCgRuYW1lGAEgASgJIj0KFUNyZWF0ZU1haWxib3hSZXNwb25zZRIkCgdtYWlsYm94GAEgASgLMhMudGFsYXJpYS52MS5NYWlsYm94IjAKFFJlbmFtZU1haWxib3hSZXF1ZXN0EgoKAmlkGAEgASgDEgwKBG5hbWUYAiABKAkiFwoVUmVuYW1lTWFpbGJveFJlc3BvbnNlIiIKFERlbGV0ZU1haWxib3hSZXF1ZXN0EgoKAmlkGAEgASgDIhcKFURlbGV0ZU1haWxib3hSZXNwb25zZSJzChNMaXN0TWVzc2FnZXNSZXF1ZXN0EhIKCm1haWxib3hfaWQYASABKAMSDQoFbGltaXQYAiABKAUSDgoGY3Vyc29yGAMgASgJEhMKC3VucmVhZF9vbmx5GAQgASgIEhQKDGZsYWdnZWRfb25seRgFIAEoCCJxChRMaXN0TWVzc2FnZXNSZXNwb25zZRIsCghtZXNzYWdlcxgBIAMoCzIaLnRhbGFyaWEudjEuTWVzc2FnZVN1bW1hcnkSEwoLbmV4dF9jdXJzb3IYAiABKAkSFgoOaGlnaGVzdF9tb2RzZXEYAyABKAMiqAEKDVNlYXJjaFJlcXVlc3QSDQoFcXVlcnkYASABKAkSEgoKbWFpbGJveF9pZBgCIAEoAxIMCgRmcm9tGAMgASgJEg4KBnVucmVhZBgEIAEoCBIPCgdmbGFnZ2VkGAUgASgIEhcKD2hhc19hdHRhY2htZW50cxgGIAEoCBINCgVhZnRlchgHIAEoAxIOCgZiZWZvcmUYCCABKAMSDQoFbGltaXQYCSABKAUiPgoOU2VhcmNoUmVzcG9uc2USLAoIbWVzc2FnZXMYASADKAsyGi50YWxhcmlhLnYxLk1lc3NhZ2VTdW1tYXJ5InQKCkF0dGFjaG1lbnQSDAoEcGFydBgBIAEoCRIQCghmaWxlbmFtZRgCIAEoCRIUCgxjb250ZW50X3R5cGUYAyABKAkSDAoEc2l6ZRgEIAEoAxISCgpjb250ZW50X2lkGAUgASgJEg4KBmlubGluZRgGIAEoCCIlCgZIZWFkZXISDAoEbmFtZRgBIAEoCRINCgV2YWx1ZRgCIAEoCSKhAgoNTWVzc2FnZURldGFpbBIrCgdzdW1tYXJ5GAEgASgLMhoudGFsYXJpYS52MS5NZXNzYWdlU3VtbWFyeRISCgptZXNzYWdlX2lkGAIgASgJEhMKC2luX3JlcGx5X3RvGAMgASgJEhAKCHJlcGx5X3RvGAQgASgJEhEKCXRleHRfYm9keRgFIAEoCRIRCglodG1sX2JvZHkYBiABKAkSKwoLYXR0YWNobWVudHMYByADKAsyFi50YWxhcmlhLnYxLkF0dGFjaG1lbnQSIwoHaGVhZGVycxgIIAMoCzISLnRhbGFyaWEudjEuSGVhZGVyEhAKCGtleXdvcmRzGAkgAygJEh4KFmF1dGhlbnRpY2F0aW9uX3Jlc3VsdHMYCiABKAkiMgoRR2V0TWVzc2FnZVJlcXVlc3QSCgoCaWQYASABKAMSEQoJbWFya19zZWVuGAIgASgIIkAKEkdldE1lc3NhZ2VSZXNwb25zZRIqCgdtZXNzYWdlGAEgASgLMhkudGFsYXJpYS52MS5NZXNzYWdlRGV0YWlsIiUKEEdldFRocmVhZFJlcXVlc3QSEQoJdGhyZWFkX2lkGAEgASgDIkEKEUdldFRocmVhZFJlc3BvbnNlEiwKCG1lc3NhZ2VzGAEgAygLMhoudGFsYXJpYS52MS5NZXNzYWdlU3VtbWFyeSKRAQoSVXBkYXRlRmxhZ3NSZXF1ZXN0EgsKA2lkcxgBIAMoAxIdCgNhZGQYAiADKA4yEC50YWxhcmlhLnYxLkZsYWcSIAoGcmVtb3ZlGAMgAygOMhAudGFsYXJpYS52MS5GbGFnEhQKDGFkZF9rZXl3b3JkcxgEIAMoCRIXCg9yZW1vdmVfa2V5d29yZHMYBSADKAkiFQoTVXBkYXRlRmxhZ3NSZXNwb25zZSI2ChNNb3ZlTWVzc2FnZXNSZXF1ZXN0EgsKA2lkcxgBIAMoAxISCgptYWlsYm94X2lkGAIgASgDIhYKFE1vdmVNZXNzYWdlc1Jlc3BvbnNlIiQKFURlbGV0ZU1lc3NhZ2VzUmVxdWVzdBILCgNpZHMYASADKAMiGAoWRGVsZXRlTWVzc2FnZXNSZXNwb25zZSIOCgxXYXRjaFJlcXVlc3QiJAoNV2F0Y2hSZXNwb25zZRITCgttYWlsYm94X2lkcxgBIAMoAypyCgRGbGFnEhQKEEZMQUdfVU5TUEVDSUZJRUQQABINCglGTEFHX1NFRU4QARIRCg1GTEFHX0FOU1dFUkVEEAISEAoMRkxBR19GTEFHR0VEEAMSEAoMRkxBR19ERUxFVEVEEAQSDgoKRkxBR19EUkFGVBAFMvMHCgtNYWlsU2VydmljZRJZCg1MaXN0TWFpbGJveGVzEiAudGFsYXJpYS52MS5MaXN0TWFpbGJveGVzUmVxdWVzdBohLnRhbGFyaWEudjEuTGlzdE1haWxib3hlc1Jlc3BvbnNlIgOQAgESVgoNQ3JlYXRlTWFpbGJveBIgLnRhbGFyaWEudjEuQ3JlYXRlTWFpbGJveFJlcXVlc3QaIS50YWxhcmlhLnYxLkNyZWF0ZU1haWxib3hSZXNwb25zZSIAElYKDVJlbmFtZU1haWxib3gSIC50YWxhcmlhLnYxLlJlbmFtZU1haWxib3hSZXF1ZXN0GiEudGFsYXJpYS52MS5SZW5hbWVNYWlsYm94UmVzcG9uc2UiABJWCg1EZWxldGVNYWlsYm94EiAudGFsYXJpYS52MS5EZWxldGVNYWlsYm94UmVxdWVzdBohLnRhbGFyaWEudjEuRGVsZXRlTWFpbGJveFJlc3BvbnNlIgASVgoMTGlzdE1lc3NhZ2VzEh8udGFsYXJpYS52MS5MaXN0TWVzc2FnZXNSZXF1ZXN0GiAudGFsYXJpYS52MS5MaXN0TWVzc2FnZXNSZXNwb25zZSIDkAIBEkQKBlNlYXJjaBIZLnRhbGFyaWEudjEuU2VhcmNoUmVxdWVzdBoaLnRhbGFyaWEudjEuU2VhcmNoUmVzcG9uc2UiA5ACARJQCgpHZXRNZXNzYWdlEh0udGFsYXJpYS52MS5HZXRNZXNzYWdlUmVxdWVzdBoeLnRhbGFyaWEudjEuR2V0TWVzc2FnZVJlc3BvbnNlIgOQAgESTQoJR2V0VGhyZWFkEhwudGFsYXJpYS52MS5HZXRUaHJlYWRSZXF1ZXN0Gh0udGFsYXJpYS52MS5HZXRUaHJlYWRSZXNwb25zZSIDkAIBElAKC1VwZGF0ZUZsYWdzEh4udGFsYXJpYS52MS5VcGRhdGVGbGFnc1JlcXVlc3QaHy50YWxhcmlhLnYxLlVwZGF0ZUZsYWdzUmVzcG9uc2UiABJTCgxNb3ZlTWVzc2FnZXMSHy50YWxhcmlhLnYxLk1vdmVNZXNzYWdlc1JlcXVlc3QaIC50YWxhcmlhLnYxLk1vdmVNZXNzYWdlc1Jlc3BvbnNlIgASWQoORGVsZXRlTWVzc2FnZXMSIS50YWxhcmlhLnYxLkRlbGV0ZU1lc3NhZ2VzUmVxdWVzdBoiLnRhbGFyaWEudjEuRGVsZXRlTWVzc2FnZXNSZXNwb25zZSIAEkAKBVdhdGNoEhgudGFsYXJpYS52MS5XYXRjaFJlcXVlc3QaGS50YWxhcmlhLnYxLldhdGNoUmVzcG9uc2UiADABQjlaN2dpdGh1Yi5jb20vZ3NvdWx0YW4vdGFsYXJpYS9nZW4vZ28vdGFsYXJpYS92MTt0YWxhcmlhdjFiBnByb3RvMw");
+  fileDesc("ChV0YWxhcmlhL3YxL21haWwucHJvdG8SCnRhbGFyaWEudjEieQoHTWFpbGJveBIKCgJpZBgBIAEoAxIMCgRuYW1lGAIgASgJEhMKC3NwZWNpYWxfdXNlGAMgASgJEg0KBXRvdGFsGAQgASgDEg4KBnVucmVhZBgFIAEoAxIMCgRzaXplGAYgASgDEhIKCnN1YnNjcmliZWQYByABKAgi9AIKDk1lc3NhZ2VTdW1tYXJ5EgoKAmlkGAEgASgDEhIKCm1haWxib3hfaWQYAiABKAMSEQoJdGhyZWFkX2lkGAMgASgDEgwKBGRhdGUYBCABKAMSEQoJc2VudF9kYXRlGAUgASgDEgwKBHNpemUYBiABKAMSDwoHc3ViamVjdBgHIAEoCRIRCglmcm9tX25hbWUYCCABKAkSEQoJZnJvbV9hZGRyGAkgASgJEgoKAnRvGAogASgJEgoKAmNjGAsgASgJEg8KB3ByZXZpZXcYDCABKAkSDAoEc2VlbhgNIAEoCBIPCgdmbGFnZ2VkGA4gASgIEhAKCGFuc3dlcmVkGA8gASgIEg0KBWRyYWZ0GBAgASgIEhcKD2hhc19hdHRhY2htZW50cxgRIAEoCBIQCghzcGZfcGFzcxgSIAEoCBIRCglka2ltX3Bhc3MYEyABKAgSEgoKZG1hcmNfcGFzcxgUIAEoCBIOCgZtb2RzZXEYFSABKAMiFgoUTGlzdE1haWxib3hlc1JlcXVlc3QiPwoVTGlzdE1haWxib3hlc1Jlc3BvbnNlEiYKCW1haWxib3hlcxgBIAMoCzITLnRhbGFyaWEudjEuTWFpbGJveCIkChRDcmVhdGVNYWlsYm94UmVxdWVzdBIMCgRuYW1lGAEgASgJIj0KFUNyZWF0ZU1haWxib3hSZXNwb25zZRIkCgdtYWlsYm94GAEgASgLMhMudGFsYXJpYS52MS5NYWlsYm94IjAKFFJlbmFtZU1haWxib3hSZXF1ZXN0EgoKAmlkGAEgASgDEgwKBG5hbWUYAiABKAkiFwoVUmVuYW1lTWFpbGJveFJlc3BvbnNlIiIKFERlbGV0ZU1haWxib3hSZXF1ZXN0EgoKAmlkGAEgASgDIhcKFURlbGV0ZU1haWxib3hSZXNwb25zZSJzChNMaXN0TWVzc2FnZXNSZXF1ZXN0EhIKCm1haWxib3hfaWQYASABKAMSDQoFbGltaXQYAiABKAUSDgoGY3Vyc29yGAMgASgJEhMKC3VucmVhZF9vbmx5GAQgASgIEhQKDGZsYWdnZWRfb25seRgFIAEoCCJxChRMaXN0TWVzc2FnZXNSZXNwb25zZRIsCghtZXNzYWdlcxgBIAMoCzIaLnRhbGFyaWEudjEuTWVzc2FnZVN1bW1hcnkSEwoLbmV4dF9jdXJzb3IYAiABKAkSFgoOaGlnaGVzdF9tb2RzZXEYAyABKAMiqAEKDVNlYXJjaFJlcXVlc3QSDQoFcXVlcnkYASABKAkSEgoKbWFpbGJveF9pZBgCIAEoAxIMCgRmcm9tGAMgASgJEg4KBnVucmVhZBgEIAEoCBIPCgdmbGFnZ2VkGAUgASgIEhcKD2hhc19hdHRhY2htZW50cxgGIAEoCBINCgVhZnRlchgHIAEoAxIOCgZiZWZvcmUYCCABKAMSDQoFbGltaXQYCSABKAUiPgoOU2VhcmNoUmVzcG9uc2USLAoIbWVzc2FnZXMYASADKAsyGi50YWxhcmlhLnYxLk1lc3NhZ2VTdW1tYXJ5InQKCkF0dGFjaG1lbnQSDAoEcGFydBgBIAEoCRIQCghmaWxlbmFtZRgCIAEoCRIUCgxjb250ZW50X3R5cGUYAyABKAkSDAoEc2l6ZRgEIAEoAxISCgpjb250ZW50X2lkGAUgASgJEg4KBmlubGluZRgGIAEoCCIlCgZIZWFkZXISDAoEbmFtZRgBIAEoCRINCgV2YWx1ZRgCIAEoCSKhAgoNTWVzc2FnZURldGFpbBIrCgdzdW1tYXJ5GAEgASgLMhoudGFsYXJpYS52MS5NZXNzYWdlU3VtbWFyeRISCgptZXNzYWdlX2lkGAIgASgJEhMKC2luX3JlcGx5X3RvGAMgASgJEhAKCHJlcGx5X3RvGAQgASgJEhEKCXRleHRfYm9keRgFIAEoCRIRCglodG1sX2JvZHkYBiABKAkSKwoLYXR0YWNobWVudHMYByADKAsyFi50YWxhcmlhLnYxLkF0dGFjaG1lbnQSIwoHaGVhZGVycxgIIAMoCzISLnRhbGFyaWEudjEuSGVhZGVyEhAKCGtleXdvcmRzGAkgAygJEh4KFmF1dGhlbnRpY2F0aW9uX3Jlc3VsdHMYCiABKAkiMgoRR2V0TWVzc2FnZVJlcXVlc3QSCgoCaWQYASABKAMSEQoJbWFya19zZWVuGAIgASgIIkAKEkdldE1lc3NhZ2VSZXNwb25zZRIqCgdtZXNzYWdlGAEgASgLMhkudGFsYXJpYS52MS5NZXNzYWdlRGV0YWlsIiUKEEdldFRocmVhZFJlcXVlc3QSEQoJdGhyZWFkX2lkGAEgASgDIkEKEUdldFRocmVhZFJlc3BvbnNlEiwKCG1lc3NhZ2VzGAEgAygLMhoudGFsYXJpYS52MS5NZXNzYWdlU3VtbWFyeSKRAQoSVXBkYXRlRmxhZ3NSZXF1ZXN0EgsKA2lkcxgBIAMoAxIdCgNhZGQYAiADKA4yEC50YWxhcmlhLnYxLkZsYWcSIAoGcmVtb3ZlGAMgAygOMhAudGFsYXJpYS52MS5GbGFnEhQKDGFkZF9rZXl3b3JkcxgEIAMoCRIXCg9yZW1vdmVfa2V5d29yZHMYBSADKAkiFQoTVXBkYXRlRmxhZ3NSZXNwb25zZSI2ChNNb3ZlTWVzc2FnZXNSZXF1ZXN0EgsKA2lkcxgBIAMoAxISCgptYWlsYm94X2lkGAIgASgDIhYKFE1vdmVNZXNzYWdlc1Jlc3BvbnNlIiQKFURlbGV0ZU1lc3NhZ2VzUmVxdWVzdBILCgNpZHMYASADKAMiGAoWRGVsZXRlTWVzc2FnZXNSZXNwb25zZSIOCgxXYXRjaFJlcXVlc3QiJAoNV2F0Y2hSZXNwb25zZRITCgttYWlsYm94X2lkcxgBIAMoAyIxCghJZGVudGl0eRIPCgdhZGRyZXNzGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCSIXChVMaXN0SWRlbnRpdGllc1JlcXVlc3QiQgoWTGlzdElkZW50aXRpZXNSZXNwb25zZRIoCgppZGVudGl0aWVzGAEgAygLMhQudGFsYXJpYS52MS5JZGVudGl0eSJZCg1OZXdBdHRhY2htZW50EhAKCGZpbGVuYW1lGAEgASgJEhQKDGNvbnRlbnRfdHlwZRgCIAEoCRIMCgRkYXRhGAMgASgMEhIKCmNvbnRlbnRfaWQYBCABKAki3gEKB0NvbXBvc2USDAoEZnJvbRgBIAEoCRIKCgJ0bxgCIAMoCRIKCgJjYxgDIAMoCRILCgNiY2MYBCADKAkSDwoHc3ViamVjdBgFIAEoCRIRCgl0ZXh0X2JvZHkYBiABKAkSEQoJaHRtbF9ib2R5GAcgASgJEhMKC2luX3JlcGx5X3RvGAggASgJEhIKCnJlZmVyZW5jZXMYCSADKAkSLgoLYXR0YWNobWVudHMYCiADKAsyGS50YWxhcmlhLnYxLk5ld0F0dGFjaG1lbnQSEAoIZHJhZnRfaWQYCyABKAMiOgoSU2VuZE1lc3NhZ2VSZXF1ZXN0EiQKB21lc3NhZ2UYASABKAsyEy50YWxhcmlhLnYxLkNvbXBvc2UiVAoTU2VuZE1lc3NhZ2VSZXNwb25zZRISCgptZXNzYWdlX2lkGAEgASgJEg4KBnF1ZXVlZBgCIAEoBRIZChFkZWxpdmVyZWRfbG9jYWxseRgDIAEoBSI4ChBTYXZlRHJhZnRSZXF1ZXN0EiQKB21lc3NhZ2UYASABKAsyEy50YWxhcmlhLnYxLkNvbXBvc2UiJQoRU2F2ZURyYWZ0UmVzcG9uc2USEAoIZHJhZnRfaWQYASABKAMqcgoERmxhZxIUChBGTEFHX1VOU1BFQ0lGSUVEEAASDQoJRkxBR19TRUVOEAESEQoNRkxBR19BTlNXRVJFRBACEhAKDEZMQUdfRkxBR0dFRBADEhAKDEZMQUdfREVMRVRFRBAEEg4KCkZMQUdfRFJBRlQQBTLvCQoLTWFpbFNlcnZpY2USWQoNTGlzdE1haWxib3hlcxIgLnRhbGFyaWEudjEuTGlzdE1haWxib3hlc1JlcXVlc3QaIS50YWxhcmlhLnYxLkxpc3RNYWlsYm94ZXNSZXNwb25zZSIDkAIBElYKDUNyZWF0ZU1haWxib3gSIC50YWxhcmlhLnYxLkNyZWF0ZU1haWxib3hSZXF1ZXN0GiEudGFsYXJpYS52MS5DcmVhdGVNYWlsYm94UmVzcG9uc2UiABJWCg1SZW5hbWVNYWlsYm94EiAudGFsYXJpYS52MS5SZW5hbWVNYWlsYm94UmVxdWVzdBohLnRhbGFyaWEudjEuUmVuYW1lTWFpbGJveFJlc3BvbnNlIgASVgoNRGVsZXRlTWFpbGJveBIgLnRhbGFyaWEudjEuRGVsZXRlTWFpbGJveFJlcXVlc3QaIS50YWxhcmlhLnYxLkRlbGV0ZU1haWxib3hSZXNwb25zZSIAElYKDExpc3RNZXNzYWdlcxIfLnRhbGFyaWEudjEuTGlzdE1lc3NhZ2VzUmVxdWVzdBogLnRhbGFyaWEudjEuTGlzdE1lc3NhZ2VzUmVzcG9uc2UiA5ACARJECgZTZWFyY2gSGS50YWxhcmlhLnYxLlNlYXJjaFJlcXVlc3QaGi50YWxhcmlhLnYxLlNlYXJjaFJlc3BvbnNlIgOQAgESUAoKR2V0TWVzc2FnZRIdLnRhbGFyaWEudjEuR2V0TWVzc2FnZVJlcXVlc3QaHi50YWxhcmlhLnYxLkdldE1lc3NhZ2VSZXNwb25zZSIDkAIBEk0KCUdldFRocmVhZBIcLnRhbGFyaWEudjEuR2V0VGhyZWFkUmVxdWVzdBodLnRhbGFyaWEudjEuR2V0VGhyZWFkUmVzcG9uc2UiA5ACARJQCgtVcGRhdGVGbGFncxIeLnRhbGFyaWEudjEuVXBkYXRlRmxhZ3NSZXF1ZXN0Gh8udGFsYXJpYS52MS5VcGRhdGVGbGFnc1Jlc3BvbnNlIgASUwoMTW92ZU1lc3NhZ2VzEh8udGFsYXJpYS52MS5Nb3ZlTWVzc2FnZXNSZXF1ZXN0GiAudGFsYXJpYS52MS5Nb3ZlTWVzc2FnZXNSZXNwb25zZSIAElkKDkRlbGV0ZU1lc3NhZ2VzEiEudGFsYXJpYS52MS5EZWxldGVNZXNzYWdlc1JlcXVlc3QaIi50YWxhcmlhLnYxLkRlbGV0ZU1lc3NhZ2VzUmVzcG9uc2UiABJcCg5MaXN0SWRlbnRpdGllcxIhLnRhbGFyaWEudjEuTGlzdElkZW50aXRpZXNSZXF1ZXN0GiIudGFsYXJpYS52MS5MaXN0SWRlbnRpdGllc1Jlc3BvbnNlIgOQAgESUAoLU2VuZE1lc3NhZ2USHi50YWxhcmlhLnYxLlNlbmRNZXNzYWdlUmVxdWVzdBofLnRhbGFyaWEudjEuU2VuZE1lc3NhZ2VSZXNwb25zZSIAEkoKCVNhdmVEcmFmdBIcLnRhbGFyaWEudjEuU2F2ZURyYWZ0UmVxdWVzdBodLnRhbGFyaWEudjEuU2F2ZURyYWZ0UmVzcG9uc2UiABJACgVXYXRjaBIYLnRhbGFyaWEudjEuV2F0Y2hSZXF1ZXN0GhkudGFsYXJpYS52MS5XYXRjaFJlc3BvbnNlIgAwAUI5WjdnaXRodWIuY29tL2dzb3VsdGFuL3RhbGFyaWEvZ2VuL2dvL3RhbGFyaWEvdjE7dGFsYXJpYXYxYgZwcm90bzM");
 
 /**
  * @generated from message talaria.v1.Mailbox
@@ -805,6 +805,237 @@ export const WatchResponseSchema: GenMessage<WatchResponse> = /*@__PURE__*/
   messageDesc(file_talaria_v1_mail, 28);
 
 /**
+ * @generated from message talaria.v1.Identity
+ */
+export type Identity = Message<"talaria.v1.Identity"> & {
+  /**
+   * @generated from field: string address = 1;
+   */
+  address: string;
+
+  /**
+   * @generated from field: string display_name = 2;
+   */
+  displayName: string;
+};
+
+/**
+ * Describes the message talaria.v1.Identity.
+ * Use `create(IdentitySchema)` to create a new message.
+ */
+export const IdentitySchema: GenMessage<Identity> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_mail, 29);
+
+/**
+ * @generated from message talaria.v1.ListIdentitiesRequest
+ */
+export type ListIdentitiesRequest = Message<"talaria.v1.ListIdentitiesRequest"> & {
+};
+
+/**
+ * Describes the message talaria.v1.ListIdentitiesRequest.
+ * Use `create(ListIdentitiesRequestSchema)` to create a new message.
+ */
+export const ListIdentitiesRequestSchema: GenMessage<ListIdentitiesRequest> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_mail, 30);
+
+/**
+ * @generated from message talaria.v1.ListIdentitiesResponse
+ */
+export type ListIdentitiesResponse = Message<"talaria.v1.ListIdentitiesResponse"> & {
+  /**
+   * @generated from field: repeated talaria.v1.Identity identities = 1;
+   */
+  identities: Identity[];
+};
+
+/**
+ * Describes the message talaria.v1.ListIdentitiesResponse.
+ * Use `create(ListIdentitiesResponseSchema)` to create a new message.
+ */
+export const ListIdentitiesResponseSchema: GenMessage<ListIdentitiesResponse> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_mail, 31);
+
+/**
+ * @generated from message talaria.v1.NewAttachment
+ */
+export type NewAttachment = Message<"talaria.v1.NewAttachment"> & {
+  /**
+   * @generated from field: string filename = 1;
+   */
+  filename: string;
+
+  /**
+   * @generated from field: string content_type = 2;
+   */
+  contentType: string;
+
+  /**
+   * @generated from field: bytes data = 3;
+   */
+  data: Uint8Array;
+
+  /**
+   * Set for images referenced from the HTML body as cid:...
+   *
+   * @generated from field: string content_id = 4;
+   */
+  contentId: string;
+};
+
+/**
+ * Describes the message talaria.v1.NewAttachment.
+ * Use `create(NewAttachmentSchema)` to create a new message.
+ */
+export const NewAttachmentSchema: GenMessage<NewAttachment> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_mail, 32);
+
+/**
+ * @generated from message talaria.v1.Compose
+ */
+export type Compose = Message<"talaria.v1.Compose"> & {
+  /**
+   * @generated from field: string from = 1;
+   */
+  from: string;
+
+  /**
+   * @generated from field: repeated string to = 2;
+   */
+  to: string[];
+
+  /**
+   * @generated from field: repeated string cc = 3;
+   */
+  cc: string[];
+
+  /**
+   * @generated from field: repeated string bcc = 4;
+   */
+  bcc: string[];
+
+  /**
+   * @generated from field: string subject = 5;
+   */
+  subject: string;
+
+  /**
+   * @generated from field: string text_body = 6;
+   */
+  textBody: string;
+
+  /**
+   * @generated from field: string html_body = 7;
+   */
+  htmlBody: string;
+
+  /**
+   * @generated from field: string in_reply_to = 8;
+   */
+  inReplyTo: string;
+
+  /**
+   * @generated from field: repeated string references = 9;
+   */
+  references: string[];
+
+  /**
+   * @generated from field: repeated talaria.v1.NewAttachment attachments = 10;
+   */
+  attachments: NewAttachment[];
+
+  /**
+   * @generated from field: int64 draft_id = 11;
+   */
+  draftId: bigint;
+};
+
+/**
+ * Describes the message talaria.v1.Compose.
+ * Use `create(ComposeSchema)` to create a new message.
+ */
+export const ComposeSchema: GenMessage<Compose> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_mail, 33);
+
+/**
+ * @generated from message talaria.v1.SendMessageRequest
+ */
+export type SendMessageRequest = Message<"talaria.v1.SendMessageRequest"> & {
+  /**
+   * @generated from field: talaria.v1.Compose message = 1;
+   */
+  message?: Compose | undefined;
+};
+
+/**
+ * Describes the message talaria.v1.SendMessageRequest.
+ * Use `create(SendMessageRequestSchema)` to create a new message.
+ */
+export const SendMessageRequestSchema: GenMessage<SendMessageRequest> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_mail, 34);
+
+/**
+ * @generated from message talaria.v1.SendMessageResponse
+ */
+export type SendMessageResponse = Message<"talaria.v1.SendMessageResponse"> & {
+  /**
+   * @generated from field: string message_id = 1;
+   */
+  messageId: string;
+
+  /**
+   * @generated from field: int32 queued = 2;
+   */
+  queued: number;
+
+  /**
+   * @generated from field: int32 delivered_locally = 3;
+   */
+  deliveredLocally: number;
+};
+
+/**
+ * Describes the message talaria.v1.SendMessageResponse.
+ * Use `create(SendMessageResponseSchema)` to create a new message.
+ */
+export const SendMessageResponseSchema: GenMessage<SendMessageResponse> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_mail, 35);
+
+/**
+ * @generated from message talaria.v1.SaveDraftRequest
+ */
+export type SaveDraftRequest = Message<"talaria.v1.SaveDraftRequest"> & {
+  /**
+   * @generated from field: talaria.v1.Compose message = 1;
+   */
+  message?: Compose | undefined;
+};
+
+/**
+ * Describes the message talaria.v1.SaveDraftRequest.
+ * Use `create(SaveDraftRequestSchema)` to create a new message.
+ */
+export const SaveDraftRequestSchema: GenMessage<SaveDraftRequest> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_mail, 36);
+
+/**
+ * @generated from message talaria.v1.SaveDraftResponse
+ */
+export type SaveDraftResponse = Message<"talaria.v1.SaveDraftResponse"> & {
+  /**
+   * @generated from field: int64 draft_id = 1;
+   */
+  draftId: bigint;
+};
+
+/**
+ * Describes the message talaria.v1.SaveDraftResponse.
+ * Use `create(SaveDraftResponseSchema)` to create a new message.
+ */
+export const SaveDraftResponseSchema: GenMessage<SaveDraftResponse> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_mail, 37);
+
+/**
  * @generated from enum talaria.v1.Flag
  */
 export enum Flag {
@@ -941,6 +1172,37 @@ export const MailService: GenService<{
     methodKind: "unary";
     input: typeof DeleteMessagesRequestSchema;
     output: typeof DeleteMessagesResponseSchema;
+  },
+  /**
+   * ListIdentities returns the addresses the user may send from.
+   *
+   * @generated from rpc talaria.v1.MailService.ListIdentities
+   */
+  listIdentities: {
+    methodKind: "unary";
+    input: typeof ListIdentitiesRequestSchema;
+    output: typeof ListIdentitiesResponseSchema;
+  },
+  /**
+   * SendMessage sends a composed message and files a copy in Sent. When
+   * draft_id is set, that draft is removed.
+   *
+   * @generated from rpc talaria.v1.MailService.SendMessage
+   */
+  sendMessage: {
+    methodKind: "unary";
+    input: typeof SendMessageRequestSchema;
+    output: typeof SendMessageResponseSchema;
+  },
+  /**
+   * SaveDraft stores the message in Drafts, replacing draft_id if set.
+   *
+   * @generated from rpc talaria.v1.MailService.SaveDraft
+   */
+  saveDraft: {
+    methodKind: "unary";
+    input: typeof SaveDraftRequestSchema;
+    output: typeof SaveDraftResponseSchema;
   },
   /**
    * Watch streams a notice whenever the user's mailboxes change.

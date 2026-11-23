@@ -18,6 +18,21 @@ default: Talaria hands every message to a smarthost on 587 or 465 with
 username and password. Switch to `direct` only where port 25 is open and the
 IP has a clean reputation and matching reverse DNS.
 
+Queued mail is retried after 1, 5, 15 and 30 minutes, then hourly with
+growing gaps, for up to four days; after that, or on a permanent 5xx reply,
+the sender gets a bounce report in their Inbox. Each tenant's
+`daily_send_limit` caps how many recipients it can send to per 24 hours.
+Without a relay host configured, mail waits in the queue and the admin queue
+view says why.
+
+## DNS records
+
+Every domain needs MX, SPF, DKIM and DMARC records, plus SRV records so mail
+apps can find the server. The admin API (`GetDomainSetup`, and the Domains
+screen in the webmail) lists the exact values, creates the DKIM key on first
+use, and can look the records up to show which are missing. When mail leaves
+through a relay, add the relay's SPF include to the SPF record.
+
 ## Behind a web gateway (HTTP)
 
 Point the gateway at `http.listen` (default `:8080`). Talaria speaks HTTP/1.1

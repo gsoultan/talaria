@@ -608,3 +608,9 @@ func chunks(ids []int64, n int) [][]int64 {
 	}
 	return out
 }
+
+// MessageByMessageID finds one of a user's messages by its Message-ID header.
+func (s *Store) MessageByMessageID(ctx context.Context, userID int64, msgID string) (Message, error) {
+	return scanMessage(s.r.QueryRowContext(ctx, `SELECT `+msgCols+` FROM messages m JOIN mailboxes b ON b.id=m.mailbox_id
+		WHERE b.user_id=? AND m.message_id=? ORDER BY m.id LIMIT 1`, userID, strings.Trim(msgID, "<> ")))
+}

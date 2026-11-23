@@ -9,9 +9,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,6 +33,7 @@ import (
 	"github.com/gsoultan/talaria/internal/ingest"
 	"github.com/gsoultan/talaria/internal/listener"
 	"github.com/gsoultan/talaria/internal/mail"
+	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/smtpd"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/tlsutil"
@@ -45,9 +48,13 @@ type Server struct {
 	Blobs   *blob.Store
 	Hub     *hub.Hub
 	Deliver *mail.Deliverer
+	Keys    *outbound.Keys
+	Queue   *outbound.Queue
+	Submit  *outbound.Submitter
 	tls     *tls.Config
 	http    *http.Server
 	smtp    *smtp.Server
+	sub     *smtp.Server
 }
 
 // OpenStores opens the database and blob store under the data directory.
@@ -96,15 +103,31 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 		TmpDir:  filepath.Join(cfg.DataDir, "tmp"), MaxSize: int64(cfg.SMTP.MaxMessageSize),
 	}
 
+	transport, route, err := newTransport(cfg)
+	if err != nil {
+		st.Close()
+		return nil, err
+	}
+	s.Keys = &outbound.Keys{Store: st}
+	s.Queue = &outbound.Queue{Store: st, Blobs: bl, Transport: transport, Deliver: s.Deliver, Hostname: cfg.Hostname, Log: log}
+	s.Submit = &outbound.Submitter{Store: st, Blobs: bl, Deliver: s.Deliver, Keys: s.Keys, Queue: s.Queue, Hostname: cfg.Hostname,
+		TmpDir: s.Deliver.TmpDir, MaxSize: int64(cfg.SMTP.MaxMessageSize), Log: log}
+
 	authn := api.NewAuth(st)
-	opts := connect.WithInterceptors(authn)
-	mailSrv := &api.MailServer{Store: st, Blobs: bl, Hub: s.Hub}
+	maxRead := int(cfg.SMTP.MaxMessageSize)*2 + 1<<20
+	opts := connect.WithHandlerOptions(connect.WithInterceptors(authn), connect.WithReadMaxBytes(maxRead))
+	mailSrv := &api.MailServer{Store: st, Blobs: bl, Hub: s.Hub, Submit: s.Submit, Deliver: s.Deliver, Hostname: cfg.Hostname,
+		MaxSize: int64(cfg.SMTP.MaxMessageSize)}
+	adminSrv := &api.AdminServer{Store: st, Keys: s.Keys, Hostname: cfg.Hostname, Route: route, Wake: s.Queue.Wake}
+	if cfg.Outbound.Mode == "relay" {
+		adminSrv.RelayHost = cfg.Outbound.Relay.Host
+	}
 
 	mux := http.NewServeMux()
 	mux.Handle(talariav1connect.NewSystemServiceHandler(api.NewSystemServer()))
 	mux.Handle(talariav1connect.NewAuthServiceHandler(api.NewAuthServer(authn), opts))
 	mux.Handle(talariav1connect.NewMailServiceHandler(mailSrv, opts))
-	mux.Handle(talariav1connect.NewAdminServiceHandler(&api.AdminServer{Store: st}, opts))
+	mux.Handle(talariav1connect.NewAdminServiceHandler(adminSrv, opts))
 	(&api.Downloads{Auth: authn, Mail: mailSrv}).Register(mux)
 	if cfg.Ingest.Enabled {
 		tok, err := os.ReadFile(cfg.Ingest.TokenFile)
@@ -143,7 +166,36 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 			Hostname: cfg.Hostname, MaxMessageSize: int64(cfg.SMTP.MaxMessageSize), TLS: s.tls, UpstreamTLS: cfg.SMTP.UpstreamTLS,
 		}, st, s.Deliver, log)
 	}
+	if cfg.SMTP.Submission != "" || cfg.SMTP.SubmissionTLS != "" {
+		s.sub = smtpd.NewSubmission(smtpd.Config{
+			Hostname: cfg.Hostname, MaxMessageSize: int64(cfg.SMTP.MaxMessageSize), TLS: s.tls, UpstreamTLS: cfg.SMTP.UpstreamTLS,
+		}, st, s.Submit, log)
+	}
 	return s, nil
+}
+
+func newTransport(cfg config.Config) (outbound.Transport, string, error) {
+	timeout := cfg.Outbound.Relay.Timeout.D()
+	if timeout == 0 {
+		timeout = 30 * time.Second
+	}
+	if cfg.Outbound.Mode == "direct" {
+		return &outbound.Direct{Hello: cfg.Hostname, Timeout: timeout}, "direct to MX on port 25", nil
+	}
+	r := cfg.Outbound.Relay
+	if r.Host == "" {
+		return noRelay{}, "not configured: set outbound.relay.host", nil
+	}
+	var password string
+	if r.PasswordFile != "" {
+		b, err := os.ReadFile(r.PasswordFile)
+		if err != nil {
+			return nil, "", fmt.Errorf("relay password: %w", err)
+		}
+		password = strings.TrimSpace(string(b))
+	}
+	return &outbound.Relay{Host: r.Host, Port: r.Port, Username: r.Username, Password: password, Hello: cfg.Hostname, Timeout: timeout},
+		fmt.Sprintf("relay %s:%d", r.Host, r.Port), nil
 }
 
 // Close releases the stores. Run calls it on exit.
@@ -175,9 +227,20 @@ func (s *Server) Run(ctx context.Context) error {
 		go func() { errc <- s.smtp.Serve(listener.Wrap(sl, trusted)) }()
 	}
 
+	if s.sub != nil {
+		trusted, _ := config.ParsePrefixes(s.cfg.SMTP.TrustedProxies)
+		if err := s.serveSubmission(s.cfg.SMTP.Submission, false, trusted, errc); err != nil {
+			return err
+		}
+		if err := s.serveSubmission(s.cfg.SMTP.SubmissionTLS, true, trusted, errc); err != nil {
+			return err
+		}
+	}
+
 	jctx, stopJanitor := context.WithCancel(ctx)
-	wg.Add(1)
+	wg.Add(2)
 	go func() { defer wg.Done(); s.janitor(jctx) }()
+	go func() { defer wg.Done(); s.Queue.Run(jctx) }()
 
 	select {
 	case err := <-errc:
@@ -192,11 +255,40 @@ func (s *Server) Run(ctx context.Context) error {
 	if s.smtp != nil {
 		s.smtp.Shutdown(shutdownCtx)
 	}
+	if s.sub != nil {
+		s.sub.Shutdown(shutdownCtx)
+	}
 	err = s.http.Shutdown(shutdownCtx)
 	wg.Wait()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+	return nil
+}
+
+// serveSubmission starts one submission listener. implicit marks port 465:
+// TLS from the first byte, unless a gateway already terminated it.
+func (s *Server) serveSubmission(addr string, implicit bool, trusted []netip.Prefix, errc chan<- error) error {
+	if addr == "" {
+		return nil
+	}
+	if s.tls == nil && !s.cfg.SMTP.UpstreamTLS {
+		s.log.Warn("submission disabled: it needs tls.mode files, or upstream_tls behind a TLS-terminating gateway", "addr", addr)
+		return nil
+	}
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("submission: %w", err)
+	}
+	if s.cfg.SMTP.MaxConnections > 0 {
+		l = netutil.LimitListener(l, s.cfg.SMTP.MaxConnections)
+	}
+	l = listener.Wrap(l, trusted)
+	if implicit && !s.cfg.SMTP.UpstreamTLS {
+		l = tls.NewListener(l, s.tls)
+	}
+	s.log.Info("submission listening", "addr", addr, "implicit_tls", implicit)
+	go func() { errc <- s.sub.Serve(l) }()
 	return nil
 }
 
@@ -235,7 +327,17 @@ func (s *Server) sweep(ctx context.Context) {
 			break
 		}
 	}
+	if err := s.Store.PruneQueue(ctx, 30*86400); err != nil {
+		s.log.Warn("prune queue", "err", err)
+	}
 	if err := s.Store.PruneExpunged(ctx, 100_000); err != nil {
 		s.log.Warn("prune expunged", "err", err)
 	}
+}
+
+// noRelay keeps mail queued until a relay is configured.
+type noRelay struct{}
+
+func (noRelay) Send(context.Context, string, string, io.Reader) (string, error) {
+	return "", errors.New("no outbound relay configured (outbound.relay.host)")
 }

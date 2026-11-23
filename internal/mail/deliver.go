@@ -41,6 +41,8 @@ type Inbound struct {
 	// Mailbox overrides the Inbox (e.g. Sent for a copy of submitted mail).
 	MailboxUse string
 	Flags      store.Flag
+	// Stored, if set, is called for every message filed.
+	Stored func(store.Message)
 }
 
 // RejectError means the message must be refused with a permanent error.
@@ -151,6 +153,9 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 			continue
 		}
 		delivered++
+		if in.Stored != nil {
+			in.Stored(m)
+		}
 		if d.Hub != nil {
 			d.Hub.Publish(u.ID, m.MailboxID)
 		}

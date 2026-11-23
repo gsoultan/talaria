@@ -25,6 +25,17 @@ service AdminService {
   }
   rpc CreateDomain(CreateDomainRequest) returns (CreateDomainResponse) {}
   rpc DeleteDomain(DeleteDomainRequest) returns (DeleteDomainResponse) {}
+  // GetDomainSetup lists the DNS records a domain needs (MX, SPF, DKIM,
+  // DMARC, client autodiscovery). It creates the DKIM key if needed.
+  rpc GetDomainSetup(GetDomainSetupRequest) returns (GetDomainSetupResponse) {}
+  // RotateDKIM replaces the domain's signing key with a new selector.
+  rpc RotateDKIM(RotateDKIMRequest) returns (RotateDKIMResponse) {}
+
+  rpc ListQueue(ListQueueRequest) returns (ListQueueResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc RetryQueue(RetryQueueRequest) returns (RetryQueueResponse) {}
+  rpc CancelQueue(CancelQueueRequest) returns (CancelQueueResponse) {}
 
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
@@ -153,3 +164,70 @@ message DeleteAliasRequest {
   int64 id = 2;
 }
 message DeleteAliasResponse {}
+
+message DNSRecord {
+  string type = 1;   // MX, TXT, SRV, CNAME
+  string name = 2;   // fully qualified
+  string value = 3;
+  string purpose = 4;
+  // Whether the record was found in DNS with the expected value.
+  bool ok = 5;
+  string found = 6;
+}
+message GetDomainSetupRequest {
+  int64 tenant_id = 1;
+  int64 domain_id = 2;
+  // Look the records up in DNS and report whether they match.
+  bool check = 3;
+}
+message GetDomainSetupResponse { repeated DNSRecord records = 1; }
+
+message RotateDKIMRequest {
+  int64 tenant_id = 1;
+  int64 domain_id = 2;
+}
+message RotateDKIMResponse { DNSRecord record = 1; }
+
+enum QueueStatus {
+  QUEUE_STATUS_UNSPECIFIED = 0;
+  QUEUE_STATUS_WAITING = 1;
+  QUEUE_STATUS_SENDING = 2;
+  QUEUE_STATUS_SENT = 3;
+  QUEUE_STATUS_BOUNCED = 4;
+}
+
+message QueueItem {
+  int64 id = 1;
+  string from = 2;
+  string to = 3;
+  QueueStatus status = 4;
+  int32 attempts = 5;
+  int64 next_attempt = 6;
+  string last_error = 7;
+  int64 size = 8;
+  int64 created_at = 9;
+  int64 updated_at = 10;
+}
+message ListQueueRequest {
+  int64 tenant_id = 1;
+  QueueStatus status = 2; // unspecified = all
+  int32 limit = 3;
+}
+message ListQueueResponse {
+  repeated QueueItem items = 1;
+  int64 waiting = 2;
+  int64 sent_today = 3;
+  int64 bounced_today = 4;
+  // Where mail leaves: "relay smtp.example.com:587" or "direct".
+  string route = 5;
+}
+message RetryQueueRequest {
+  int64 tenant_id = 1;
+  int64 id = 2; // 0 = all waiting items
+}
+message RetryQueueResponse {}
+message CancelQueueRequest {
+  int64 tenant_id = 1;
+  int64 id = 2;
+}
+message CancelQueueResponse {}

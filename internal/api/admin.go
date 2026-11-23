@@ -12,6 +12,7 @@ import (
 	talariav1 "github.com/gsoultan/talaria/gen/go/talaria/v1"
 	"github.com/gsoultan/talaria/gen/go/talaria/v1/talariav1connect"
 	"github.com/gsoultan/talaria/internal/auth"
+	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/store"
 )
 
@@ -19,7 +20,14 @@ import (
 // tenant admins see and change only their own tenant, and only platform
 // admins manage tenants or grant the platform admin role.
 type AdminServer struct {
-	Store *store.Store
+	Store    *store.Store
+	Keys     *outbound.Keys
+	Hostname string
+	// Route describes where outbound mail goes, for the queue view.
+	Route     string
+	RelayHost string
+	// Wake nudges the outbound queue after "retry now".
+	Wake func()
 }
 
 var _ talariav1connect.AdminServiceHandler = (*AdminServer)(nil)

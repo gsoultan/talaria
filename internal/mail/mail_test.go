@@ -172,3 +172,21 @@ func TestDetail(t *testing.T) {
 		t.Fatalf("%s %q", ct, b.String())
 	}
 }
+
+func TestCompose(t *testing.T) {
+	to, _ := ParseAddresses([]string{"Priya <priya@lumen.example>, bo@harbor.example"})
+	from, _ := ParseAddresses([]string{"Ana Lopes <ana@northwind.example>"})
+	c := Compose{From: from[0], To: to, Bcc: to[:1], Subject: "Plan für Q4", HTML: "<p>Hello <b>there</b></p>", MessageID: "x@mx.test",
+		InReplyTo: "<root@x>", Attachments: []NewAttachment{{Filename: "a.txt", ContentType: "text/plain", Data: []byte("data")}}}
+	var b bytes.Buffer
+	if err := c.Write(&b); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(b.String(), "Bcc") {
+		t.Fatal("bcc leaked")
+	}
+	s := Summarize(bytes.NewReader(b.Bytes()))
+	if s.Subject != "Plan für Q4" || s.Preview != "Hello there" || !s.HasAttachments || s.InReplyTo != "root@x" || !strings.Contains(s.To, "bo@harbor.example") {
+		t.Fatalf("%+v\n%s", s, b.String())
+	}
+}

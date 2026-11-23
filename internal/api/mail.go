@@ -19,14 +19,19 @@ import (
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/mail"
+	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/store"
 )
 
 // MailServer implements talaria.v1.MailService for the signed-in user.
 type MailServer struct {
-	Store *store.Store
-	Blobs *blob.Store
-	Hub   *hub.Hub
+	Store    *store.Store
+	Blobs    *blob.Store
+	Hub      *hub.Hub
+	Submit   *outbound.Submitter
+	Deliver  *mail.Deliverer
+	Hostname string
+	MaxSize  int64
 }
 
 var _ talariav1connect.MailServiceHandler = (*MailServer)(nil)

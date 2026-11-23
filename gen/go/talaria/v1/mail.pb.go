@@ -1804,6 +1804,523 @@ func (x *WatchResponse) GetMailboxIds() []int64 {
 	return nil
 }
 
+type Identity struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Address       string                 `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Identity) Reset() {
+	*x = Identity{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Identity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Identity) ProtoMessage() {}
+
+func (x *Identity) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Identity.ProtoReflect.Descriptor instead.
+func (*Identity) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *Identity) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *Identity) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+type ListIdentitiesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListIdentitiesRequest) Reset() {
+	*x = ListIdentitiesRequest{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListIdentitiesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListIdentitiesRequest) ProtoMessage() {}
+
+func (x *ListIdentitiesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListIdentitiesRequest.ProtoReflect.Descriptor instead.
+func (*ListIdentitiesRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{30}
+}
+
+type ListIdentitiesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Identities    []*Identity            `protobuf:"bytes,1,rep,name=identities,proto3" json:"identities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListIdentitiesResponse) Reset() {
+	*x = ListIdentitiesResponse{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListIdentitiesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListIdentitiesResponse) ProtoMessage() {}
+
+func (x *ListIdentitiesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListIdentitiesResponse.ProtoReflect.Descriptor instead.
+func (*ListIdentitiesResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ListIdentitiesResponse) GetIdentities() []*Identity {
+	if x != nil {
+		return x.Identities
+	}
+	return nil
+}
+
+type NewAttachment struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Filename    string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
+	ContentType string                 `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	Data        []byte                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	// Set for images referenced from the HTML body as cid:...
+	ContentId     string `protobuf:"bytes,4,opt,name=content_id,json=contentId,proto3" json:"content_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NewAttachment) Reset() {
+	*x = NewAttachment{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NewAttachment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NewAttachment) ProtoMessage() {}
+
+func (x *NewAttachment) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NewAttachment.ProtoReflect.Descriptor instead.
+func (*NewAttachment) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *NewAttachment) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *NewAttachment) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *NewAttachment) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *NewAttachment) GetContentId() string {
+	if x != nil {
+		return x.ContentId
+	}
+	return ""
+}
+
+type Compose struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	From          string                 `protobuf:"bytes,1,opt,name=from,proto3" json:"from,omitempty"`
+	To            []string               `protobuf:"bytes,2,rep,name=to,proto3" json:"to,omitempty"`
+	Cc            []string               `protobuf:"bytes,3,rep,name=cc,proto3" json:"cc,omitempty"`
+	Bcc           []string               `protobuf:"bytes,4,rep,name=bcc,proto3" json:"bcc,omitempty"`
+	Subject       string                 `protobuf:"bytes,5,opt,name=subject,proto3" json:"subject,omitempty"`
+	TextBody      string                 `protobuf:"bytes,6,opt,name=text_body,json=textBody,proto3" json:"text_body,omitempty"`
+	HtmlBody      string                 `protobuf:"bytes,7,opt,name=html_body,json=htmlBody,proto3" json:"html_body,omitempty"`
+	InReplyTo     string                 `protobuf:"bytes,8,opt,name=in_reply_to,json=inReplyTo,proto3" json:"in_reply_to,omitempty"`
+	References    []string               `protobuf:"bytes,9,rep,name=references,proto3" json:"references,omitempty"`
+	Attachments   []*NewAttachment       `protobuf:"bytes,10,rep,name=attachments,proto3" json:"attachments,omitempty"`
+	DraftId       int64                  `protobuf:"varint,11,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Compose) Reset() {
+	*x = Compose{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Compose) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Compose) ProtoMessage() {}
+
+func (x *Compose) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Compose.ProtoReflect.Descriptor instead.
+func (*Compose) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *Compose) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *Compose) GetTo() []string {
+	if x != nil {
+		return x.To
+	}
+	return nil
+}
+
+func (x *Compose) GetCc() []string {
+	if x != nil {
+		return x.Cc
+	}
+	return nil
+}
+
+func (x *Compose) GetBcc() []string {
+	if x != nil {
+		return x.Bcc
+	}
+	return nil
+}
+
+func (x *Compose) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *Compose) GetTextBody() string {
+	if x != nil {
+		return x.TextBody
+	}
+	return ""
+}
+
+func (x *Compose) GetHtmlBody() string {
+	if x != nil {
+		return x.HtmlBody
+	}
+	return ""
+}
+
+func (x *Compose) GetInReplyTo() string {
+	if x != nil {
+		return x.InReplyTo
+	}
+	return ""
+}
+
+func (x *Compose) GetReferences() []string {
+	if x != nil {
+		return x.References
+	}
+	return nil
+}
+
+func (x *Compose) GetAttachments() []*NewAttachment {
+	if x != nil {
+		return x.Attachments
+	}
+	return nil
+}
+
+func (x *Compose) GetDraftId() int64 {
+	if x != nil {
+		return x.DraftId
+	}
+	return 0
+}
+
+type SendMessageRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       *Compose               `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SendMessageRequest) Reset() {
+	*x = SendMessageRequest{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendMessageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendMessageRequest) ProtoMessage() {}
+
+func (x *SendMessageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendMessageRequest.ProtoReflect.Descriptor instead.
+func (*SendMessageRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *SendMessageRequest) GetMessage() *Compose {
+	if x != nil {
+		return x.Message
+	}
+	return nil
+}
+
+type SendMessageResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	MessageId        string                 `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	Queued           int32                  `protobuf:"varint,2,opt,name=queued,proto3" json:"queued,omitempty"`
+	DeliveredLocally int32                  `protobuf:"varint,3,opt,name=delivered_locally,json=deliveredLocally,proto3" json:"delivered_locally,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *SendMessageResponse) Reset() {
+	*x = SendMessageResponse{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SendMessageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SendMessageResponse) ProtoMessage() {}
+
+func (x *SendMessageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SendMessageResponse.ProtoReflect.Descriptor instead.
+func (*SendMessageResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *SendMessageResponse) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *SendMessageResponse) GetQueued() int32 {
+	if x != nil {
+		return x.Queued
+	}
+	return 0
+}
+
+func (x *SendMessageResponse) GetDeliveredLocally() int32 {
+	if x != nil {
+		return x.DeliveredLocally
+	}
+	return 0
+}
+
+type SaveDraftRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       *Compose               `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveDraftRequest) Reset() {
+	*x = SaveDraftRequest{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveDraftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveDraftRequest) ProtoMessage() {}
+
+func (x *SaveDraftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveDraftRequest.ProtoReflect.Descriptor instead.
+func (*SaveDraftRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *SaveDraftRequest) GetMessage() *Compose {
+	if x != nil {
+		return x.Message
+	}
+	return nil
+}
+
+type SaveDraftResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DraftId       int64                  `protobuf:"varint,1,opt,name=draft_id,json=draftId,proto3" json:"draft_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveDraftResponse) Reset() {
+	*x = SaveDraftResponse{}
+	mi := &file_talaria_v1_mail_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveDraftResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveDraftResponse) ProtoMessage() {}
+
+func (x *SaveDraftResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_mail_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveDraftResponse.ProtoReflect.Descriptor instead.
+func (*SaveDraftResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_mail_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *SaveDraftResponse) GetDraftId() int64 {
+	if x != nil {
+		return x.DraftId
+	}
+	return 0
+}
+
 var File_talaria_v1_mail_proto protoreflect.FileDescriptor
 
 const file_talaria_v1_mail_proto_rawDesc = "" +
@@ -1938,7 +2455,47 @@ const file_talaria_v1_mail_proto_rawDesc = "" +
 	"\fWatchRequest\"0\n" +
 	"\rWatchResponse\x12\x1f\n" +
 	"\vmailbox_ids\x18\x01 \x03(\x03R\n" +
-	"mailboxIds*r\n" +
+	"mailboxIds\"G\n" +
+	"\bIdentity\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"\x17\n" +
+	"\x15ListIdentitiesRequest\"N\n" +
+	"\x16ListIdentitiesResponse\x124\n" +
+	"\n" +
+	"identities\x18\x01 \x03(\v2\x14.talaria.v1.IdentityR\n" +
+	"identities\"\x81\x01\n" +
+	"\rNewAttachment\x12\x1a\n" +
+	"\bfilename\x18\x01 \x01(\tR\bfilename\x12!\n" +
+	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x12\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\x12\x1d\n" +
+	"\n" +
+	"content_id\x18\x04 \x01(\tR\tcontentId\"\xbb\x02\n" +
+	"\aCompose\x12\x12\n" +
+	"\x04from\x18\x01 \x01(\tR\x04from\x12\x0e\n" +
+	"\x02to\x18\x02 \x03(\tR\x02to\x12\x0e\n" +
+	"\x02cc\x18\x03 \x03(\tR\x02cc\x12\x10\n" +
+	"\x03bcc\x18\x04 \x03(\tR\x03bcc\x12\x18\n" +
+	"\asubject\x18\x05 \x01(\tR\asubject\x12\x1b\n" +
+	"\ttext_body\x18\x06 \x01(\tR\btextBody\x12\x1b\n" +
+	"\thtml_body\x18\a \x01(\tR\bhtmlBody\x12\x1e\n" +
+	"\vin_reply_to\x18\b \x01(\tR\tinReplyTo\x12\x1e\n" +
+	"\n" +
+	"references\x18\t \x03(\tR\n" +
+	"references\x12;\n" +
+	"\vattachments\x18\n" +
+	" \x03(\v2\x19.talaria.v1.NewAttachmentR\vattachments\x12\x19\n" +
+	"\bdraft_id\x18\v \x01(\x03R\adraftId\"C\n" +
+	"\x12SendMessageRequest\x12-\n" +
+	"\amessage\x18\x01 \x01(\v2\x13.talaria.v1.ComposeR\amessage\"y\n" +
+	"\x13SendMessageResponse\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\tR\tmessageId\x12\x16\n" +
+	"\x06queued\x18\x02 \x01(\x05R\x06queued\x12+\n" +
+	"\x11delivered_locally\x18\x03 \x01(\x05R\x10deliveredLocally\"A\n" +
+	"\x10SaveDraftRequest\x12-\n" +
+	"\amessage\x18\x01 \x01(\v2\x13.talaria.v1.ComposeR\amessage\".\n" +
+	"\x11SaveDraftResponse\x12\x19\n" +
+	"\bdraft_id\x18\x01 \x01(\x03R\adraftId*r\n" +
 	"\x04Flag\x12\x14\n" +
 	"\x10FLAG_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tFLAG_SEEN\x10\x01\x12\x11\n" +
@@ -1946,7 +2503,7 @@ const file_talaria_v1_mail_proto_rawDesc = "" +
 	"\fFLAG_FLAGGED\x10\x03\x12\x10\n" +
 	"\fFLAG_DELETED\x10\x04\x12\x0e\n" +
 	"\n" +
-	"FLAG_DRAFT\x10\x052\xf3\a\n" +
+	"FLAG_DRAFT\x10\x052\xef\t\n" +
 	"\vMailService\x12Y\n" +
 	"\rListMailboxes\x12 .talaria.v1.ListMailboxesRequest\x1a!.talaria.v1.ListMailboxesResponse\"\x03\x90\x02\x01\x12V\n" +
 	"\rCreateMailbox\x12 .talaria.v1.CreateMailboxRequest\x1a!.talaria.v1.CreateMailboxResponse\"\x00\x12V\n" +
@@ -1959,7 +2516,10 @@ const file_talaria_v1_mail_proto_rawDesc = "" +
 	"\tGetThread\x12\x1c.talaria.v1.GetThreadRequest\x1a\x1d.talaria.v1.GetThreadResponse\"\x03\x90\x02\x01\x12P\n" +
 	"\vUpdateFlags\x12\x1e.talaria.v1.UpdateFlagsRequest\x1a\x1f.talaria.v1.UpdateFlagsResponse\"\x00\x12S\n" +
 	"\fMoveMessages\x12\x1f.talaria.v1.MoveMessagesRequest\x1a .talaria.v1.MoveMessagesResponse\"\x00\x12Y\n" +
-	"\x0eDeleteMessages\x12!.talaria.v1.DeleteMessagesRequest\x1a\".talaria.v1.DeleteMessagesResponse\"\x00\x12@\n" +
+	"\x0eDeleteMessages\x12!.talaria.v1.DeleteMessagesRequest\x1a\".talaria.v1.DeleteMessagesResponse\"\x00\x12\\\n" +
+	"\x0eListIdentities\x12!.talaria.v1.ListIdentitiesRequest\x1a\".talaria.v1.ListIdentitiesResponse\"\x03\x90\x02\x01\x12P\n" +
+	"\vSendMessage\x12\x1e.talaria.v1.SendMessageRequest\x1a\x1f.talaria.v1.SendMessageResponse\"\x00\x12J\n" +
+	"\tSaveDraft\x12\x1c.talaria.v1.SaveDraftRequest\x1a\x1d.talaria.v1.SaveDraftResponse\"\x00\x12@\n" +
 	"\x05Watch\x12\x18.talaria.v1.WatchRequest\x1a\x19.talaria.v1.WatchResponse\"\x000\x01B9Z7github.com/gsoultan/talaria/gen/go/talaria/v1;talariav1b\x06proto3"
 
 var (
@@ -1975,7 +2535,7 @@ func file_talaria_v1_mail_proto_rawDescGZIP() []byte {
 }
 
 var file_talaria_v1_mail_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_talaria_v1_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_talaria_v1_mail_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_talaria_v1_mail_proto_goTypes = []any{
 	(Flag)(0),                      // 0: talaria.v1.Flag
 	(*Mailbox)(nil),                // 1: talaria.v1.Mailbox
@@ -2007,6 +2567,15 @@ var file_talaria_v1_mail_proto_goTypes = []any{
 	(*DeleteMessagesResponse)(nil), // 27: talaria.v1.DeleteMessagesResponse
 	(*WatchRequest)(nil),           // 28: talaria.v1.WatchRequest
 	(*WatchResponse)(nil),          // 29: talaria.v1.WatchResponse
+	(*Identity)(nil),               // 30: talaria.v1.Identity
+	(*ListIdentitiesRequest)(nil),  // 31: talaria.v1.ListIdentitiesRequest
+	(*ListIdentitiesResponse)(nil), // 32: talaria.v1.ListIdentitiesResponse
+	(*NewAttachment)(nil),          // 33: talaria.v1.NewAttachment
+	(*Compose)(nil),                // 34: talaria.v1.Compose
+	(*SendMessageRequest)(nil),     // 35: talaria.v1.SendMessageRequest
+	(*SendMessageResponse)(nil),    // 36: talaria.v1.SendMessageResponse
+	(*SaveDraftRequest)(nil),       // 37: talaria.v1.SaveDraftRequest
+	(*SaveDraftResponse)(nil),      // 38: talaria.v1.SaveDraftResponse
 }
 var file_talaria_v1_mail_proto_depIdxs = []int32{
 	1,  // 0: talaria.v1.ListMailboxesResponse.mailboxes:type_name -> talaria.v1.Mailbox
@@ -2020,35 +2589,45 @@ var file_talaria_v1_mail_proto_depIdxs = []int32{
 	2,  // 8: talaria.v1.GetThreadResponse.messages:type_name -> talaria.v1.MessageSummary
 	0,  // 9: talaria.v1.UpdateFlagsRequest.add:type_name -> talaria.v1.Flag
 	0,  // 10: talaria.v1.UpdateFlagsRequest.remove:type_name -> talaria.v1.Flag
-	3,  // 11: talaria.v1.MailService.ListMailboxes:input_type -> talaria.v1.ListMailboxesRequest
-	5,  // 12: talaria.v1.MailService.CreateMailbox:input_type -> talaria.v1.CreateMailboxRequest
-	7,  // 13: talaria.v1.MailService.RenameMailbox:input_type -> talaria.v1.RenameMailboxRequest
-	9,  // 14: talaria.v1.MailService.DeleteMailbox:input_type -> talaria.v1.DeleteMailboxRequest
-	11, // 15: talaria.v1.MailService.ListMessages:input_type -> talaria.v1.ListMessagesRequest
-	13, // 16: talaria.v1.MailService.Search:input_type -> talaria.v1.SearchRequest
-	18, // 17: talaria.v1.MailService.GetMessage:input_type -> talaria.v1.GetMessageRequest
-	20, // 18: talaria.v1.MailService.GetThread:input_type -> talaria.v1.GetThreadRequest
-	22, // 19: talaria.v1.MailService.UpdateFlags:input_type -> talaria.v1.UpdateFlagsRequest
-	24, // 20: talaria.v1.MailService.MoveMessages:input_type -> talaria.v1.MoveMessagesRequest
-	26, // 21: talaria.v1.MailService.DeleteMessages:input_type -> talaria.v1.DeleteMessagesRequest
-	28, // 22: talaria.v1.MailService.Watch:input_type -> talaria.v1.WatchRequest
-	4,  // 23: talaria.v1.MailService.ListMailboxes:output_type -> talaria.v1.ListMailboxesResponse
-	6,  // 24: talaria.v1.MailService.CreateMailbox:output_type -> talaria.v1.CreateMailboxResponse
-	8,  // 25: talaria.v1.MailService.RenameMailbox:output_type -> talaria.v1.RenameMailboxResponse
-	10, // 26: talaria.v1.MailService.DeleteMailbox:output_type -> talaria.v1.DeleteMailboxResponse
-	12, // 27: talaria.v1.MailService.ListMessages:output_type -> talaria.v1.ListMessagesResponse
-	14, // 28: talaria.v1.MailService.Search:output_type -> talaria.v1.SearchResponse
-	19, // 29: talaria.v1.MailService.GetMessage:output_type -> talaria.v1.GetMessageResponse
-	21, // 30: talaria.v1.MailService.GetThread:output_type -> talaria.v1.GetThreadResponse
-	23, // 31: talaria.v1.MailService.UpdateFlags:output_type -> talaria.v1.UpdateFlagsResponse
-	25, // 32: talaria.v1.MailService.MoveMessages:output_type -> talaria.v1.MoveMessagesResponse
-	27, // 33: talaria.v1.MailService.DeleteMessages:output_type -> talaria.v1.DeleteMessagesResponse
-	29, // 34: talaria.v1.MailService.Watch:output_type -> talaria.v1.WatchResponse
-	23, // [23:35] is the sub-list for method output_type
-	11, // [11:23] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	30, // 11: talaria.v1.ListIdentitiesResponse.identities:type_name -> talaria.v1.Identity
+	33, // 12: talaria.v1.Compose.attachments:type_name -> talaria.v1.NewAttachment
+	34, // 13: talaria.v1.SendMessageRequest.message:type_name -> talaria.v1.Compose
+	34, // 14: talaria.v1.SaveDraftRequest.message:type_name -> talaria.v1.Compose
+	3,  // 15: talaria.v1.MailService.ListMailboxes:input_type -> talaria.v1.ListMailboxesRequest
+	5,  // 16: talaria.v1.MailService.CreateMailbox:input_type -> talaria.v1.CreateMailboxRequest
+	7,  // 17: talaria.v1.MailService.RenameMailbox:input_type -> talaria.v1.RenameMailboxRequest
+	9,  // 18: talaria.v1.MailService.DeleteMailbox:input_type -> talaria.v1.DeleteMailboxRequest
+	11, // 19: talaria.v1.MailService.ListMessages:input_type -> talaria.v1.ListMessagesRequest
+	13, // 20: talaria.v1.MailService.Search:input_type -> talaria.v1.SearchRequest
+	18, // 21: talaria.v1.MailService.GetMessage:input_type -> talaria.v1.GetMessageRequest
+	20, // 22: talaria.v1.MailService.GetThread:input_type -> talaria.v1.GetThreadRequest
+	22, // 23: talaria.v1.MailService.UpdateFlags:input_type -> talaria.v1.UpdateFlagsRequest
+	24, // 24: talaria.v1.MailService.MoveMessages:input_type -> talaria.v1.MoveMessagesRequest
+	26, // 25: talaria.v1.MailService.DeleteMessages:input_type -> talaria.v1.DeleteMessagesRequest
+	31, // 26: talaria.v1.MailService.ListIdentities:input_type -> talaria.v1.ListIdentitiesRequest
+	35, // 27: talaria.v1.MailService.SendMessage:input_type -> talaria.v1.SendMessageRequest
+	37, // 28: talaria.v1.MailService.SaveDraft:input_type -> talaria.v1.SaveDraftRequest
+	28, // 29: talaria.v1.MailService.Watch:input_type -> talaria.v1.WatchRequest
+	4,  // 30: talaria.v1.MailService.ListMailboxes:output_type -> talaria.v1.ListMailboxesResponse
+	6,  // 31: talaria.v1.MailService.CreateMailbox:output_type -> talaria.v1.CreateMailboxResponse
+	8,  // 32: talaria.v1.MailService.RenameMailbox:output_type -> talaria.v1.RenameMailboxResponse
+	10, // 33: talaria.v1.MailService.DeleteMailbox:output_type -> talaria.v1.DeleteMailboxResponse
+	12, // 34: talaria.v1.MailService.ListMessages:output_type -> talaria.v1.ListMessagesResponse
+	14, // 35: talaria.v1.MailService.Search:output_type -> talaria.v1.SearchResponse
+	19, // 36: talaria.v1.MailService.GetMessage:output_type -> talaria.v1.GetMessageResponse
+	21, // 37: talaria.v1.MailService.GetThread:output_type -> talaria.v1.GetThreadResponse
+	23, // 38: talaria.v1.MailService.UpdateFlags:output_type -> talaria.v1.UpdateFlagsResponse
+	25, // 39: talaria.v1.MailService.MoveMessages:output_type -> talaria.v1.MoveMessagesResponse
+	27, // 40: talaria.v1.MailService.DeleteMessages:output_type -> talaria.v1.DeleteMessagesResponse
+	32, // 41: talaria.v1.MailService.ListIdentities:output_type -> talaria.v1.ListIdentitiesResponse
+	36, // 42: talaria.v1.MailService.SendMessage:output_type -> talaria.v1.SendMessageResponse
+	38, // 43: talaria.v1.MailService.SaveDraft:output_type -> talaria.v1.SaveDraftResponse
+	29, // 44: talaria.v1.MailService.Watch:output_type -> talaria.v1.WatchResponse
+	30, // [30:45] is the sub-list for method output_type
+	15, // [15:30] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_talaria_v1_mail_proto_init() }
@@ -2062,7 +2641,7 @@ func file_talaria_v1_mail_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_talaria_v1_mail_proto_rawDesc), len(file_talaria_v1_mail_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   29,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

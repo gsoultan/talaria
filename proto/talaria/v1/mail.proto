@@ -34,6 +34,16 @@ service MailService {
   // they are already in Trash or Junk.
   rpc DeleteMessages(DeleteMessagesRequest) returns (DeleteMessagesResponse) {}
 
+  // ListIdentities returns the addresses the user may send from.
+  rpc ListIdentities(ListIdentitiesRequest) returns (ListIdentitiesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // SendMessage sends a composed message and files a copy in Sent. When
+  // draft_id is set, that draft is removed.
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
+  // SaveDraft stores the message in Drafts, replacing draft_id if set.
+  rpc SaveDraft(SaveDraftRequest) returns (SaveDraftResponse) {}
+
   // Watch streams a notice whenever the user's mailboxes change.
   rpc Watch(WatchRequest) returns (stream WatchResponse) {}
 }
@@ -186,3 +196,42 @@ message WatchRequest {}
 message WatchResponse {
   repeated int64 mailbox_ids = 1;
 }
+
+message Identity {
+  string address = 1;
+  string display_name = 2;
+}
+message ListIdentitiesRequest {}
+message ListIdentitiesResponse { repeated Identity identities = 1; }
+
+message NewAttachment {
+  string filename = 1;
+  string content_type = 2;
+  bytes data = 3;
+  // Set for images referenced from the HTML body as cid:...
+  string content_id = 4;
+}
+
+message Compose {
+  string from = 1;
+  repeated string to = 2;
+  repeated string cc = 3;
+  repeated string bcc = 4;
+  string subject = 5;
+  string text_body = 6;
+  string html_body = 7;
+  string in_reply_to = 8;
+  repeated string references = 9;
+  repeated NewAttachment attachments = 10;
+  int64 draft_id = 11;
+}
+
+message SendMessageRequest { Compose message = 1; }
+message SendMessageResponse {
+  string message_id = 1;
+  int32 queued = 2;
+  int32 delivered_locally = 3;
+}
+
+message SaveDraftRequest { Compose message = 1; }
+message SaveDraftResponse { int64 draft_id = 1; }

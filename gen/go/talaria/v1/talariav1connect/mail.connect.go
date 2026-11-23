@@ -65,6 +65,13 @@ const (
 	// MailServiceDeleteMessagesProcedure is the fully-qualified name of the MailService's
 	// DeleteMessages RPC.
 	MailServiceDeleteMessagesProcedure = "/talaria.v1.MailService/DeleteMessages"
+	// MailServiceListIdentitiesProcedure is the fully-qualified name of the MailService's
+	// ListIdentities RPC.
+	MailServiceListIdentitiesProcedure = "/talaria.v1.MailService/ListIdentities"
+	// MailServiceSendMessageProcedure is the fully-qualified name of the MailService's SendMessage RPC.
+	MailServiceSendMessageProcedure = "/talaria.v1.MailService/SendMessage"
+	// MailServiceSaveDraftProcedure is the fully-qualified name of the MailService's SaveDraft RPC.
+	MailServiceSaveDraftProcedure = "/talaria.v1.MailService/SaveDraft"
 	// MailServiceWatchProcedure is the fully-qualified name of the MailService's Watch RPC.
 	MailServiceWatchProcedure = "/talaria.v1.MailService/Watch"
 )
@@ -84,6 +91,13 @@ type MailServiceClient interface {
 	// DeleteMessages moves messages to Trash, or removes them for good when
 	// they are already in Trash or Junk.
 	DeleteMessages(context.Context, *connect.Request[v1.DeleteMessagesRequest]) (*connect.Response[v1.DeleteMessagesResponse], error)
+	// ListIdentities returns the addresses the user may send from.
+	ListIdentities(context.Context, *connect.Request[v1.ListIdentitiesRequest]) (*connect.Response[v1.ListIdentitiesResponse], error)
+	// SendMessage sends a composed message and files a copy in Sent. When
+	// draft_id is set, that draft is removed.
+	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
+	// SaveDraft stores the message in Drafts, replacing draft_id if set.
+	SaveDraft(context.Context, *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error)
 	// Watch streams a notice whenever the user's mailboxes change.
 	Watch(context.Context, *connect.Request[v1.WatchRequest]) (*connect.ServerStreamForClient[v1.WatchResponse], error)
 }
@@ -170,6 +184,25 @@ func NewMailServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(mailServiceMethods.ByName("DeleteMessages")),
 			connect.WithClientOptions(opts...),
 		),
+		listIdentities: connect.NewClient[v1.ListIdentitiesRequest, v1.ListIdentitiesResponse](
+			httpClient,
+			baseURL+MailServiceListIdentitiesProcedure,
+			connect.WithSchema(mailServiceMethods.ByName("ListIdentities")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
+		sendMessage: connect.NewClient[v1.SendMessageRequest, v1.SendMessageResponse](
+			httpClient,
+			baseURL+MailServiceSendMessageProcedure,
+			connect.WithSchema(mailServiceMethods.ByName("SendMessage")),
+			connect.WithClientOptions(opts...),
+		),
+		saveDraft: connect.NewClient[v1.SaveDraftRequest, v1.SaveDraftResponse](
+			httpClient,
+			baseURL+MailServiceSaveDraftProcedure,
+			connect.WithSchema(mailServiceMethods.ByName("SaveDraft")),
+			connect.WithClientOptions(opts...),
+		),
 		watch: connect.NewClient[v1.WatchRequest, v1.WatchResponse](
 			httpClient,
 			baseURL+MailServiceWatchProcedure,
@@ -192,6 +225,9 @@ type mailServiceClient struct {
 	updateFlags    *connect.Client[v1.UpdateFlagsRequest, v1.UpdateFlagsResponse]
 	moveMessages   *connect.Client[v1.MoveMessagesRequest, v1.MoveMessagesResponse]
 	deleteMessages *connect.Client[v1.DeleteMessagesRequest, v1.DeleteMessagesResponse]
+	listIdentities *connect.Client[v1.ListIdentitiesRequest, v1.ListIdentitiesResponse]
+	sendMessage    *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
+	saveDraft      *connect.Client[v1.SaveDraftRequest, v1.SaveDraftResponse]
 	watch          *connect.Client[v1.WatchRequest, v1.WatchResponse]
 }
 
@@ -250,6 +286,21 @@ func (c *mailServiceClient) DeleteMessages(ctx context.Context, req *connect.Req
 	return c.deleteMessages.CallUnary(ctx, req)
 }
 
+// ListIdentities calls talaria.v1.MailService.ListIdentities.
+func (c *mailServiceClient) ListIdentities(ctx context.Context, req *connect.Request[v1.ListIdentitiesRequest]) (*connect.Response[v1.ListIdentitiesResponse], error) {
+	return c.listIdentities.CallUnary(ctx, req)
+}
+
+// SendMessage calls talaria.v1.MailService.SendMessage.
+func (c *mailServiceClient) SendMessage(ctx context.Context, req *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {
+	return c.sendMessage.CallUnary(ctx, req)
+}
+
+// SaveDraft calls talaria.v1.MailService.SaveDraft.
+func (c *mailServiceClient) SaveDraft(ctx context.Context, req *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error) {
+	return c.saveDraft.CallUnary(ctx, req)
+}
+
 // Watch calls talaria.v1.MailService.Watch.
 func (c *mailServiceClient) Watch(ctx context.Context, req *connect.Request[v1.WatchRequest]) (*connect.ServerStreamForClient[v1.WatchResponse], error) {
 	return c.watch.CallServerStream(ctx, req)
@@ -270,6 +321,13 @@ type MailServiceHandler interface {
 	// DeleteMessages moves messages to Trash, or removes them for good when
 	// they are already in Trash or Junk.
 	DeleteMessages(context.Context, *connect.Request[v1.DeleteMessagesRequest]) (*connect.Response[v1.DeleteMessagesResponse], error)
+	// ListIdentities returns the addresses the user may send from.
+	ListIdentities(context.Context, *connect.Request[v1.ListIdentitiesRequest]) (*connect.Response[v1.ListIdentitiesResponse], error)
+	// SendMessage sends a composed message and files a copy in Sent. When
+	// draft_id is set, that draft is removed.
+	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
+	// SaveDraft stores the message in Drafts, replacing draft_id if set.
+	SaveDraft(context.Context, *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error)
 	// Watch streams a notice whenever the user's mailboxes change.
 	Watch(context.Context, *connect.Request[v1.WatchRequest], *connect.ServerStream[v1.WatchResponse]) error
 }
@@ -352,6 +410,25 @@ func NewMailServiceHandler(svc MailServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(mailServiceMethods.ByName("DeleteMessages")),
 		connect.WithHandlerOptions(opts...),
 	)
+	mailServiceListIdentitiesHandler := connect.NewUnaryHandler(
+		MailServiceListIdentitiesProcedure,
+		svc.ListIdentities,
+		connect.WithSchema(mailServiceMethods.ByName("ListIdentities")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
+	mailServiceSendMessageHandler := connect.NewUnaryHandler(
+		MailServiceSendMessageProcedure,
+		svc.SendMessage,
+		connect.WithSchema(mailServiceMethods.ByName("SendMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	mailServiceSaveDraftHandler := connect.NewUnaryHandler(
+		MailServiceSaveDraftProcedure,
+		svc.SaveDraft,
+		connect.WithSchema(mailServiceMethods.ByName("SaveDraft")),
+		connect.WithHandlerOptions(opts...),
+	)
 	mailServiceWatchHandler := connect.NewServerStreamHandler(
 		MailServiceWatchProcedure,
 		svc.Watch,
@@ -382,6 +459,12 @@ func NewMailServiceHandler(svc MailServiceHandler, opts ...connect.HandlerOption
 			mailServiceMoveMessagesHandler.ServeHTTP(w, r)
 		case MailServiceDeleteMessagesProcedure:
 			mailServiceDeleteMessagesHandler.ServeHTTP(w, r)
+		case MailServiceListIdentitiesProcedure:
+			mailServiceListIdentitiesHandler.ServeHTTP(w, r)
+		case MailServiceSendMessageProcedure:
+			mailServiceSendMessageHandler.ServeHTTP(w, r)
+		case MailServiceSaveDraftProcedure:
+			mailServiceSaveDraftHandler.ServeHTTP(w, r)
 		case MailServiceWatchProcedure:
 			mailServiceWatchHandler.ServeHTTP(w, r)
 		default:
@@ -435,6 +518,18 @@ func (UnimplementedMailServiceHandler) MoveMessages(context.Context, *connect.Re
 
 func (UnimplementedMailServiceHandler) DeleteMessages(context.Context, *connect.Request[v1.DeleteMessagesRequest]) (*connect.Response[v1.DeleteMessagesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.MailService.DeleteMessages is not implemented"))
+}
+
+func (UnimplementedMailServiceHandler) ListIdentities(context.Context, *connect.Request[v1.ListIdentitiesRequest]) (*connect.Response[v1.ListIdentitiesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.MailService.ListIdentities is not implemented"))
+}
+
+func (UnimplementedMailServiceHandler) SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.MailService.SendMessage is not implemented"))
+}
+
+func (UnimplementedMailServiceHandler) SaveDraft(context.Context, *connect.Request[v1.SaveDraftRequest]) (*connect.Response[v1.SaveDraftResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.MailService.SaveDraft is not implemented"))
 }
 
 func (UnimplementedMailServiceHandler) Watch(context.Context, *connect.Request[v1.WatchRequest], *connect.ServerStream[v1.WatchResponse]) error {

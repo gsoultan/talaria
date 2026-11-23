@@ -12,10 +12,12 @@ A fast, low-footprint mail server with built-in webmail, sized for a
 - Runs on a public IP, behind a gateway such as Gateon (PROXY protocol), or
   behind Cloudflare Tunnel. See [doc/deployment.md](doc/deployment.md).
 
-Status: phase 1 (receive and store). Talaria accepts mail on port 25 or
-through the HTTP ingest endpoint, checks SPF, DKIM and DMARC, and files it
-into compressed, deduplicated storage with full-text search. The Auth, Mail
-and Admin APIs are live. Sending, IMAP/POP3 and the full webmail follow.
+Status: phase 2 (sending). Talaria receives mail on port 25 or through the
+HTTP ingest endpoint, checks SPF, DKIM and DMARC, and files it into
+compressed, deduplicated storage with full-text search. Users send from the
+API or from mail apps on 587/465; mail is DKIM-signed and leaves through a
+relay or directly, with retries and bounce reports. IMAP/POP3 and the full
+webmail follow.
 
 ## Build
 
@@ -56,7 +58,8 @@ internal/clientip real client address behind trusted proxies
 internal/store    SQLite metadata: tenants, domains, users, mailboxes, messages
 internal/blob     zstd-compressed, content-addressed message bodies
 internal/mail     parsing, SPF/DKIM/DMARC, delivery
-internal/smtpd    inbound SMTP
+internal/smtpd    inbound SMTP and submission
+internal/outbound DKIM signing, queue, relay and direct delivery, bounces
 internal/ingest   HTTP ingest for Cloudflare Email Workers
 internal/hub      live mailbox change notifications
 internal/auth     Argon2id passwords, login rate limits

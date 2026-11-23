@@ -24,6 +24,61 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type QueueStatus int32
+
+const (
+	QueueStatus_QUEUE_STATUS_UNSPECIFIED QueueStatus = 0
+	QueueStatus_QUEUE_STATUS_WAITING     QueueStatus = 1
+	QueueStatus_QUEUE_STATUS_SENDING     QueueStatus = 2
+	QueueStatus_QUEUE_STATUS_SENT        QueueStatus = 3
+	QueueStatus_QUEUE_STATUS_BOUNCED     QueueStatus = 4
+)
+
+// Enum value maps for QueueStatus.
+var (
+	QueueStatus_name = map[int32]string{
+		0: "QUEUE_STATUS_UNSPECIFIED",
+		1: "QUEUE_STATUS_WAITING",
+		2: "QUEUE_STATUS_SENDING",
+		3: "QUEUE_STATUS_SENT",
+		4: "QUEUE_STATUS_BOUNCED",
+	}
+	QueueStatus_value = map[string]int32{
+		"QUEUE_STATUS_UNSPECIFIED": 0,
+		"QUEUE_STATUS_WAITING":     1,
+		"QUEUE_STATUS_SENDING":     2,
+		"QUEUE_STATUS_SENT":        3,
+		"QUEUE_STATUS_BOUNCED":     4,
+	}
+)
+
+func (x QueueStatus) Enum() *QueueStatus {
+	p := new(QueueStatus)
+	*p = x
+	return p
+}
+
+func (x QueueStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (QueueStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_talaria_v1_admin_proto_enumTypes[0].Descriptor()
+}
+
+func (QueueStatus) Type() protoreflect.EnumType {
+	return &file_talaria_v1_admin_proto_enumTypes[0]
+}
+
+func (x QueueStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use QueueStatus.Descriptor instead.
+func (QueueStatus) EnumDescriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{0}
+}
+
 type Tenant struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1716,6 +1771,721 @@ func (*DeleteAliasResponse) Descriptor() ([]byte, []int) {
 	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{32}
 }
 
+type DNSRecord struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Type    string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // MX, TXT, SRV, CNAME
+	Name    string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"` // fully qualified
+	Value   string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	Purpose string                 `protobuf:"bytes,4,opt,name=purpose,proto3" json:"purpose,omitempty"`
+	// Whether the record was found in DNS with the expected value.
+	Ok            bool   `protobuf:"varint,5,opt,name=ok,proto3" json:"ok,omitempty"`
+	Found         string `protobuf:"bytes,6,opt,name=found,proto3" json:"found,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DNSRecord) Reset() {
+	*x = DNSRecord{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DNSRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DNSRecord) ProtoMessage() {}
+
+func (x *DNSRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DNSRecord.ProtoReflect.Descriptor instead.
+func (*DNSRecord) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *DNSRecord) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *DNSRecord) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *DNSRecord) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *DNSRecord) GetPurpose() string {
+	if x != nil {
+		return x.Purpose
+	}
+	return ""
+}
+
+func (x *DNSRecord) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
+func (x *DNSRecord) GetFound() string {
+	if x != nil {
+		return x.Found
+	}
+	return ""
+}
+
+type GetDomainSetupRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId int64                  `protobuf:"varint,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	DomainId int64                  `protobuf:"varint,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	// Look the records up in DNS and report whether they match.
+	Check         bool `protobuf:"varint,3,opt,name=check,proto3" json:"check,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDomainSetupRequest) Reset() {
+	*x = GetDomainSetupRequest{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDomainSetupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDomainSetupRequest) ProtoMessage() {}
+
+func (x *GetDomainSetupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDomainSetupRequest.ProtoReflect.Descriptor instead.
+func (*GetDomainSetupRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *GetDomainSetupRequest) GetTenantId() int64 {
+	if x != nil {
+		return x.TenantId
+	}
+	return 0
+}
+
+func (x *GetDomainSetupRequest) GetDomainId() int64 {
+	if x != nil {
+		return x.DomainId
+	}
+	return 0
+}
+
+func (x *GetDomainSetupRequest) GetCheck() bool {
+	if x != nil {
+		return x.Check
+	}
+	return false
+}
+
+type GetDomainSetupResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Records       []*DNSRecord           `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDomainSetupResponse) Reset() {
+	*x = GetDomainSetupResponse{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDomainSetupResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDomainSetupResponse) ProtoMessage() {}
+
+func (x *GetDomainSetupResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDomainSetupResponse.ProtoReflect.Descriptor instead.
+func (*GetDomainSetupResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *GetDomainSetupResponse) GetRecords() []*DNSRecord {
+	if x != nil {
+		return x.Records
+	}
+	return nil
+}
+
+type RotateDKIMRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      int64                  `protobuf:"varint,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	DomainId      int64                  `protobuf:"varint,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateDKIMRequest) Reset() {
+	*x = RotateDKIMRequest{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateDKIMRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateDKIMRequest) ProtoMessage() {}
+
+func (x *RotateDKIMRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateDKIMRequest.ProtoReflect.Descriptor instead.
+func (*RotateDKIMRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *RotateDKIMRequest) GetTenantId() int64 {
+	if x != nil {
+		return x.TenantId
+	}
+	return 0
+}
+
+func (x *RotateDKIMRequest) GetDomainId() int64 {
+	if x != nil {
+		return x.DomainId
+	}
+	return 0
+}
+
+type RotateDKIMResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Record        *DNSRecord             `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateDKIMResponse) Reset() {
+	*x = RotateDKIMResponse{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateDKIMResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateDKIMResponse) ProtoMessage() {}
+
+func (x *RotateDKIMResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateDKIMResponse.ProtoReflect.Descriptor instead.
+func (*RotateDKIMResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *RotateDKIMResponse) GetRecord() *DNSRecord {
+	if x != nil {
+		return x.Record
+	}
+	return nil
+}
+
+type QueueItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	From          string                 `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	To            string                 `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`
+	Status        QueueStatus            `protobuf:"varint,4,opt,name=status,proto3,enum=talaria.v1.QueueStatus" json:"status,omitempty"`
+	Attempts      int32                  `protobuf:"varint,5,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	NextAttempt   int64                  `protobuf:"varint,6,opt,name=next_attempt,json=nextAttempt,proto3" json:"next_attempt,omitempty"`
+	LastError     string                 `protobuf:"bytes,7,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	Size          int64                  `protobuf:"varint,8,opt,name=size,proto3" json:"size,omitempty"`
+	CreatedAt     int64                  `protobuf:"varint,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     int64                  `protobuf:"varint,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueueItem) Reset() {
+	*x = QueueItem{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueueItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueueItem) ProtoMessage() {}
+
+func (x *QueueItem) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueueItem.ProtoReflect.Descriptor instead.
+func (*QueueItem) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *QueueItem) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *QueueItem) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *QueueItem) GetTo() string {
+	if x != nil {
+		return x.To
+	}
+	return ""
+}
+
+func (x *QueueItem) GetStatus() QueueStatus {
+	if x != nil {
+		return x.Status
+	}
+	return QueueStatus_QUEUE_STATUS_UNSPECIFIED
+}
+
+func (x *QueueItem) GetAttempts() int32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+func (x *QueueItem) GetNextAttempt() int64 {
+	if x != nil {
+		return x.NextAttempt
+	}
+	return 0
+}
+
+func (x *QueueItem) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+func (x *QueueItem) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *QueueItem) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *QueueItem) GetUpdatedAt() int64 {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return 0
+}
+
+type ListQueueRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      int64                  `protobuf:"varint,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Status        QueueStatus            `protobuf:"varint,2,opt,name=status,proto3,enum=talaria.v1.QueueStatus" json:"status,omitempty"` // unspecified = all
+	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListQueueRequest) Reset() {
+	*x = ListQueueRequest{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListQueueRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListQueueRequest) ProtoMessage() {}
+
+func (x *ListQueueRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListQueueRequest.ProtoReflect.Descriptor instead.
+func (*ListQueueRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ListQueueRequest) GetTenantId() int64 {
+	if x != nil {
+		return x.TenantId
+	}
+	return 0
+}
+
+func (x *ListQueueRequest) GetStatus() QueueStatus {
+	if x != nil {
+		return x.Status
+	}
+	return QueueStatus_QUEUE_STATUS_UNSPECIFIED
+}
+
+func (x *ListQueueRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type ListQueueResponse struct {
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Items        []*QueueItem           `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Waiting      int64                  `protobuf:"varint,2,opt,name=waiting,proto3" json:"waiting,omitempty"`
+	SentToday    int64                  `protobuf:"varint,3,opt,name=sent_today,json=sentToday,proto3" json:"sent_today,omitempty"`
+	BouncedToday int64                  `protobuf:"varint,4,opt,name=bounced_today,json=bouncedToday,proto3" json:"bounced_today,omitempty"`
+	// Where mail leaves: "relay smtp.example.com:587" or "direct".
+	Route         string `protobuf:"bytes,5,opt,name=route,proto3" json:"route,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListQueueResponse) Reset() {
+	*x = ListQueueResponse{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListQueueResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListQueueResponse) ProtoMessage() {}
+
+func (x *ListQueueResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListQueueResponse.ProtoReflect.Descriptor instead.
+func (*ListQueueResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ListQueueResponse) GetItems() []*QueueItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ListQueueResponse) GetWaiting() int64 {
+	if x != nil {
+		return x.Waiting
+	}
+	return 0
+}
+
+func (x *ListQueueResponse) GetSentToday() int64 {
+	if x != nil {
+		return x.SentToday
+	}
+	return 0
+}
+
+func (x *ListQueueResponse) GetBouncedToday() int64 {
+	if x != nil {
+		return x.BouncedToday
+	}
+	return 0
+}
+
+func (x *ListQueueResponse) GetRoute() string {
+	if x != nil {
+		return x.Route
+	}
+	return ""
+}
+
+type RetryQueueRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      int64                  `protobuf:"varint,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Id            int64                  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"` // 0 = all waiting items
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RetryQueueRequest) Reset() {
+	*x = RetryQueueRequest{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryQueueRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryQueueRequest) ProtoMessage() {}
+
+func (x *RetryQueueRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryQueueRequest.ProtoReflect.Descriptor instead.
+func (*RetryQueueRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *RetryQueueRequest) GetTenantId() int64 {
+	if x != nil {
+		return x.TenantId
+	}
+	return 0
+}
+
+func (x *RetryQueueRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type RetryQueueResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RetryQueueResponse) Reset() {
+	*x = RetryQueueResponse{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryQueueResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryQueueResponse) ProtoMessage() {}
+
+func (x *RetryQueueResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryQueueResponse.ProtoReflect.Descriptor instead.
+func (*RetryQueueResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{42}
+}
+
+type CancelQueueRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      int64                  `protobuf:"varint,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Id            int64                  `protobuf:"varint,2,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelQueueRequest) Reset() {
+	*x = CancelQueueRequest{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelQueueRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelQueueRequest) ProtoMessage() {}
+
+func (x *CancelQueueRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelQueueRequest.ProtoReflect.Descriptor instead.
+func (*CancelQueueRequest) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *CancelQueueRequest) GetTenantId() int64 {
+	if x != nil {
+		return x.TenantId
+	}
+	return 0
+}
+
+func (x *CancelQueueRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type CancelQueueResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelQueueResponse) Reset() {
+	*x = CancelQueueResponse{}
+	mi := &file_talaria_v1_admin_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelQueueResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelQueueResponse) ProtoMessage() {}
+
+func (x *CancelQueueResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_talaria_v1_admin_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelQueueResponse.ProtoReflect.Descriptor instead.
+func (*CancelQueueResponse) Descriptor() ([]byte, []int) {
+	return file_talaria_v1_admin_proto_rawDescGZIP(), []int{44}
+}
+
 var File_talaria_v1_admin_proto protoreflect.FileDescriptor
 
 const file_talaria_v1_admin_proto_rawDesc = "" +
@@ -1828,7 +2598,65 @@ const file_talaria_v1_admin_proto_rawDesc = "" +
 	"\x12DeleteAliasRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\x03R\btenantId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\x03R\x02id\"\x15\n" +
-	"\x13DeleteAliasResponse2\xf4\t\n" +
+	"\x13DeleteAliasResponse\"\x89\x01\n" +
+	"\tDNSRecord\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05value\x18\x03 \x01(\tR\x05value\x12\x18\n" +
+	"\apurpose\x18\x04 \x01(\tR\apurpose\x12\x0e\n" +
+	"\x02ok\x18\x05 \x01(\bR\x02ok\x12\x14\n" +
+	"\x05found\x18\x06 \x01(\tR\x05found\"g\n" +
+	"\x15GetDomainSetupRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\x03R\btenantId\x12\x1b\n" +
+	"\tdomain_id\x18\x02 \x01(\x03R\bdomainId\x12\x14\n" +
+	"\x05check\x18\x03 \x01(\bR\x05check\"I\n" +
+	"\x16GetDomainSetupResponse\x12/\n" +
+	"\arecords\x18\x01 \x03(\v2\x15.talaria.v1.DNSRecordR\arecords\"M\n" +
+	"\x11RotateDKIMRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\x03R\btenantId\x12\x1b\n" +
+	"\tdomain_id\x18\x02 \x01(\x03R\bdomainId\"C\n" +
+	"\x12RotateDKIMResponse\x12-\n" +
+	"\x06record\x18\x01 \x01(\v2\x15.talaria.v1.DNSRecordR\x06record\"\xa0\x02\n" +
+	"\tQueueItem\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04from\x18\x02 \x01(\tR\x04from\x12\x0e\n" +
+	"\x02to\x18\x03 \x01(\tR\x02to\x12/\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x17.talaria.v1.QueueStatusR\x06status\x12\x1a\n" +
+	"\battempts\x18\x05 \x01(\x05R\battempts\x12!\n" +
+	"\fnext_attempt\x18\x06 \x01(\x03R\vnextAttempt\x12\x1d\n" +
+	"\n" +
+	"last_error\x18\a \x01(\tR\tlastError\x12\x12\n" +
+	"\x04size\x18\b \x01(\x03R\x04size\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\t \x01(\x03R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\n" +
+	" \x01(\x03R\tupdatedAt\"v\n" +
+	"\x10ListQueueRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\x03R\btenantId\x12/\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x17.talaria.v1.QueueStatusR\x06status\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\xb4\x01\n" +
+	"\x11ListQueueResponse\x12+\n" +
+	"\x05items\x18\x01 \x03(\v2\x15.talaria.v1.QueueItemR\x05items\x12\x18\n" +
+	"\awaiting\x18\x02 \x01(\x03R\awaiting\x12\x1d\n" +
+	"\n" +
+	"sent_today\x18\x03 \x01(\x03R\tsentToday\x12#\n" +
+	"\rbounced_today\x18\x04 \x01(\x03R\fbouncedToday\x12\x14\n" +
+	"\x05route\x18\x05 \x01(\tR\x05route\"@\n" +
+	"\x11RetryQueueRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\x03R\btenantId\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\x03R\x02id\"\x14\n" +
+	"\x12RetryQueueResponse\"A\n" +
+	"\x12CancelQueueRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\x03R\btenantId\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\x03R\x02id\"\x15\n" +
+	"\x13CancelQueueResponse*\x90\x01\n" +
+	"\vQueueStatus\x12\x1c\n" +
+	"\x18QUEUE_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14QUEUE_STATUS_WAITING\x10\x01\x12\x18\n" +
+	"\x14QUEUE_STATUS_SENDING\x10\x02\x12\x15\n" +
+	"\x11QUEUE_STATUS_SENT\x10\x03\x12\x18\n" +
+	"\x14QUEUE_STATUS_BOUNCED\x10\x042\x8e\r\n" +
 	"\fAdminService\x12S\n" +
 	"\vListTenants\x12\x1e.talaria.v1.ListTenantsRequest\x1a\x1f.talaria.v1.ListTenantsResponse\"\x03\x90\x02\x01\x12S\n" +
 	"\fCreateTenant\x12\x1f.talaria.v1.CreateTenantRequest\x1a .talaria.v1.CreateTenantResponse\"\x00\x12S\n" +
@@ -1836,7 +2664,14 @@ const file_talaria_v1_admin_proto_rawDesc = "" +
 	"\fDeleteTenant\x12\x1f.talaria.v1.DeleteTenantRequest\x1a .talaria.v1.DeleteTenantResponse\"\x00\x12S\n" +
 	"\vListDomains\x12\x1e.talaria.v1.ListDomainsRequest\x1a\x1f.talaria.v1.ListDomainsResponse\"\x03\x90\x02\x01\x12S\n" +
 	"\fCreateDomain\x12\x1f.talaria.v1.CreateDomainRequest\x1a .talaria.v1.CreateDomainResponse\"\x00\x12S\n" +
-	"\fDeleteDomain\x12\x1f.talaria.v1.DeleteDomainRequest\x1a .talaria.v1.DeleteDomainResponse\"\x00\x12M\n" +
+	"\fDeleteDomain\x12\x1f.talaria.v1.DeleteDomainRequest\x1a .talaria.v1.DeleteDomainResponse\"\x00\x12Y\n" +
+	"\x0eGetDomainSetup\x12!.talaria.v1.GetDomainSetupRequest\x1a\".talaria.v1.GetDomainSetupResponse\"\x00\x12M\n" +
+	"\n" +
+	"RotateDKIM\x12\x1d.talaria.v1.RotateDKIMRequest\x1a\x1e.talaria.v1.RotateDKIMResponse\"\x00\x12M\n" +
+	"\tListQueue\x12\x1c.talaria.v1.ListQueueRequest\x1a\x1d.talaria.v1.ListQueueResponse\"\x03\x90\x02\x01\x12M\n" +
+	"\n" +
+	"RetryQueue\x12\x1d.talaria.v1.RetryQueueRequest\x1a\x1e.talaria.v1.RetryQueueResponse\"\x00\x12P\n" +
+	"\vCancelQueue\x12\x1e.talaria.v1.CancelQueueRequest\x1a\x1f.talaria.v1.CancelQueueResponse\"\x00\x12M\n" +
 	"\tListUsers\x12\x1c.talaria.v1.ListUsersRequest\x1a\x1d.talaria.v1.ListUsersResponse\"\x03\x90\x02\x01\x12M\n" +
 	"\n" +
 	"CreateUser\x12\x1d.talaria.v1.CreateUserRequest\x1a\x1e.talaria.v1.CreateUserResponse\"\x00\x12M\n" +
@@ -1861,91 +2696,120 @@ func file_talaria_v1_admin_proto_rawDescGZIP() []byte {
 	return file_talaria_v1_admin_proto_rawDescData
 }
 
-var file_talaria_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_talaria_v1_admin_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_talaria_v1_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
 var file_talaria_v1_admin_proto_goTypes = []any{
-	(*Tenant)(nil),                  // 0: talaria.v1.Tenant
-	(*Domain)(nil),                  // 1: talaria.v1.Domain
-	(*Alias)(nil),                   // 2: talaria.v1.Alias
-	(*ListTenantsRequest)(nil),      // 3: talaria.v1.ListTenantsRequest
-	(*ListTenantsResponse)(nil),     // 4: talaria.v1.ListTenantsResponse
-	(*CreateTenantRequest)(nil),     // 5: talaria.v1.CreateTenantRequest
-	(*CreateTenantResponse)(nil),    // 6: talaria.v1.CreateTenantResponse
-	(*UpdateTenantRequest)(nil),     // 7: talaria.v1.UpdateTenantRequest
-	(*UpdateTenantResponse)(nil),    // 8: talaria.v1.UpdateTenantResponse
-	(*DeleteTenantRequest)(nil),     // 9: talaria.v1.DeleteTenantRequest
-	(*DeleteTenantResponse)(nil),    // 10: talaria.v1.DeleteTenantResponse
-	(*ListDomainsRequest)(nil),      // 11: talaria.v1.ListDomainsRequest
-	(*ListDomainsResponse)(nil),     // 12: talaria.v1.ListDomainsResponse
-	(*CreateDomainRequest)(nil),     // 13: talaria.v1.CreateDomainRequest
-	(*CreateDomainResponse)(nil),    // 14: talaria.v1.CreateDomainResponse
-	(*DeleteDomainRequest)(nil),     // 15: talaria.v1.DeleteDomainRequest
-	(*DeleteDomainResponse)(nil),    // 16: talaria.v1.DeleteDomainResponse
-	(*ListUsersRequest)(nil),        // 17: talaria.v1.ListUsersRequest
-	(*ListUsersResponse)(nil),       // 18: talaria.v1.ListUsersResponse
-	(*CreateUserRequest)(nil),       // 19: talaria.v1.CreateUserRequest
-	(*CreateUserResponse)(nil),      // 20: talaria.v1.CreateUserResponse
-	(*UpdateUserRequest)(nil),       // 21: talaria.v1.UpdateUserRequest
-	(*UpdateUserResponse)(nil),      // 22: talaria.v1.UpdateUserResponse
-	(*SetUserPasswordRequest)(nil),  // 23: talaria.v1.SetUserPasswordRequest
-	(*SetUserPasswordResponse)(nil), // 24: talaria.v1.SetUserPasswordResponse
-	(*DeleteUserRequest)(nil),       // 25: talaria.v1.DeleteUserRequest
-	(*DeleteUserResponse)(nil),      // 26: talaria.v1.DeleteUserResponse
-	(*ListAliasesRequest)(nil),      // 27: talaria.v1.ListAliasesRequest
-	(*ListAliasesResponse)(nil),     // 28: talaria.v1.ListAliasesResponse
-	(*CreateAliasRequest)(nil),      // 29: talaria.v1.CreateAliasRequest
-	(*CreateAliasResponse)(nil),     // 30: talaria.v1.CreateAliasResponse
-	(*DeleteAliasRequest)(nil),      // 31: talaria.v1.DeleteAliasRequest
-	(*DeleteAliasResponse)(nil),     // 32: talaria.v1.DeleteAliasResponse
-	(*User)(nil),                    // 33: talaria.v1.User
-	(Role)(0),                       // 34: talaria.v1.Role
+	(QueueStatus)(0),                // 0: talaria.v1.QueueStatus
+	(*Tenant)(nil),                  // 1: talaria.v1.Tenant
+	(*Domain)(nil),                  // 2: talaria.v1.Domain
+	(*Alias)(nil),                   // 3: talaria.v1.Alias
+	(*ListTenantsRequest)(nil),      // 4: talaria.v1.ListTenantsRequest
+	(*ListTenantsResponse)(nil),     // 5: talaria.v1.ListTenantsResponse
+	(*CreateTenantRequest)(nil),     // 6: talaria.v1.CreateTenantRequest
+	(*CreateTenantResponse)(nil),    // 7: talaria.v1.CreateTenantResponse
+	(*UpdateTenantRequest)(nil),     // 8: talaria.v1.UpdateTenantRequest
+	(*UpdateTenantResponse)(nil),    // 9: talaria.v1.UpdateTenantResponse
+	(*DeleteTenantRequest)(nil),     // 10: talaria.v1.DeleteTenantRequest
+	(*DeleteTenantResponse)(nil),    // 11: talaria.v1.DeleteTenantResponse
+	(*ListDomainsRequest)(nil),      // 12: talaria.v1.ListDomainsRequest
+	(*ListDomainsResponse)(nil),     // 13: talaria.v1.ListDomainsResponse
+	(*CreateDomainRequest)(nil),     // 14: talaria.v1.CreateDomainRequest
+	(*CreateDomainResponse)(nil),    // 15: talaria.v1.CreateDomainResponse
+	(*DeleteDomainRequest)(nil),     // 16: talaria.v1.DeleteDomainRequest
+	(*DeleteDomainResponse)(nil),    // 17: talaria.v1.DeleteDomainResponse
+	(*ListUsersRequest)(nil),        // 18: talaria.v1.ListUsersRequest
+	(*ListUsersResponse)(nil),       // 19: talaria.v1.ListUsersResponse
+	(*CreateUserRequest)(nil),       // 20: talaria.v1.CreateUserRequest
+	(*CreateUserResponse)(nil),      // 21: talaria.v1.CreateUserResponse
+	(*UpdateUserRequest)(nil),       // 22: talaria.v1.UpdateUserRequest
+	(*UpdateUserResponse)(nil),      // 23: talaria.v1.UpdateUserResponse
+	(*SetUserPasswordRequest)(nil),  // 24: talaria.v1.SetUserPasswordRequest
+	(*SetUserPasswordResponse)(nil), // 25: talaria.v1.SetUserPasswordResponse
+	(*DeleteUserRequest)(nil),       // 26: talaria.v1.DeleteUserRequest
+	(*DeleteUserResponse)(nil),      // 27: talaria.v1.DeleteUserResponse
+	(*ListAliasesRequest)(nil),      // 28: talaria.v1.ListAliasesRequest
+	(*ListAliasesResponse)(nil),     // 29: talaria.v1.ListAliasesResponse
+	(*CreateAliasRequest)(nil),      // 30: talaria.v1.CreateAliasRequest
+	(*CreateAliasResponse)(nil),     // 31: talaria.v1.CreateAliasResponse
+	(*DeleteAliasRequest)(nil),      // 32: talaria.v1.DeleteAliasRequest
+	(*DeleteAliasResponse)(nil),     // 33: talaria.v1.DeleteAliasResponse
+	(*DNSRecord)(nil),               // 34: talaria.v1.DNSRecord
+	(*GetDomainSetupRequest)(nil),   // 35: talaria.v1.GetDomainSetupRequest
+	(*GetDomainSetupResponse)(nil),  // 36: talaria.v1.GetDomainSetupResponse
+	(*RotateDKIMRequest)(nil),       // 37: talaria.v1.RotateDKIMRequest
+	(*RotateDKIMResponse)(nil),      // 38: talaria.v1.RotateDKIMResponse
+	(*QueueItem)(nil),               // 39: talaria.v1.QueueItem
+	(*ListQueueRequest)(nil),        // 40: talaria.v1.ListQueueRequest
+	(*ListQueueResponse)(nil),       // 41: talaria.v1.ListQueueResponse
+	(*RetryQueueRequest)(nil),       // 42: talaria.v1.RetryQueueRequest
+	(*RetryQueueResponse)(nil),      // 43: talaria.v1.RetryQueueResponse
+	(*CancelQueueRequest)(nil),      // 44: talaria.v1.CancelQueueRequest
+	(*CancelQueueResponse)(nil),     // 45: talaria.v1.CancelQueueResponse
+	(*User)(nil),                    // 46: talaria.v1.User
+	(Role)(0),                       // 47: talaria.v1.Role
 }
 var file_talaria_v1_admin_proto_depIdxs = []int32{
-	0,  // 0: talaria.v1.ListTenantsResponse.tenants:type_name -> talaria.v1.Tenant
-	0,  // 1: talaria.v1.CreateTenantResponse.tenant:type_name -> talaria.v1.Tenant
-	0,  // 2: talaria.v1.UpdateTenantRequest.tenant:type_name -> talaria.v1.Tenant
-	1,  // 3: talaria.v1.ListDomainsResponse.domains:type_name -> talaria.v1.Domain
-	1,  // 4: talaria.v1.CreateDomainResponse.domain:type_name -> talaria.v1.Domain
-	33, // 5: talaria.v1.ListUsersResponse.users:type_name -> talaria.v1.User
-	34, // 6: talaria.v1.CreateUserRequest.role:type_name -> talaria.v1.Role
-	33, // 7: talaria.v1.CreateUserResponse.user:type_name -> talaria.v1.User
-	34, // 8: talaria.v1.UpdateUserRequest.role:type_name -> talaria.v1.Role
-	2,  // 9: talaria.v1.ListAliasesResponse.aliases:type_name -> talaria.v1.Alias
-	2,  // 10: talaria.v1.CreateAliasResponse.alias:type_name -> talaria.v1.Alias
-	3,  // 11: talaria.v1.AdminService.ListTenants:input_type -> talaria.v1.ListTenantsRequest
-	5,  // 12: talaria.v1.AdminService.CreateTenant:input_type -> talaria.v1.CreateTenantRequest
-	7,  // 13: talaria.v1.AdminService.UpdateTenant:input_type -> talaria.v1.UpdateTenantRequest
-	9,  // 14: talaria.v1.AdminService.DeleteTenant:input_type -> talaria.v1.DeleteTenantRequest
-	11, // 15: talaria.v1.AdminService.ListDomains:input_type -> talaria.v1.ListDomainsRequest
-	13, // 16: talaria.v1.AdminService.CreateDomain:input_type -> talaria.v1.CreateDomainRequest
-	15, // 17: talaria.v1.AdminService.DeleteDomain:input_type -> talaria.v1.DeleteDomainRequest
-	17, // 18: talaria.v1.AdminService.ListUsers:input_type -> talaria.v1.ListUsersRequest
-	19, // 19: talaria.v1.AdminService.CreateUser:input_type -> talaria.v1.CreateUserRequest
-	21, // 20: talaria.v1.AdminService.UpdateUser:input_type -> talaria.v1.UpdateUserRequest
-	23, // 21: talaria.v1.AdminService.SetUserPassword:input_type -> talaria.v1.SetUserPasswordRequest
-	25, // 22: talaria.v1.AdminService.DeleteUser:input_type -> talaria.v1.DeleteUserRequest
-	27, // 23: talaria.v1.AdminService.ListAliases:input_type -> talaria.v1.ListAliasesRequest
-	29, // 24: talaria.v1.AdminService.CreateAlias:input_type -> talaria.v1.CreateAliasRequest
-	31, // 25: talaria.v1.AdminService.DeleteAlias:input_type -> talaria.v1.DeleteAliasRequest
-	4,  // 26: talaria.v1.AdminService.ListTenants:output_type -> talaria.v1.ListTenantsResponse
-	6,  // 27: talaria.v1.AdminService.CreateTenant:output_type -> talaria.v1.CreateTenantResponse
-	8,  // 28: talaria.v1.AdminService.UpdateTenant:output_type -> talaria.v1.UpdateTenantResponse
-	10, // 29: talaria.v1.AdminService.DeleteTenant:output_type -> talaria.v1.DeleteTenantResponse
-	12, // 30: talaria.v1.AdminService.ListDomains:output_type -> talaria.v1.ListDomainsResponse
-	14, // 31: talaria.v1.AdminService.CreateDomain:output_type -> talaria.v1.CreateDomainResponse
-	16, // 32: talaria.v1.AdminService.DeleteDomain:output_type -> talaria.v1.DeleteDomainResponse
-	18, // 33: talaria.v1.AdminService.ListUsers:output_type -> talaria.v1.ListUsersResponse
-	20, // 34: talaria.v1.AdminService.CreateUser:output_type -> talaria.v1.CreateUserResponse
-	22, // 35: talaria.v1.AdminService.UpdateUser:output_type -> talaria.v1.UpdateUserResponse
-	24, // 36: talaria.v1.AdminService.SetUserPassword:output_type -> talaria.v1.SetUserPasswordResponse
-	26, // 37: talaria.v1.AdminService.DeleteUser:output_type -> talaria.v1.DeleteUserResponse
-	28, // 38: talaria.v1.AdminService.ListAliases:output_type -> talaria.v1.ListAliasesResponse
-	30, // 39: talaria.v1.AdminService.CreateAlias:output_type -> talaria.v1.CreateAliasResponse
-	32, // 40: talaria.v1.AdminService.DeleteAlias:output_type -> talaria.v1.DeleteAliasResponse
-	26, // [26:41] is the sub-list for method output_type
-	11, // [11:26] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	1,  // 0: talaria.v1.ListTenantsResponse.tenants:type_name -> talaria.v1.Tenant
+	1,  // 1: talaria.v1.CreateTenantResponse.tenant:type_name -> talaria.v1.Tenant
+	1,  // 2: talaria.v1.UpdateTenantRequest.tenant:type_name -> talaria.v1.Tenant
+	2,  // 3: talaria.v1.ListDomainsResponse.domains:type_name -> talaria.v1.Domain
+	2,  // 4: talaria.v1.CreateDomainResponse.domain:type_name -> talaria.v1.Domain
+	46, // 5: talaria.v1.ListUsersResponse.users:type_name -> talaria.v1.User
+	47, // 6: talaria.v1.CreateUserRequest.role:type_name -> talaria.v1.Role
+	46, // 7: talaria.v1.CreateUserResponse.user:type_name -> talaria.v1.User
+	47, // 8: talaria.v1.UpdateUserRequest.role:type_name -> talaria.v1.Role
+	3,  // 9: talaria.v1.ListAliasesResponse.aliases:type_name -> talaria.v1.Alias
+	3,  // 10: talaria.v1.CreateAliasResponse.alias:type_name -> talaria.v1.Alias
+	34, // 11: talaria.v1.GetDomainSetupResponse.records:type_name -> talaria.v1.DNSRecord
+	34, // 12: talaria.v1.RotateDKIMResponse.record:type_name -> talaria.v1.DNSRecord
+	0,  // 13: talaria.v1.QueueItem.status:type_name -> talaria.v1.QueueStatus
+	0,  // 14: talaria.v1.ListQueueRequest.status:type_name -> talaria.v1.QueueStatus
+	39, // 15: talaria.v1.ListQueueResponse.items:type_name -> talaria.v1.QueueItem
+	4,  // 16: talaria.v1.AdminService.ListTenants:input_type -> talaria.v1.ListTenantsRequest
+	6,  // 17: talaria.v1.AdminService.CreateTenant:input_type -> talaria.v1.CreateTenantRequest
+	8,  // 18: talaria.v1.AdminService.UpdateTenant:input_type -> talaria.v1.UpdateTenantRequest
+	10, // 19: talaria.v1.AdminService.DeleteTenant:input_type -> talaria.v1.DeleteTenantRequest
+	12, // 20: talaria.v1.AdminService.ListDomains:input_type -> talaria.v1.ListDomainsRequest
+	14, // 21: talaria.v1.AdminService.CreateDomain:input_type -> talaria.v1.CreateDomainRequest
+	16, // 22: talaria.v1.AdminService.DeleteDomain:input_type -> talaria.v1.DeleteDomainRequest
+	35, // 23: talaria.v1.AdminService.GetDomainSetup:input_type -> talaria.v1.GetDomainSetupRequest
+	37, // 24: talaria.v1.AdminService.RotateDKIM:input_type -> talaria.v1.RotateDKIMRequest
+	40, // 25: talaria.v1.AdminService.ListQueue:input_type -> talaria.v1.ListQueueRequest
+	42, // 26: talaria.v1.AdminService.RetryQueue:input_type -> talaria.v1.RetryQueueRequest
+	44, // 27: talaria.v1.AdminService.CancelQueue:input_type -> talaria.v1.CancelQueueRequest
+	18, // 28: talaria.v1.AdminService.ListUsers:input_type -> talaria.v1.ListUsersRequest
+	20, // 29: talaria.v1.AdminService.CreateUser:input_type -> talaria.v1.CreateUserRequest
+	22, // 30: talaria.v1.AdminService.UpdateUser:input_type -> talaria.v1.UpdateUserRequest
+	24, // 31: talaria.v1.AdminService.SetUserPassword:input_type -> talaria.v1.SetUserPasswordRequest
+	26, // 32: talaria.v1.AdminService.DeleteUser:input_type -> talaria.v1.DeleteUserRequest
+	28, // 33: talaria.v1.AdminService.ListAliases:input_type -> talaria.v1.ListAliasesRequest
+	30, // 34: talaria.v1.AdminService.CreateAlias:input_type -> talaria.v1.CreateAliasRequest
+	32, // 35: talaria.v1.AdminService.DeleteAlias:input_type -> talaria.v1.DeleteAliasRequest
+	5,  // 36: talaria.v1.AdminService.ListTenants:output_type -> talaria.v1.ListTenantsResponse
+	7,  // 37: talaria.v1.AdminService.CreateTenant:output_type -> talaria.v1.CreateTenantResponse
+	9,  // 38: talaria.v1.AdminService.UpdateTenant:output_type -> talaria.v1.UpdateTenantResponse
+	11, // 39: talaria.v1.AdminService.DeleteTenant:output_type -> talaria.v1.DeleteTenantResponse
+	13, // 40: talaria.v1.AdminService.ListDomains:output_type -> talaria.v1.ListDomainsResponse
+	15, // 41: talaria.v1.AdminService.CreateDomain:output_type -> talaria.v1.CreateDomainResponse
+	17, // 42: talaria.v1.AdminService.DeleteDomain:output_type -> talaria.v1.DeleteDomainResponse
+	36, // 43: talaria.v1.AdminService.GetDomainSetup:output_type -> talaria.v1.GetDomainSetupResponse
+	38, // 44: talaria.v1.AdminService.RotateDKIM:output_type -> talaria.v1.RotateDKIMResponse
+	41, // 45: talaria.v1.AdminService.ListQueue:output_type -> talaria.v1.ListQueueResponse
+	43, // 46: talaria.v1.AdminService.RetryQueue:output_type -> talaria.v1.RetryQueueResponse
+	45, // 47: talaria.v1.AdminService.CancelQueue:output_type -> talaria.v1.CancelQueueResponse
+	19, // 48: talaria.v1.AdminService.ListUsers:output_type -> talaria.v1.ListUsersResponse
+	21, // 49: talaria.v1.AdminService.CreateUser:output_type -> talaria.v1.CreateUserResponse
+	23, // 50: talaria.v1.AdminService.UpdateUser:output_type -> talaria.v1.UpdateUserResponse
+	25, // 51: talaria.v1.AdminService.SetUserPassword:output_type -> talaria.v1.SetUserPasswordResponse
+	27, // 52: talaria.v1.AdminService.DeleteUser:output_type -> talaria.v1.DeleteUserResponse
+	29, // 53: talaria.v1.AdminService.ListAliases:output_type -> talaria.v1.ListAliasesResponse
+	31, // 54: talaria.v1.AdminService.CreateAlias:output_type -> talaria.v1.CreateAliasResponse
+	33, // 55: talaria.v1.AdminService.DeleteAlias:output_type -> talaria.v1.DeleteAliasResponse
+	36, // [36:56] is the sub-list for method output_type
+	16, // [16:36] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_talaria_v1_admin_proto_init() }
@@ -1959,13 +2823,14 @@ func file_talaria_v1_admin_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_talaria_v1_admin_proto_rawDesc), len(file_talaria_v1_admin_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   33,
+			NumEnums:      1,
+			NumMessages:   45,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_talaria_v1_admin_proto_goTypes,
 		DependencyIndexes: file_talaria_v1_admin_proto_depIdxs,
+		EnumInfos:         file_talaria_v1_admin_proto_enumTypes,
 		MessageInfos:      file_talaria_v1_admin_proto_msgTypes,
 	}.Build()
 	File_talaria_v1_admin_proto = out.File

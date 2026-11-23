@@ -14,9 +14,11 @@ format = "json"
 listen = ":8080"
 
 [smtp]
-listen = ":25"
-submission = ":587"
-submission_tls = ":465"
+listen = ":25"            # inbound mail from the internet
+# Mail apps send through these, with AUTH. They need tls.mode = "files", or
+# upstream_tls = true when a gateway terminates TLS in front of them.
+submission = ":587"       # STARTTLS
+submission_tls = ":465"   # implicit TLS
 max_message_size = "25MiB"
 max_connections = 200
 

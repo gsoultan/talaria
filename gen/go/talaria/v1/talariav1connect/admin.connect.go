@@ -57,6 +57,18 @@ const (
 	// AdminServiceDeleteDomainProcedure is the fully-qualified name of the AdminService's DeleteDomain
 	// RPC.
 	AdminServiceDeleteDomainProcedure = "/talaria.v1.AdminService/DeleteDomain"
+	// AdminServiceGetDomainSetupProcedure is the fully-qualified name of the AdminService's
+	// GetDomainSetup RPC.
+	AdminServiceGetDomainSetupProcedure = "/talaria.v1.AdminService/GetDomainSetup"
+	// AdminServiceRotateDKIMProcedure is the fully-qualified name of the AdminService's RotateDKIM RPC.
+	AdminServiceRotateDKIMProcedure = "/talaria.v1.AdminService/RotateDKIM"
+	// AdminServiceListQueueProcedure is the fully-qualified name of the AdminService's ListQueue RPC.
+	AdminServiceListQueueProcedure = "/talaria.v1.AdminService/ListQueue"
+	// AdminServiceRetryQueueProcedure is the fully-qualified name of the AdminService's RetryQueue RPC.
+	AdminServiceRetryQueueProcedure = "/talaria.v1.AdminService/RetryQueue"
+	// AdminServiceCancelQueueProcedure is the fully-qualified name of the AdminService's CancelQueue
+	// RPC.
+	AdminServiceCancelQueueProcedure = "/talaria.v1.AdminService/CancelQueue"
 	// AdminServiceListUsersProcedure is the fully-qualified name of the AdminService's ListUsers RPC.
 	AdminServiceListUsersProcedure = "/talaria.v1.AdminService/ListUsers"
 	// AdminServiceCreateUserProcedure is the fully-qualified name of the AdminService's CreateUser RPC.
@@ -88,6 +100,14 @@ type AdminServiceClient interface {
 	ListDomains(context.Context, *connect.Request[v1.ListDomainsRequest]) (*connect.Response[v1.ListDomainsResponse], error)
 	CreateDomain(context.Context, *connect.Request[v1.CreateDomainRequest]) (*connect.Response[v1.CreateDomainResponse], error)
 	DeleteDomain(context.Context, *connect.Request[v1.DeleteDomainRequest]) (*connect.Response[v1.DeleteDomainResponse], error)
+	// GetDomainSetup lists the DNS records a domain needs (MX, SPF, DKIM,
+	// DMARC, client autodiscovery). It creates the DKIM key if needed.
+	GetDomainSetup(context.Context, *connect.Request[v1.GetDomainSetupRequest]) (*connect.Response[v1.GetDomainSetupResponse], error)
+	// RotateDKIM replaces the domain's signing key with a new selector.
+	RotateDKIM(context.Context, *connect.Request[v1.RotateDKIMRequest]) (*connect.Response[v1.RotateDKIMResponse], error)
+	ListQueue(context.Context, *connect.Request[v1.ListQueueRequest]) (*connect.Response[v1.ListQueueResponse], error)
+	RetryQueue(context.Context, *connect.Request[v1.RetryQueueRequest]) (*connect.Response[v1.RetryQueueResponse], error)
+	CancelQueue(context.Context, *connect.Request[v1.CancelQueueRequest]) (*connect.Response[v1.CancelQueueResponse], error)
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
 	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
 	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
@@ -153,6 +173,37 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(adminServiceMethods.ByName("DeleteDomain")),
 			connect.WithClientOptions(opts...),
 		),
+		getDomainSetup: connect.NewClient[v1.GetDomainSetupRequest, v1.GetDomainSetupResponse](
+			httpClient,
+			baseURL+AdminServiceGetDomainSetupProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("GetDomainSetup")),
+			connect.WithClientOptions(opts...),
+		),
+		rotateDKIM: connect.NewClient[v1.RotateDKIMRequest, v1.RotateDKIMResponse](
+			httpClient,
+			baseURL+AdminServiceRotateDKIMProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("RotateDKIM")),
+			connect.WithClientOptions(opts...),
+		),
+		listQueue: connect.NewClient[v1.ListQueueRequest, v1.ListQueueResponse](
+			httpClient,
+			baseURL+AdminServiceListQueueProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("ListQueue")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
+		retryQueue: connect.NewClient[v1.RetryQueueRequest, v1.RetryQueueResponse](
+			httpClient,
+			baseURL+AdminServiceRetryQueueProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("RetryQueue")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelQueue: connect.NewClient[v1.CancelQueueRequest, v1.CancelQueueResponse](
+			httpClient,
+			baseURL+AdminServiceCancelQueueProcedure,
+			connect.WithSchema(adminServiceMethods.ByName("CancelQueue")),
+			connect.WithClientOptions(opts...),
+		),
 		listUsers: connect.NewClient[v1.ListUsersRequest, v1.ListUsersResponse](
 			httpClient,
 			baseURL+AdminServiceListUsersProcedure,
@@ -215,6 +266,11 @@ type adminServiceClient struct {
 	listDomains     *connect.Client[v1.ListDomainsRequest, v1.ListDomainsResponse]
 	createDomain    *connect.Client[v1.CreateDomainRequest, v1.CreateDomainResponse]
 	deleteDomain    *connect.Client[v1.DeleteDomainRequest, v1.DeleteDomainResponse]
+	getDomainSetup  *connect.Client[v1.GetDomainSetupRequest, v1.GetDomainSetupResponse]
+	rotateDKIM      *connect.Client[v1.RotateDKIMRequest, v1.RotateDKIMResponse]
+	listQueue       *connect.Client[v1.ListQueueRequest, v1.ListQueueResponse]
+	retryQueue      *connect.Client[v1.RetryQueueRequest, v1.RetryQueueResponse]
+	cancelQueue     *connect.Client[v1.CancelQueueRequest, v1.CancelQueueResponse]
 	listUsers       *connect.Client[v1.ListUsersRequest, v1.ListUsersResponse]
 	createUser      *connect.Client[v1.CreateUserRequest, v1.CreateUserResponse]
 	updateUser      *connect.Client[v1.UpdateUserRequest, v1.UpdateUserResponse]
@@ -258,6 +314,31 @@ func (c *adminServiceClient) CreateDomain(ctx context.Context, req *connect.Requ
 // DeleteDomain calls talaria.v1.AdminService.DeleteDomain.
 func (c *adminServiceClient) DeleteDomain(ctx context.Context, req *connect.Request[v1.DeleteDomainRequest]) (*connect.Response[v1.DeleteDomainResponse], error) {
 	return c.deleteDomain.CallUnary(ctx, req)
+}
+
+// GetDomainSetup calls talaria.v1.AdminService.GetDomainSetup.
+func (c *adminServiceClient) GetDomainSetup(ctx context.Context, req *connect.Request[v1.GetDomainSetupRequest]) (*connect.Response[v1.GetDomainSetupResponse], error) {
+	return c.getDomainSetup.CallUnary(ctx, req)
+}
+
+// RotateDKIM calls talaria.v1.AdminService.RotateDKIM.
+func (c *adminServiceClient) RotateDKIM(ctx context.Context, req *connect.Request[v1.RotateDKIMRequest]) (*connect.Response[v1.RotateDKIMResponse], error) {
+	return c.rotateDKIM.CallUnary(ctx, req)
+}
+
+// ListQueue calls talaria.v1.AdminService.ListQueue.
+func (c *adminServiceClient) ListQueue(ctx context.Context, req *connect.Request[v1.ListQueueRequest]) (*connect.Response[v1.ListQueueResponse], error) {
+	return c.listQueue.CallUnary(ctx, req)
+}
+
+// RetryQueue calls talaria.v1.AdminService.RetryQueue.
+func (c *adminServiceClient) RetryQueue(ctx context.Context, req *connect.Request[v1.RetryQueueRequest]) (*connect.Response[v1.RetryQueueResponse], error) {
+	return c.retryQueue.CallUnary(ctx, req)
+}
+
+// CancelQueue calls talaria.v1.AdminService.CancelQueue.
+func (c *adminServiceClient) CancelQueue(ctx context.Context, req *connect.Request[v1.CancelQueueRequest]) (*connect.Response[v1.CancelQueueResponse], error) {
+	return c.cancelQueue.CallUnary(ctx, req)
 }
 
 // ListUsers calls talaria.v1.AdminService.ListUsers.
@@ -309,6 +390,14 @@ type AdminServiceHandler interface {
 	ListDomains(context.Context, *connect.Request[v1.ListDomainsRequest]) (*connect.Response[v1.ListDomainsResponse], error)
 	CreateDomain(context.Context, *connect.Request[v1.CreateDomainRequest]) (*connect.Response[v1.CreateDomainResponse], error)
 	DeleteDomain(context.Context, *connect.Request[v1.DeleteDomainRequest]) (*connect.Response[v1.DeleteDomainResponse], error)
+	// GetDomainSetup lists the DNS records a domain needs (MX, SPF, DKIM,
+	// DMARC, client autodiscovery). It creates the DKIM key if needed.
+	GetDomainSetup(context.Context, *connect.Request[v1.GetDomainSetupRequest]) (*connect.Response[v1.GetDomainSetupResponse], error)
+	// RotateDKIM replaces the domain's signing key with a new selector.
+	RotateDKIM(context.Context, *connect.Request[v1.RotateDKIMRequest]) (*connect.Response[v1.RotateDKIMResponse], error)
+	ListQueue(context.Context, *connect.Request[v1.ListQueueRequest]) (*connect.Response[v1.ListQueueResponse], error)
+	RetryQueue(context.Context, *connect.Request[v1.RetryQueueRequest]) (*connect.Response[v1.RetryQueueResponse], error)
+	CancelQueue(context.Context, *connect.Request[v1.CancelQueueRequest]) (*connect.Response[v1.CancelQueueResponse], error)
 	ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error)
 	CreateUser(context.Context, *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error)
 	UpdateUser(context.Context, *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error)
@@ -368,6 +457,37 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		AdminServiceDeleteDomainProcedure,
 		svc.DeleteDomain,
 		connect.WithSchema(adminServiceMethods.ByName("DeleteDomain")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceGetDomainSetupHandler := connect.NewUnaryHandler(
+		AdminServiceGetDomainSetupProcedure,
+		svc.GetDomainSetup,
+		connect.WithSchema(adminServiceMethods.ByName("GetDomainSetup")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceRotateDKIMHandler := connect.NewUnaryHandler(
+		AdminServiceRotateDKIMProcedure,
+		svc.RotateDKIM,
+		connect.WithSchema(adminServiceMethods.ByName("RotateDKIM")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceListQueueHandler := connect.NewUnaryHandler(
+		AdminServiceListQueueProcedure,
+		svc.ListQueue,
+		connect.WithSchema(adminServiceMethods.ByName("ListQueue")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceRetryQueueHandler := connect.NewUnaryHandler(
+		AdminServiceRetryQueueProcedure,
+		svc.RetryQueue,
+		connect.WithSchema(adminServiceMethods.ByName("RetryQueue")),
+		connect.WithHandlerOptions(opts...),
+	)
+	adminServiceCancelQueueHandler := connect.NewUnaryHandler(
+		AdminServiceCancelQueueProcedure,
+		svc.CancelQueue,
+		connect.WithSchema(adminServiceMethods.ByName("CancelQueue")),
 		connect.WithHandlerOptions(opts...),
 	)
 	adminServiceListUsersHandler := connect.NewUnaryHandler(
@@ -436,6 +556,16 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceCreateDomainHandler.ServeHTTP(w, r)
 		case AdminServiceDeleteDomainProcedure:
 			adminServiceDeleteDomainHandler.ServeHTTP(w, r)
+		case AdminServiceGetDomainSetupProcedure:
+			adminServiceGetDomainSetupHandler.ServeHTTP(w, r)
+		case AdminServiceRotateDKIMProcedure:
+			adminServiceRotateDKIMHandler.ServeHTTP(w, r)
+		case AdminServiceListQueueProcedure:
+			adminServiceListQueueHandler.ServeHTTP(w, r)
+		case AdminServiceRetryQueueProcedure:
+			adminServiceRetryQueueHandler.ServeHTTP(w, r)
+		case AdminServiceCancelQueueProcedure:
+			adminServiceCancelQueueHandler.ServeHTTP(w, r)
 		case AdminServiceListUsersProcedure:
 			adminServiceListUsersHandler.ServeHTTP(w, r)
 		case AdminServiceCreateUserProcedure:
@@ -487,6 +617,26 @@ func (UnimplementedAdminServiceHandler) CreateDomain(context.Context, *connect.R
 
 func (UnimplementedAdminServiceHandler) DeleteDomain(context.Context, *connect.Request[v1.DeleteDomainRequest]) (*connect.Response[v1.DeleteDomainResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.AdminService.DeleteDomain is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) GetDomainSetup(context.Context, *connect.Request[v1.GetDomainSetupRequest]) (*connect.Response[v1.GetDomainSetupResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.AdminService.GetDomainSetup is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) RotateDKIM(context.Context, *connect.Request[v1.RotateDKIMRequest]) (*connect.Response[v1.RotateDKIMResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.AdminService.RotateDKIM is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) ListQueue(context.Context, *connect.Request[v1.ListQueueRequest]) (*connect.Response[v1.ListQueueResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.AdminService.ListQueue is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) RetryQueue(context.Context, *connect.Request[v1.RetryQueueRequest]) (*connect.Response[v1.RetryQueueResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.AdminService.RetryQueue is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) CancelQueue(context.Context, *connect.Request[v1.CancelQueueRequest]) (*connect.Response[v1.CancelQueueResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("talaria.v1.AdminService.CancelQueue is not implemented"))
 }
 
 func (UnimplementedAdminServiceHandler) ListUsers(context.Context, *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error) {

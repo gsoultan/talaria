@@ -5,8 +5,8 @@
 // @generated from file talaria/v1/admin.proto (package talaria.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Role, User } from "./auth_pb";
 import { file_talaria_v1_auth } from "./auth_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file talaria/v1/admin.proto.
  */
 export const file_talaria_v1_admin: GenFile = /*@__PURE__*/
-  fileDesc("ChZ0YWxhcmlhL3YxL2FkbWluLnByb3RvEgp0YWxhcmlhLnYxItYBCgZUZW5hbnQSCgoCaWQYASABKAMSDAoEbmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEgoKc2VhdF9saW1pdBgEIAEoAxITCgtxdW90YV9ieXRlcxgFIAEoAxIYChBkYWlseV9zZW5kX2xpbWl0GAYgASgDEhEKCXN1c3BlbmRlZBgHIAEoCBISCgpjcmVhdGVkX2F0GAggASgDEg8KB2RvbWFpbnMYCSABKAMSDQoFdXNlcnMYCiABKAMSEgoKdXNlZF9ieXRlcxgLIAEoAyJjCgZEb21haW4SCgoCaWQYASABKAMSEQoJdGVuYW50X2lkGAIgASgDEgwKBG5hbWUYAyABKAkSGAoQY2F0Y2hhbGxfdXNlcl9pZBgEIAEoAxISCgpjcmVhdGVkX2F0GAUgASgDIlwKBUFsaWFzEgoKAmlkGAEgASgDEhEKCXRlbmFudF9pZBgCIAEoAxIPCgdhZGRyZXNzGAMgASgJEg8KB3VzZXJfaWQYBCABKAMSEgoKdXNlcl9lbWFpbBgFIAEoCSIUChJMaXN0VGVuYW50c1JlcXVlc3QiOgoTTGlzdFRlbmFudHNSZXNwb25zZRIjCgd0ZW5hbnRzGAEgAygLMhIudGFsYXJpYS52MS5UZW5hbnQifAoTQ3JlYXRlVGVuYW50UmVxdWVzdBIMCgRuYW1lGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRISCgpzZWF0X2xpbWl0GAMgASgDEhMKC3F1b3RhX2J5dGVzGAQgASgDEhgKEGRhaWx5X3NlbmRfbGltaXQYBSABKAMiOgoUQ3JlYXRlVGVuYW50UmVzcG9uc2USIgoGdGVuYW50GAEgASgLMhIudGFsYXJpYS52MS5UZW5hbnQiOQoTVXBkYXRlVGVuYW50UmVxdWVzdBIiCgZ0ZW5hbnQYASABKAsyEi50YWxhcmlhLnYxLlRlbmFudCIWChRVcGRhdGVUZW5hbnRSZXNwb25zZSIhChNEZWxldGVUZW5hbnRSZXF1ZXN0EgoKAmlkGAEgASgDIhYKFERlbGV0ZVRlbmFudFJlc3BvbnNlIicKEkxpc3REb21haW5zUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAMiOgoTTGlzdERvbWFpbnNSZXNwb25zZRIjCgdkb21haW5zGAEgAygLMhIudGFsYXJpYS52MS5Eb21haW4iNgoTQ3JlYXRlRG9tYWluUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAMSDAoEbmFtZRgCIAEoCSI6ChRDcmVhdGVEb21haW5SZXNwb25zZRIiCgZkb21haW4YASABKAsyEi50YWxhcmlhLnYxLkRvbWFpbiI0ChNEZWxldGVEb21haW5SZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIKCgJpZBgCIAEoAyIWChREZWxldGVEb21haW5SZXNwb25zZSIlChBMaXN0VXNlcnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAyI0ChFMaXN0VXNlcnNSZXNwb25zZRIfCgV1c2VycxgBIAMoCzIQLnRhbGFyaWEudjEuVXNlciKSAQoRQ3JlYXRlVXNlclJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgDEg0KBWVtYWlsGAIgASgJEhQKDGRpc3BsYXlfbmFtZRgDIAEoCRIQCghwYXNzd29yZBgEIAEoCRIeCgRyb2xlGAUgASgOMhAudGFsYXJpYS52MS5Sb2xlEhMKC3F1b3RhX2J5dGVzGAYgASgDIjQKEkNyZWF0ZVVzZXJSZXNwb25zZRIeCgR1c2VyGAEgASgLMhAudGFsYXJpYS52MS5Vc2VyIn0KEVVwZGF0ZVVzZXJSZXF1ZXN0EgoKAmlkGAEgASgDEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIeCgRyb2xlGAMgASgOMhAudGFsYXJpYS52MS5Sb2xlEhMKC3F1b3RhX2J5dGVzGAQgASgDEhEKCXN1c3BlbmRlZBgFIAEoCCIUChJVcGRhdGVVc2VyUmVzcG9uc2UiNgoWU2V0VXNlclBhc3N3b3JkUmVxdWVzdBIKCgJpZBgBIAEoAxIQCghwYXNzd29yZBgCIAEoCSIZChdTZXRVc2VyUGFzc3dvcmRSZXNwb25zZSIfChFEZWxldGVVc2VyUmVxdWVzdBIKCgJpZBgBIAEoAyIUChJEZWxldGVVc2VyUmVzcG9uc2UiOAoSTGlzdEFsaWFzZXNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIPCgd1c2VyX2lkGAIgASgDIjkKE0xpc3RBbGlhc2VzUmVzcG9uc2USIgoHYWxpYXNlcxgBIAMoCzIRLnRhbGFyaWEudjEuQWxpYXMiSQoSQ3JlYXRlQWxpYXNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIPCgdhZGRyZXNzGAIgASgJEg8KB3VzZXJfaWQYAyABKAMiNwoTQ3JlYXRlQWxpYXNSZXNwb25zZRIgCgVhbGlhcxgBIAEoCzIRLnRhbGFyaWEudjEuQWxpYXMiMwoSRGVsZXRlQWxpYXNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIKCgJpZBgCIAEoAyIVChNEZWxldGVBbGlhc1Jlc3BvbnNlMvQJCgxBZG1pblNlcnZpY2USUwoLTGlzdFRlbmFudHMSHi50YWxhcmlhLnYxLkxpc3RUZW5hbnRzUmVxdWVzdBofLnRhbGFyaWEudjEuTGlzdFRlbmFudHNSZXNwb25zZSIDkAIBElMKDENyZWF0ZVRlbmFudBIfLnRhbGFyaWEudjEuQ3JlYXRlVGVuYW50UmVxdWVzdBogLnRhbGFyaWEudjEuQ3JlYXRlVGVuYW50UmVzcG9uc2UiABJTCgxVcGRhdGVUZW5hbnQSHy50YWxhcmlhLnYxLlVwZGF0ZVRlbmFudFJlcXVlc3QaIC50YWxhcmlhLnYxLlVwZGF0ZVRlbmFudFJlc3BvbnNlIgASUwoMRGVsZXRlVGVuYW50Eh8udGFsYXJpYS52MS5EZWxldGVUZW5hbnRSZXF1ZXN0GiAudGFsYXJpYS52MS5EZWxldGVUZW5hbnRSZXNwb25zZSIAElMKC0xpc3REb21haW5zEh4udGFsYXJpYS52MS5MaXN0RG9tYWluc1JlcXVlc3QaHy50YWxhcmlhLnYxLkxpc3REb21haW5zUmVzcG9uc2UiA5ACARJTCgxDcmVhdGVEb21haW4SHy50YWxhcmlhLnYxLkNyZWF0ZURvbWFpblJlcXVlc3QaIC50YWxhcmlhLnYxLkNyZWF0ZURvbWFpblJlc3BvbnNlIgASUwoMRGVsZXRlRG9tYWluEh8udGFsYXJpYS52MS5EZWxldGVEb21haW5SZXF1ZXN0GiAudGFsYXJpYS52MS5EZWxldGVEb21haW5SZXNwb25zZSIAEk0KCUxpc3RVc2VycxIcLnRhbGFyaWEudjEuTGlzdFVzZXJzUmVxdWVzdBodLnRhbGFyaWEudjEuTGlzdFVzZXJzUmVzcG9uc2UiA5ACARJNCgpDcmVhdGVVc2VyEh0udGFsYXJpYS52MS5DcmVhdGVVc2VyUmVxdWVzdBoeLnRhbGFyaWEudjEuQ3JlYXRlVXNlclJlc3BvbnNlIgASTQoKVXBkYXRlVXNlchIdLnRhbGFyaWEudjEuVXBkYXRlVXNlclJlcXVlc3QaHi50YWxhcmlhLnYxLlVwZGF0ZVVzZXJSZXNwb25zZSIAElwKD1NldFVzZXJQYXNzd29yZBIiLnRhbGFyaWEudjEuU2V0VXNlclBhc3N3b3JkUmVxdWVzdBojLnRhbGFyaWEudjEuU2V0VXNlclBhc3N3b3JkUmVzcG9uc2UiABJNCgpEZWxldGVVc2VyEh0udGFsYXJpYS52MS5EZWxldGVVc2VyUmVxdWVzdBoeLnRhbGFyaWEudjEuRGVsZXRlVXNlclJlc3BvbnNlIgASUwoLTGlzdEFsaWFzZXMSHi50YWxhcmlhLnYxLkxpc3RBbGlhc2VzUmVxdWVzdBofLnRhbGFyaWEudjEuTGlzdEFsaWFzZXNSZXNwb25zZSIDkAIBElAKC0NyZWF0ZUFsaWFzEh4udGFsYXJpYS52MS5DcmVhdGVBbGlhc1JlcXVlc3QaHy50YWxhcmlhLnYxLkNyZWF0ZUFsaWFzUmVzcG9uc2UiABJQCgtEZWxldGVBbGlhcxIeLnRhbGFyaWEudjEuRGVsZXRlQWxpYXNSZXF1ZXN0Gh8udGFsYXJpYS52MS5EZWxldGVBbGlhc1Jlc3BvbnNlIgBCOVo3Z2l0aHViLmNvbS9nc291bHRhbi90YWxhcmlhL2dlbi9nby90YWxhcmlhL3YxO3RhbGFyaWF2MWIGcHJvdG8z", [file_talaria_v1_auth]);
+  fileDesc("ChZ0YWxhcmlhL3YxL2FkbWluLnByb3RvEgp0YWxhcmlhLnYxItYBCgZUZW5hbnQSCgoCaWQYASABKAMSDAoEbmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEgoKc2VhdF9saW1pdBgEIAEoAxITCgtxdW90YV9ieXRlcxgFIAEoAxIYChBkYWlseV9zZW5kX2xpbWl0GAYgASgDEhEKCXN1c3BlbmRlZBgHIAEoCBISCgpjcmVhdGVkX2F0GAggASgDEg8KB2RvbWFpbnMYCSABKAMSDQoFdXNlcnMYCiABKAMSEgoKdXNlZF9ieXRlcxgLIAEoAyJjCgZEb21haW4SCgoCaWQYASABKAMSEQoJdGVuYW50X2lkGAIgASgDEgwKBG5hbWUYAyABKAkSGAoQY2F0Y2hhbGxfdXNlcl9pZBgEIAEoAxISCgpjcmVhdGVkX2F0GAUgASgDIlwKBUFsaWFzEgoKAmlkGAEgASgDEhEKCXRlbmFudF9pZBgCIAEoAxIPCgdhZGRyZXNzGAMgASgJEg8KB3VzZXJfaWQYBCABKAMSEgoKdXNlcl9lbWFpbBgFIAEoCSIUChJMaXN0VGVuYW50c1JlcXVlc3QiOgoTTGlzdFRlbmFudHNSZXNwb25zZRIjCgd0ZW5hbnRzGAEgAygLMhIudGFsYXJpYS52MS5UZW5hbnQifAoTQ3JlYXRlVGVuYW50UmVxdWVzdBIMCgRuYW1lGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRISCgpzZWF0X2xpbWl0GAMgASgDEhMKC3F1b3RhX2J5dGVzGAQgASgDEhgKEGRhaWx5X3NlbmRfbGltaXQYBSABKAMiOgoUQ3JlYXRlVGVuYW50UmVzcG9uc2USIgoGdGVuYW50GAEgASgLMhIudGFsYXJpYS52MS5UZW5hbnQiOQoTVXBkYXRlVGVuYW50UmVxdWVzdBIiCgZ0ZW5hbnQYASABKAsyEi50YWxhcmlhLnYxLlRlbmFudCIWChRVcGRhdGVUZW5hbnRSZXNwb25zZSIhChNEZWxldGVUZW5hbnRSZXF1ZXN0EgoKAmlkGAEgASgDIhYKFERlbGV0ZVRlbmFudFJlc3BvbnNlIicKEkxpc3REb21haW5zUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAMiOgoTTGlzdERvbWFpbnNSZXNwb25zZRIjCgdkb21haW5zGAEgAygLMhIudGFsYXJpYS52MS5Eb21haW4iNgoTQ3JlYXRlRG9tYWluUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAMSDAoEbmFtZRgCIAEoCSI6ChRDcmVhdGVEb21haW5SZXNwb25zZRIiCgZkb21haW4YASABKAsyEi50YWxhcmlhLnYxLkRvbWFpbiI0ChNEZWxldGVEb21haW5SZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIKCgJpZBgCIAEoAyIWChREZWxldGVEb21haW5SZXNwb25zZSIlChBMaXN0VXNlcnNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAyI0ChFMaXN0VXNlcnNSZXNwb25zZRIfCgV1c2VycxgBIAMoCzIQLnRhbGFyaWEudjEuVXNlciKSAQoRQ3JlYXRlVXNlclJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgDEg0KBWVtYWlsGAIgASgJEhQKDGRpc3BsYXlfbmFtZRgDIAEoCRIQCghwYXNzd29yZBgEIAEoCRIeCgRyb2xlGAUgASgOMhAudGFsYXJpYS52MS5Sb2xlEhMKC3F1b3RhX2J5dGVzGAYgASgDIjQKEkNyZWF0ZVVzZXJSZXNwb25zZRIeCgR1c2VyGAEgASgLMhAudGFsYXJpYS52MS5Vc2VyIn0KEVVwZGF0ZVVzZXJSZXF1ZXN0EgoKAmlkGAEgASgDEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIeCgRyb2xlGAMgASgOMhAudGFsYXJpYS52MS5Sb2xlEhMKC3F1b3RhX2J5dGVzGAQgASgDEhEKCXN1c3BlbmRlZBgFIAEoCCIUChJVcGRhdGVVc2VyUmVzcG9uc2UiNgoWU2V0VXNlclBhc3N3b3JkUmVxdWVzdBIKCgJpZBgBIAEoAxIQCghwYXNzd29yZBgCIAEoCSIZChdTZXRVc2VyUGFzc3dvcmRSZXNwb25zZSIfChFEZWxldGVVc2VyUmVxdWVzdBIKCgJpZBgBIAEoAyIUChJEZWxldGVVc2VyUmVzcG9uc2UiOAoSTGlzdEFsaWFzZXNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIPCgd1c2VyX2lkGAIgASgDIjkKE0xpc3RBbGlhc2VzUmVzcG9uc2USIgoHYWxpYXNlcxgBIAMoCzIRLnRhbGFyaWEudjEuQWxpYXMiSQoSQ3JlYXRlQWxpYXNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIPCgdhZGRyZXNzGAIgASgJEg8KB3VzZXJfaWQYAyABKAMiNwoTQ3JlYXRlQWxpYXNSZXNwb25zZRIgCgVhbGlhcxgBIAEoCzIRLnRhbGFyaWEudjEuQWxpYXMiMwoSRGVsZXRlQWxpYXNSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIKCgJpZBgCIAEoAyIVChNEZWxldGVBbGlhc1Jlc3BvbnNlImIKCUROU1JlY29yZBIMCgR0eXBlGAEgASgJEgwKBG5hbWUYAiABKAkSDQoFdmFsdWUYAyABKAkSDwoHcHVycG9zZRgEIAEoCRIKCgJvaxgFIAEoCBINCgVmb3VuZBgGIAEoCSJMChVHZXREb21haW5TZXR1cFJlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgDEhEKCWRvbWFpbl9pZBgCIAEoAxINCgVjaGVjaxgDIAEoCCJAChZHZXREb21haW5TZXR1cFJlc3BvbnNlEiYKB3JlY29yZHMYASADKAsyFS50YWxhcmlhLnYxLkROU1JlY29yZCI5ChFSb3RhdGVES0lNUmVxdWVzdBIRCgl0ZW5hbnRfaWQYASABKAMSEQoJZG9tYWluX2lkGAIgASgDIjsKElJvdGF0ZURLSU1SZXNwb25zZRIlCgZyZWNvcmQYASABKAsyFS50YWxhcmlhLnYxLkROU1JlY29yZCLMAQoJUXVldWVJdGVtEgoKAmlkGAEgASgDEgwKBGZyb20YAiABKAkSCgoCdG8YAyABKAkSJwoGc3RhdHVzGAQgASgOMhcudGFsYXJpYS52MS5RdWV1ZVN0YXR1cxIQCghhdHRlbXB0cxgFIAEoBRIUCgxuZXh0X2F0dGVtcHQYBiABKAMSEgoKbGFzdF9lcnJvchgHIAEoCRIMCgRzaXplGAggASgDEhIKCmNyZWF0ZWRfYXQYCSABKAMSEgoKdXBkYXRlZF9hdBgKIAEoAyJdChBMaXN0UXVldWVSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxInCgZzdGF0dXMYAiABKA4yFy50YWxhcmlhLnYxLlF1ZXVlU3RhdHVzEg0KBWxpbWl0GAMgASgFIoQBChFMaXN0UXVldWVSZXNwb25zZRIkCgVpdGVtcxgBIAMoCzIVLnRhbGFyaWEudjEuUXVldWVJdGVtEg8KB3dhaXRpbmcYAiABKAMSEgoKc2VudF90b2RheRgDIAEoAxIVCg1ib3VuY2VkX3RvZGF5GAQgASgDEg0KBXJvdXRlGAUgASgJIjIKEVJldHJ5UXVldWVSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIKCgJpZBgCIAEoAyIUChJSZXRyeVF1ZXVlUmVzcG9uc2UiMwoSQ2FuY2VsUXVldWVSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoAxIKCgJpZBgCIAEoAyIVChNDYW5jZWxRdWV1ZVJlc3BvbnNlKpABCgtRdWV1ZVN0YXR1cxIcChhRVUVVRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIYChRRVUVVRV9TVEFUVVNfV0FJVElORxABEhgKFFFVRVVFX1NUQVRVU19TRU5ESU5HEAISFQoRUVVFVUVfU1RBVFVTX1NFTlQQAxIYChRRVUVVRV9TVEFUVVNfQk9VTkNFRBAEMo4NCgxBZG1pblNlcnZpY2USUwoLTGlzdFRlbmFudHMSHi50YWxhcmlhLnYxLkxpc3RUZW5hbnRzUmVxdWVzdBofLnRhbGFyaWEudjEuTGlzdFRlbmFudHNSZXNwb25zZSIDkAIBElMKDENyZWF0ZVRlbmFudBIfLnRhbGFyaWEudjEuQ3JlYXRlVGVuYW50UmVxdWVzdBogLnRhbGFyaWEudjEuQ3JlYXRlVGVuYW50UmVzcG9uc2UiABJTCgxVcGRhdGVUZW5hbnQSHy50YWxhcmlhLnYxLlVwZGF0ZVRlbmFudFJlcXVlc3QaIC50YWxhcmlhLnYxLlVwZGF0ZVRlbmFudFJlc3BvbnNlIgASUwoMRGVsZXRlVGVuYW50Eh8udGFsYXJpYS52MS5EZWxldGVUZW5hbnRSZXF1ZXN0GiAudGFsYXJpYS52MS5EZWxldGVUZW5hbnRSZXNwb25zZSIAElMKC0xpc3REb21haW5zEh4udGFsYXJpYS52MS5MaXN0RG9tYWluc1JlcXVlc3QaHy50YWxhcmlhLnYxLkxpc3REb21haW5zUmVzcG9uc2UiA5ACARJTCgxDcmVhdGVEb21haW4SHy50YWxhcmlhLnYxLkNyZWF0ZURvbWFpblJlcXVlc3QaIC50YWxhcmlhLnYxLkNyZWF0ZURvbWFpblJlc3BvbnNlIgASUwoMRGVsZXRlRG9tYWluEh8udGFsYXJpYS52MS5EZWxldGVEb21haW5SZXF1ZXN0GiAudGFsYXJpYS52MS5EZWxldGVEb21haW5SZXNwb25zZSIAElkKDkdldERvbWFpblNldHVwEiEudGFsYXJpYS52MS5HZXREb21haW5TZXR1cFJlcXVlc3QaIi50YWxhcmlhLnYxLkdldERvbWFpblNldHVwUmVzcG9uc2UiABJNCgpSb3RhdGVES0lNEh0udGFsYXJpYS52MS5Sb3RhdGVES0lNUmVxdWVzdBoeLnRhbGFyaWEudjEuUm90YXRlREtJTVJlc3BvbnNlIgASTQoJTGlzdFF1ZXVlEhwudGFsYXJpYS52MS5MaXN0UXVldWVSZXF1ZXN0Gh0udGFsYXJpYS52MS5MaXN0UXVldWVSZXNwb25zZSIDkAIBEk0KClJldHJ5UXVldWUSHS50YWxhcmlhLnYxLlJldHJ5UXVldWVSZXF1ZXN0Gh4udGFsYXJpYS52MS5SZXRyeVF1ZXVlUmVzcG9uc2UiABJQCgtDYW5jZWxRdWV1ZRIeLnRhbGFyaWEudjEuQ2FuY2VsUXVldWVSZXF1ZXN0Gh8udGFsYXJpYS52MS5DYW5jZWxRdWV1ZVJlc3BvbnNlIgASTQoJTGlzdFVzZXJzEhwudGFsYXJpYS52MS5MaXN0VXNlcnNSZXF1ZXN0Gh0udGFsYXJpYS52MS5MaXN0VXNlcnNSZXNwb25zZSIDkAIBEk0KCkNyZWF0ZVVzZXISHS50YWxhcmlhLnYxLkNyZWF0ZVVzZXJSZXF1ZXN0Gh4udGFsYXJpYS52MS5DcmVhdGVVc2VyUmVzcG9uc2UiABJNCgpVcGRhdGVVc2VyEh0udGFsYXJpYS52MS5VcGRhdGVVc2VyUmVxdWVzdBoeLnRhbGFyaWEudjEuVXBkYXRlVXNlclJlc3BvbnNlIgASXAoPU2V0VXNlclBhc3N3b3JkEiIudGFsYXJpYS52MS5TZXRVc2VyUGFzc3dvcmRSZXF1ZXN0GiMudGFsYXJpYS52MS5TZXRVc2VyUGFzc3dvcmRSZXNwb25zZSIAEk0KCkRlbGV0ZVVzZXISHS50YWxhcmlhLnYxLkRlbGV0ZVVzZXJSZXF1ZXN0Gh4udGFsYXJpYS52MS5EZWxldGVVc2VyUmVzcG9uc2UiABJTCgtMaXN0QWxpYXNlcxIeLnRhbGFyaWEudjEuTGlzdEFsaWFzZXNSZXF1ZXN0Gh8udGFsYXJpYS52MS5MaXN0QWxpYXNlc1Jlc3BvbnNlIgOQAgESUAoLQ3JlYXRlQWxpYXMSHi50YWxhcmlhLnYxLkNyZWF0ZUFsaWFzUmVxdWVzdBofLnRhbGFyaWEudjEuQ3JlYXRlQWxpYXNSZXNwb25zZSIAElAKC0RlbGV0ZUFsaWFzEh4udGFsYXJpYS52MS5EZWxldGVBbGlhc1JlcXVlc3QaHy50YWxhcmlhLnYxLkRlbGV0ZUFsaWFzUmVzcG9uc2UiAEI5WjdnaXRodWIuY29tL2dzb3VsdGFuL3RhbGFyaWEvZ2VuL2dvL3RhbGFyaWEvdjE7dGFsYXJpYXYxYgZwcm90bzM", [file_talaria_v1_auth]);
 
 /**
  * @generated from message talaria.v1.Tenant
@@ -739,6 +739,377 @@ export const DeleteAliasResponseSchema: GenMessage<DeleteAliasResponse> = /*@__P
   messageDesc(file_talaria_v1_admin, 32);
 
 /**
+ * @generated from message talaria.v1.DNSRecord
+ */
+export type DNSRecord = Message<"talaria.v1.DNSRecord"> & {
+  /**
+   * MX, TXT, SRV, CNAME
+   *
+   * @generated from field: string type = 1;
+   */
+  type: string;
+
+  /**
+   * fully qualified
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string value = 3;
+   */
+  value: string;
+
+  /**
+   * @generated from field: string purpose = 4;
+   */
+  purpose: string;
+
+  /**
+   * Whether the record was found in DNS with the expected value.
+   *
+   * @generated from field: bool ok = 5;
+   */
+  ok: boolean;
+
+  /**
+   * @generated from field: string found = 6;
+   */
+  found: string;
+};
+
+/**
+ * Describes the message talaria.v1.DNSRecord.
+ * Use `create(DNSRecordSchema)` to create a new message.
+ */
+export const DNSRecordSchema: GenMessage<DNSRecord> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 33);
+
+/**
+ * @generated from message talaria.v1.GetDomainSetupRequest
+ */
+export type GetDomainSetupRequest = Message<"talaria.v1.GetDomainSetupRequest"> & {
+  /**
+   * @generated from field: int64 tenant_id = 1;
+   */
+  tenantId: bigint;
+
+  /**
+   * @generated from field: int64 domain_id = 2;
+   */
+  domainId: bigint;
+
+  /**
+   * Look the records up in DNS and report whether they match.
+   *
+   * @generated from field: bool check = 3;
+   */
+  check: boolean;
+};
+
+/**
+ * Describes the message talaria.v1.GetDomainSetupRequest.
+ * Use `create(GetDomainSetupRequestSchema)` to create a new message.
+ */
+export const GetDomainSetupRequestSchema: GenMessage<GetDomainSetupRequest> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 34);
+
+/**
+ * @generated from message talaria.v1.GetDomainSetupResponse
+ */
+export type GetDomainSetupResponse = Message<"talaria.v1.GetDomainSetupResponse"> & {
+  /**
+   * @generated from field: repeated talaria.v1.DNSRecord records = 1;
+   */
+  records: DNSRecord[];
+};
+
+/**
+ * Describes the message talaria.v1.GetDomainSetupResponse.
+ * Use `create(GetDomainSetupResponseSchema)` to create a new message.
+ */
+export const GetDomainSetupResponseSchema: GenMessage<GetDomainSetupResponse> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 35);
+
+/**
+ * @generated from message talaria.v1.RotateDKIMRequest
+ */
+export type RotateDKIMRequest = Message<"talaria.v1.RotateDKIMRequest"> & {
+  /**
+   * @generated from field: int64 tenant_id = 1;
+   */
+  tenantId: bigint;
+
+  /**
+   * @generated from field: int64 domain_id = 2;
+   */
+  domainId: bigint;
+};
+
+/**
+ * Describes the message talaria.v1.RotateDKIMRequest.
+ * Use `create(RotateDKIMRequestSchema)` to create a new message.
+ */
+export const RotateDKIMRequestSchema: GenMessage<RotateDKIMRequest> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 36);
+
+/**
+ * @generated from message talaria.v1.RotateDKIMResponse
+ */
+export type RotateDKIMResponse = Message<"talaria.v1.RotateDKIMResponse"> & {
+  /**
+   * @generated from field: talaria.v1.DNSRecord record = 1;
+   */
+  record?: DNSRecord | undefined;
+};
+
+/**
+ * Describes the message talaria.v1.RotateDKIMResponse.
+ * Use `create(RotateDKIMResponseSchema)` to create a new message.
+ */
+export const RotateDKIMResponseSchema: GenMessage<RotateDKIMResponse> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 37);
+
+/**
+ * @generated from message talaria.v1.QueueItem
+ */
+export type QueueItem = Message<"talaria.v1.QueueItem"> & {
+  /**
+   * @generated from field: int64 id = 1;
+   */
+  id: bigint;
+
+  /**
+   * @generated from field: string from = 2;
+   */
+  from: string;
+
+  /**
+   * @generated from field: string to = 3;
+   */
+  to: string;
+
+  /**
+   * @generated from field: talaria.v1.QueueStatus status = 4;
+   */
+  status: QueueStatus;
+
+  /**
+   * @generated from field: int32 attempts = 5;
+   */
+  attempts: number;
+
+  /**
+   * @generated from field: int64 next_attempt = 6;
+   */
+  nextAttempt: bigint;
+
+  /**
+   * @generated from field: string last_error = 7;
+   */
+  lastError: string;
+
+  /**
+   * @generated from field: int64 size = 8;
+   */
+  size: bigint;
+
+  /**
+   * @generated from field: int64 created_at = 9;
+   */
+  createdAt: bigint;
+
+  /**
+   * @generated from field: int64 updated_at = 10;
+   */
+  updatedAt: bigint;
+};
+
+/**
+ * Describes the message talaria.v1.QueueItem.
+ * Use `create(QueueItemSchema)` to create a new message.
+ */
+export const QueueItemSchema: GenMessage<QueueItem> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 38);
+
+/**
+ * @generated from message talaria.v1.ListQueueRequest
+ */
+export type ListQueueRequest = Message<"talaria.v1.ListQueueRequest"> & {
+  /**
+   * @generated from field: int64 tenant_id = 1;
+   */
+  tenantId: bigint;
+
+  /**
+   * unspecified = all
+   *
+   * @generated from field: talaria.v1.QueueStatus status = 2;
+   */
+  status: QueueStatus;
+
+  /**
+   * @generated from field: int32 limit = 3;
+   */
+  limit: number;
+};
+
+/**
+ * Describes the message talaria.v1.ListQueueRequest.
+ * Use `create(ListQueueRequestSchema)` to create a new message.
+ */
+export const ListQueueRequestSchema: GenMessage<ListQueueRequest> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 39);
+
+/**
+ * @generated from message talaria.v1.ListQueueResponse
+ */
+export type ListQueueResponse = Message<"talaria.v1.ListQueueResponse"> & {
+  /**
+   * @generated from field: repeated talaria.v1.QueueItem items = 1;
+   */
+  items: QueueItem[];
+
+  /**
+   * @generated from field: int64 waiting = 2;
+   */
+  waiting: bigint;
+
+  /**
+   * @generated from field: int64 sent_today = 3;
+   */
+  sentToday: bigint;
+
+  /**
+   * @generated from field: int64 bounced_today = 4;
+   */
+  bouncedToday: bigint;
+
+  /**
+   * Where mail leaves: "relay smtp.example.com:587" or "direct".
+   *
+   * @generated from field: string route = 5;
+   */
+  route: string;
+};
+
+/**
+ * Describes the message talaria.v1.ListQueueResponse.
+ * Use `create(ListQueueResponseSchema)` to create a new message.
+ */
+export const ListQueueResponseSchema: GenMessage<ListQueueResponse> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 40);
+
+/**
+ * @generated from message talaria.v1.RetryQueueRequest
+ */
+export type RetryQueueRequest = Message<"talaria.v1.RetryQueueRequest"> & {
+  /**
+   * @generated from field: int64 tenant_id = 1;
+   */
+  tenantId: bigint;
+
+  /**
+   * 0 = all waiting items
+   *
+   * @generated from field: int64 id = 2;
+   */
+  id: bigint;
+};
+
+/**
+ * Describes the message talaria.v1.RetryQueueRequest.
+ * Use `create(RetryQueueRequestSchema)` to create a new message.
+ */
+export const RetryQueueRequestSchema: GenMessage<RetryQueueRequest> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 41);
+
+/**
+ * @generated from message talaria.v1.RetryQueueResponse
+ */
+export type RetryQueueResponse = Message<"talaria.v1.RetryQueueResponse"> & {
+};
+
+/**
+ * Describes the message talaria.v1.RetryQueueResponse.
+ * Use `create(RetryQueueResponseSchema)` to create a new message.
+ */
+export const RetryQueueResponseSchema: GenMessage<RetryQueueResponse> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 42);
+
+/**
+ * @generated from message talaria.v1.CancelQueueRequest
+ */
+export type CancelQueueRequest = Message<"talaria.v1.CancelQueueRequest"> & {
+  /**
+   * @generated from field: int64 tenant_id = 1;
+   */
+  tenantId: bigint;
+
+  /**
+   * @generated from field: int64 id = 2;
+   */
+  id: bigint;
+};
+
+/**
+ * Describes the message talaria.v1.CancelQueueRequest.
+ * Use `create(CancelQueueRequestSchema)` to create a new message.
+ */
+export const CancelQueueRequestSchema: GenMessage<CancelQueueRequest> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 43);
+
+/**
+ * @generated from message talaria.v1.CancelQueueResponse
+ */
+export type CancelQueueResponse = Message<"talaria.v1.CancelQueueResponse"> & {
+};
+
+/**
+ * Describes the message talaria.v1.CancelQueueResponse.
+ * Use `create(CancelQueueResponseSchema)` to create a new message.
+ */
+export const CancelQueueResponseSchema: GenMessage<CancelQueueResponse> = /*@__PURE__*/
+  messageDesc(file_talaria_v1_admin, 44);
+
+/**
+ * @generated from enum talaria.v1.QueueStatus
+ */
+export enum QueueStatus {
+  /**
+   * @generated from enum value: QUEUE_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: QUEUE_STATUS_WAITING = 1;
+   */
+  WAITING = 1,
+
+  /**
+   * @generated from enum value: QUEUE_STATUS_SENDING = 2;
+   */
+  SENDING = 2,
+
+  /**
+   * @generated from enum value: QUEUE_STATUS_SENT = 3;
+   */
+  SENT = 3,
+
+  /**
+   * @generated from enum value: QUEUE_STATUS_BOUNCED = 4;
+   */
+  BOUNCED = 4,
+}
+
+/**
+ * Describes the enum talaria.v1.QueueStatus.
+ */
+export const QueueStatusSchema: GenEnum<QueueStatus> = /*@__PURE__*/
+  enumDesc(file_talaria_v1_admin, 0);
+
+/**
  * AdminService manages tenants, domains, users and aliases. Platform admins
  * manage every tenant; tenant admins only their own. tenant_id 0 means the
  * caller's tenant.
@@ -801,6 +1172,51 @@ export const AdminService: GenService<{
     methodKind: "unary";
     input: typeof DeleteDomainRequestSchema;
     output: typeof DeleteDomainResponseSchema;
+  },
+  /**
+   * GetDomainSetup lists the DNS records a domain needs (MX, SPF, DKIM,
+   * DMARC, client autodiscovery). It creates the DKIM key if needed.
+   *
+   * @generated from rpc talaria.v1.AdminService.GetDomainSetup
+   */
+  getDomainSetup: {
+    methodKind: "unary";
+    input: typeof GetDomainSetupRequestSchema;
+    output: typeof GetDomainSetupResponseSchema;
+  },
+  /**
+   * RotateDKIM replaces the domain's signing key with a new selector.
+   *
+   * @generated from rpc talaria.v1.AdminService.RotateDKIM
+   */
+  rotateDKIM: {
+    methodKind: "unary";
+    input: typeof RotateDKIMRequestSchema;
+    output: typeof RotateDKIMResponseSchema;
+  },
+  /**
+   * @generated from rpc talaria.v1.AdminService.ListQueue
+   */
+  listQueue: {
+    methodKind: "unary";
+    input: typeof ListQueueRequestSchema;
+    output: typeof ListQueueResponseSchema;
+  },
+  /**
+   * @generated from rpc talaria.v1.AdminService.RetryQueue
+   */
+  retryQueue: {
+    methodKind: "unary";
+    input: typeof RetryQueueRequestSchema;
+    output: typeof RetryQueueResponseSchema;
+  },
+  /**
+   * @generated from rpc talaria.v1.AdminService.CancelQueue
+   */
+  cancelQueue: {
+    methodKind: "unary";
+    input: typeof CancelQueueRequestSchema;
+    output: typeof CancelQueueResponseSchema;
   },
   /**
    * @generated from rpc talaria.v1.AdminService.ListUsers
