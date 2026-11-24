@@ -10,11 +10,13 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/netip"
 	"os"
 	"time"
 
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
+	"github.com/gsoultan/talaria/internal/spam"
 	"github.com/gsoultan/talaria/internal/store"
 )
 
@@ -24,6 +26,7 @@ type Deliverer struct {
 	Blobs    *blob.Store
 	Hub      *hub.Hub
 	Checker  *Checker
+	Spam     *spam.Scorer // nil turns spam scoring off
 	Hostname string
 	TmpDir   string
 	MaxSize  int64
@@ -95,6 +98,30 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 		}
 	}
 
+	// Spam: the shared part of the score first, so the worst mail is
+	// refused before it is stored; each recipient's own filter adds to it.
+	var score spam.Result
+	var toks []int64
+	scored := !in.Trusted && d.Spam != nil && in.MailboxUse == ""
+	if scored {
+		rcpts := make([]string, len(in.Rcpts))
+		for i, u := range in.Rcpts {
+			rcpts[i] = u.Address()
+		}
+		score = d.Spam.Score(ctx, spam.Message{
+			RemoteIP: in.Env.RemoteIP, Helo: in.Env.Helo, MailFrom: in.Env.MailFrom, Rcpts: rcpts,
+			BadHelo: in.Env.BadHelo, NoRDNS: in.Env.NoRDNS,
+			Auth: verdict.Bits, AuthFail: verdict.Action == Quarantine,
+			Subject: sum.Subject, FromName: sum.FromName, FromAddr: sum.FromAddr,
+			MessageID: sum.MessageID, SentDate: sum.SentDate, Text: sum.Text, Raw: rewind,
+		})
+		if d.Spam.Rejects(score.Score) && in.Env.RemoteIP != nil && !d.allowed(ctx, in, sum.FromAddr) {
+			d.log().Info("refused as spam", "from", in.Env.MailFrom, "ip", in.Env.RemoteIP, "spam", score.Header())
+			return nil, &RejectError{Reason: "5.7.1 Message refused as spam"}
+		}
+		toks = spam.Tokens(sum.Subject, sum.FromAddr, sum.Text)
+	}
+
 	now := time.Now()
 	var prefix bytes.Buffer
 	if !in.Trusted {
@@ -108,6 +135,9 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 		}
 		fmt.Fprintf(&prefix, "Received: from %s ([%s])\r\n\tby %s with %s;\r\n\t%s\r\n",
 			sanitize(in.Env.Helo), ip, d.Hostname, in.Proto, now.Format(time.RFC1123Z))
+		if scored {
+			fmt.Fprintf(&prefix, "X-Spam-Status: %s\r\n", score.Header())
+		}
 	}
 
 	use := in.MailboxUse
@@ -121,7 +151,7 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 	stored := map[int64]blob.Result{}
 	errs := make([]error, len(in.Rcpts))
 	seen := map[int64]bool{}
-	delivered := 0
+	delivered, junked := 0, 0
 	for i, u := range in.Rcpts {
 		if seen[u.ID] {
 			continue
@@ -139,8 +169,20 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 			}
 			stored[u.TenantID] = res
 		}
+		folder, total := use, score.Score
+		if scored {
+			if b, _ := d.Spam.Bayes(ctx, u.ID, toks); b != 0 {
+				total += b
+			}
+			switch {
+			case d.allowedFor(ctx, u.TenantID, in, sum.FromAddr):
+				folder = store.UseInbox
+			case total >= d.Spam.JunkScore():
+				folder = store.UseJunk
+			}
+		}
 		m, err := d.Store.InsertMessage(ctx, store.NewMessage{
-			TenantID: u.TenantID, UserID: u.ID, MailboxUse: use,
+			TenantID: u.TenantID, UserID: u.ID, MailboxUse: folder, SpamScore: total,
 			BlobHash: res.Hash, Size: res.Size, StoredSize: res.StoredSize,
 			InternalDate: now.Unix(), Flags: in.Flags, Auth: verdict.Bits,
 			SentDate: sum.SentDate, Subject: sum.Subject, FromName: sum.FromName, FromAddr: sum.FromAddr,
@@ -153,6 +195,9 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 			continue
 		}
 		delivered++
+		if folder == store.UseJunk {
+			junked++
+		}
 		if in.Stored != nil {
 			in.Stored(m)
 		}
@@ -168,8 +213,32 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 		}
 		return errs, errors.New("no recipients")
 	}
-	d.log().Info("delivered", "from", in.Env.MailFrom, "rcpts", delivered, "size", n, "folder", use)
+	d.log().Info("delivered", "from", in.Env.MailFrom, "rcpts", delivered, "size", n, "junk", junked, "spam", score.Score)
 	return errs, nil
+}
+
+// allowed reports whether any recipient's tenant allows the sender.
+func (d *Deliverer) allowed(ctx context.Context, in Inbound, from string) bool {
+	seen := map[int64]bool{}
+	for _, u := range in.Rcpts {
+		if !seen[u.TenantID] {
+			seen[u.TenantID] = true
+			if d.allowedFor(ctx, u.TenantID, in, from) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// allowedFor reports whether the tenant has an allow rule for the sender.
+func (d *Deliverer) allowedFor(ctx context.Context, tenantID int64, in Inbound, from string) bool {
+	var ip netip.Addr
+	if in.Env.RemoteIP != nil {
+		ip, _ = netip.AddrFromSlice(in.Env.RemoteIP)
+	}
+	v, err := d.Store.SenderVerdict(ctx, tenantID, ip, from)
+	return err == nil && v == "allow"
 }
 
 func (d *Deliverer) log() *slog.Logger {

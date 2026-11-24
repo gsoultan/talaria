@@ -177,8 +177,13 @@ func (s *session) Data(r io.Reader) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
+	env := mail.Envelope{RemoteIP: s.ip, Helo: s.c.Hostname(), MailFrom: s.from}
+	if s.fc != nil && !s.fc.Local {
+		env.BadHelo = s.fc.BadHelo
+		env.NoRDNS = s.fc.RDNSChecked && s.fc.RDNS == ""
+	}
 	_, err := s.b.deliver.Deliver(ctx, mail.Inbound{
-		Env:   mail.Envelope{RemoteIP: s.ip, Helo: s.c.Hostname(), MailFrom: s.from},
+		Env:   env,
 		Rcpts: s.rcpts, Proto: proto,
 	}, r)
 	io.Copy(io.Discard, r) // the server requires the body to be consumed

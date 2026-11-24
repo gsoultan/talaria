@@ -38,6 +38,7 @@ import (
 	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/pop3"
 	"github.com/gsoultan/talaria/internal/smtpd"
+	"github.com/gsoultan/talaria/internal/spam"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/tlsutil"
 	"github.com/gsoultan/talaria/internal/uploads"
@@ -52,6 +53,7 @@ type Server struct {
 	Blobs   *blob.Store
 	Hub     *hub.Hub
 	Filter  *filter.Filter // inbound connection checks
+	learner *spam.Learner
 	Deliver *mail.Deliverer
 	Keys    *outbound.Keys
 	Queue   *outbound.Queue
@@ -122,6 +124,32 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 		Checker: &mail.Checker{Hostname: cfg.Hostname},
 		TmpDir:  filepath.Join(cfg.DataDir, "tmp"), MaxSize: int64(cfg.SMTP.MaxMessageSize),
 	}
+	if cfg.Spam.Enabled {
+		sc := spam.Config{JunkScore: cfg.Spam.JunkScore, RejectScore: cfg.Spam.RejectScore}
+		if cfg.Spam.RspamdURL != "" {
+			sc.Rspamd = &spam.Rspamd{URL: cfg.Spam.RspamdURL}
+			if f := cfg.Spam.RspamdPasswordFile; f != "" {
+				b, err := os.ReadFile(f)
+				if err != nil {
+					st.Close()
+					return nil, fmt.Errorf("spam.rspamd_password_file: %w", err)
+				}
+				sc.Rspamd.Password = strings.TrimSpace(string(b))
+			}
+		}
+		s.Deliver.Spam = spam.New(sc, st, log)
+	}
+	// Training runs even with scoring off, so the filters are ready when
+	// it is turned on.
+	s.learner = &spam.Learner{Store: st, Log: log, Text: func(ctx context.Context, tenantID int64, hash []byte) (string, string, string, error) {
+		rc, err := bl.Open(tenantID, hash)
+		if err != nil {
+			return "", "", "", err
+		}
+		defer rc.Close()
+		sum := mail.Summarize(rc)
+		return sum.Subject, sum.FromAddr, sum.Text, nil
+	}}
 
 	transport, route, err := newTransport(cfg)
 	if err != nil {
@@ -331,8 +359,9 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 
 	jctx, stopJanitor := context.WithCancel(ctx)
-	wg.Add(2)
+	wg.Add(3)
 	go func() { defer wg.Done(); s.janitor(jctx) }()
+	go func() { defer wg.Done(); s.learner.Run(jctx, 30*time.Second) }()
 	go func() { defer wg.Done(); s.Queue.Run(jctx) }()
 
 	select {

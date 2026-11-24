@@ -10,6 +10,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"io"
+	"log/slog"
 	"net"
 	"strings"
 	"testing"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
+	"github.com/gsoultan/talaria/internal/spam"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/store/pgtest"
 )
@@ -190,4 +193,74 @@ func TestCompose(t *testing.T) {
 	if s.Subject != "Plan für Q4" || s.Preview != "Hello there" || !s.HasAttachments || s.InReplyTo != "root@x" || !strings.Contains(s.To, "bo@harbor.example") {
 		t.Fatalf("%+v\n%s", s, b.String())
 	}
+}
+
+func TestDeliverSpam(t *testing.T) {
+	d, u := setup(t, fakeDNS{})
+	d.Spam = spam.New(spam.Config{JunkScore: 6, RejectScore: 15}, d.Store, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	ctx := context.Background()
+	env := Envelope{RemoteIP: net.ParseIP("203.0.113.9"), Helo: "evil.example", MailFrom: "x@evil.example", BadHelo: true}
+	folder := func() (string, store.Message) {
+		t.Helper()
+		for _, use := range []string{store.UseInbox, store.UseJunk} {
+			mb, _ := d.Store.MailboxByUse(ctx, u.ID, use)
+			if ms, _ := d.Store.ListMessages(ctx, u.ID, mb.ID, store.ListOptions{}); len(ms) > 0 {
+				d.Store.MoveMessages(ctx, u.ID, []int64{ms[0].ID}, mustUse(t, d, u, store.UseTrash))
+				return use, ms[0]
+			}
+		}
+		t.Fatal("not delivered")
+		return "", store.Message{}
+	}
+
+	// Ordinary mail from an unauthenticated stranger still reaches the inbox.
+	if _, err := d.Deliver(ctx, Inbound{Env: env, Rcpts: []store.User{u}, Proto: "ESMTP"}, strings.NewReader(multipart)); err != nil {
+		t.Fatal(err)
+	}
+	if use, m := folder(); use != store.UseInbox || m.SpamScore <= 0 {
+		t.Fatalf("plain: %s %v", use, m.SpamScore)
+	}
+
+	phish := "From: \"service@paypal.com\" <x@evil.example>\r\nSubject: ACCOUNT SUSPENDED NOTICE\r\n\r\n" +
+		"Unusual sign-in activity. Verify your account at http://198.51.100.7/login\r\n"
+	if _, err := d.Deliver(ctx, Inbound{Env: env, Rcpts: []store.User{u}, Proto: "ESMTP"}, strings.NewReader(phish)); err != nil {
+		t.Fatal(err)
+	}
+	use, m := folder()
+	if use != store.UseJunk || m.SpamScore < 6 {
+		t.Fatalf("phish: %s %v", use, m.SpamScore)
+	}
+	full, _ := d.Store.Message(ctx, u.ID, m.ID)
+	r, _ := d.Blobs.Open(u.TenantID, full.BlobHash)
+	raw, _ := io.ReadAll(r)
+	r.Close()
+	if !strings.Contains(string(raw), "X-Spam-Status: score=") {
+		t.Fatalf("no X-Spam-Status:\n%.500s", raw)
+	}
+
+	// Past the reject score it is refused during SMTP...
+	worse := phish + "Wire transfer, bitcoin, claim your prize, act now: https://bit.ly/x\r\n"
+	var rej *RejectError
+	if _, err := d.Deliver(ctx, Inbound{Env: env, Rcpts: []store.User{u}, Proto: "ESMTP"}, strings.NewReader(worse)); !errors.As(err, &rej) {
+		t.Fatalf("want reject, got %v", err)
+	}
+	// ...unless the tenant allows the sender, and then it is not junked.
+	if _, err := d.Store.CreateSenderRule(ctx, store.SenderRule{TenantID: u.TenantID, Kind: "domain", Value: "evil.example", Action: "allow"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Deliver(ctx, Inbound{Env: env, Rcpts: []store.User{u}, Proto: "ESMTP"}, strings.NewReader(worse)); err != nil {
+		t.Fatal(err)
+	}
+	if use, _ := folder(); use != store.UseInbox {
+		t.Fatalf("allowed sender filed in %s", use)
+	}
+}
+
+func mustUse(t *testing.T, d *Deliverer, u store.User, use string) int64 {
+	t.Helper()
+	mb, err := d.Store.MailboxByUse(context.Background(), u.ID, use)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return mb.ID
 }

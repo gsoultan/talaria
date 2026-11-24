@@ -66,6 +66,9 @@ func TestLoadRejectsUnknownKeysAndBadMode(t *testing.T) {
 		// No database.
 		"database": "hostname = \"mx.example\"\n",
 		"dsn":      "hostname = \"mx.example\"\n[database]\nurl = \"/var/lib/talaria.db\"\n",
+		// Refusing below the Junk line would bounce mail meant for Junk.
+		"spam":   "hostname = \"mx.example\"\n[database]\nurl = \"postgres://x@h/db\"\n[spam]\njunk_score = 8\nreject_score = 5\n",
+		"rspamd": "hostname = \"mx.example\"\n[database]\nurl = \"postgres://x@h/db\"\n[spam]\nrspamd_url = \"127.0.0.1:11333\"\n",
 	} {
 		p := filepath.Join(dir, name+".toml")
 		os.WriteFile(p, []byte(body), 0o600)
@@ -79,6 +82,9 @@ func TestExampleConfigLoads(t *testing.T) {
 	cfg, err := Load("../../talaria.example.toml")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !cfg.Spam.Enabled || cfg.Spam.JunkScore != 6 || cfg.Spam.RejectScore != 15 {
+		t.Fatalf("spam = %+v", cfg.Spam)
 	}
 	if cfg.Outbound.Relay.Timeout.D().Seconds() != 30 {
 		t.Fatalf("relay timeout = %v", cfg.Outbound.Relay.Timeout)

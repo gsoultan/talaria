@@ -52,6 +52,9 @@ type Envelope struct {
 	RemoteIP net.IP // nil when unknown (HTTP ingest)
 	Helo     string
 	MailFrom string
+	// Tells from connection filtering, for the spam score.
+	BadHelo bool
+	NoRDNS  bool
 }
 
 // Check verifies msg (a re-readable source of the raw message).

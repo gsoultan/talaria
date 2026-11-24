@@ -36,6 +36,21 @@ type Config struct {
 	TLS         TLS      `toml:"tls"`
 	Ingest      Ingest   `toml:"ingest"`
 	Filter      Filter   `toml:"filter"`
+	Spam        Spam     `toml:"spam"`
+}
+
+// Spam configures spam scoring of inbound mail.
+type Spam struct {
+	Enabled bool `toml:"enabled"`
+	// JunkScore files a message in Junk at or above it.
+	JunkScore float64 `toml:"junk_score"`
+	// RejectScore refuses a message during SMTP at or above it; 0 never
+	// refuses. It applies before each user's own filter is consulted.
+	RejectScore float64 `toml:"reject_score"`
+	// RspamdURL, when set, adds the score of an Rspamd worker, e.g.
+	// http://127.0.0.1:11333. RspamdPasswordFile holds its password, if any.
+	RspamdURL          string `toml:"rspamd_url"`
+	RspamdPasswordFile string `toml:"rspamd_password_file"`
 }
 
 // Filter configures the checks on inbound SMTP connections. Tenants add
@@ -183,6 +198,7 @@ func Default() Config {
 			GreylistDelay: Duration(5 * time.Minute),
 			MaxPerIPHour:  500,
 		},
+		Spam: Spam{Enabled: true, JunkScore: 6, RejectScore: 15},
 		Log:  Log{Level: "info", Format: "text"},
 		HTTP: HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
 		TLS:  TLS{Mode: "off"},
@@ -273,6 +289,15 @@ func (c Config) Validate() error {
 		if pp.UpstreamTLS && len(pp.TrustedProxies) == 0 {
 			errs = append(errs, fmt.Errorf("%s.upstream_tls needs %s.trusted_proxies: only the gateway's connections count as encrypted", name, name))
 		}
+	}
+	if c.Spam.Enabled && c.Spam.JunkScore <= 0 {
+		errs = append(errs, errors.New("spam.junk_score must be above 0"))
+	}
+	if c.Spam.RejectScore < 0 || (c.Spam.RejectScore > 0 && c.Spam.RejectScore <= c.Spam.JunkScore) {
+		errs = append(errs, errors.New("spam.reject_score must be 0 (never refuse) or above spam.junk_score"))
+	}
+	if u := c.Spam.RspamdURL; u != "" && !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
+		errs = append(errs, errors.New("spam.rspamd_url must be an http:// or https:// URL"))
 	}
 	if c.Ingest.Enabled && c.Ingest.TokenFile == "" {
 		errs = append(errs, errors.New("ingest.enabled needs ingest.token_file"))

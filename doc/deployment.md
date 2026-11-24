@@ -59,6 +59,32 @@ never stored:
 
 Mail from loopback and private addresses skips the network checks.
 
+## Spam
+
+Accepted mail gets a spam score (`[spam]`), shown in the `X-Spam-Status`
+header. Around 0 is normal mail. At `junk_score` (6) it goes to Junk; at
+`reject_score` (15) it is refused during SMTP, so the sender learns it was
+not delivered. The score comes from:
+
+- **Sender checks.** DMARC, DKIM or SPF passes lower it; a stranger with
+  none of them, or an SPF or DMARC failure, raises it. So do a bad HELO and
+  missing reverse DNS.
+- **Message tells.** A missing Message-ID or Date, an empty or all-capitals
+  subject, a display name that holds another address
+  (`"service@paypal.com" <x@elsewhere>`), phishing phrases, links to bare
+  IP addresses and to link shorteners.
+- **Each person's own filter.** Moving mail into Junk, or out of Junk to
+  any folder but Trash, in the webmail or in an IMAP app that uses MOVE,
+  teaches that person's Bayesian filter. It starts scoring once they have
+  marked 20 messages each way, and can then add up to 5 or take away up
+  to 4.
+- **Rspamd, optional** (`spam.rspamd_url`). Its score is added. It needs
+  about 200 MB of memory with Redis, so leave it off on a 2 GB machine
+  that also runs PostgreSQL unless spam gets through.
+
+Senders on a tenant's allow list are never junked or refused for their
+score.
+
 ## Outbound mail
 
 Most VPS providers block outbound port 25, so `outbound.mode = "relay"` is the

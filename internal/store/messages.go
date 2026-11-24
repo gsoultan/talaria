@@ -52,6 +52,7 @@ type Message struct {
 	Preview        string
 	HasAttachments bool
 	Auth           int64
+	SpamScore      float64
 }
 
 // NewMessage describes a message to file into a mailbox.
@@ -80,17 +81,18 @@ type NewMessage struct {
 	References     []string
 	Preview        string
 	HasAttachments bool
+	SpamScore      float64
 	// SearchText is indexed for full-text search, not stored.
 	SearchText string
 }
 
 const msgCols = `m.id, m.mailbox_id, m.uid, m.modseq, m.blob_id, m.thread_id, m.flags, m.internal_date, m.size, m.sent_date,
-	m.subject, m.from_name, m.from_addr, m.to_addrs, m.cc_addrs, m.message_id, m.in_reply_to, m.preview, m.has_attachments, m.auth_results`
+	m.subject, m.from_name, m.from_addr, m.to_addrs, m.cc_addrs, m.message_id, m.in_reply_to, m.preview, m.has_attachments, m.auth_results, m.spam_score`
 
 func scanMessage(row interface{ Scan(...any) error }, extra ...any) (Message, error) {
 	var m Message
 	dst := append([]any{&m.ID, &m.MailboxID, &m.UID, &m.ModSeq, &m.BlobID, &m.ThreadID, &m.Flags, &m.InternalDate, &m.Size, &m.SentDate,
-		&m.Subject, &m.FromName, &m.FromAddr, &m.To, &m.Cc, &m.MessageID, &m.InReplyTo, &m.Preview, &m.HasAttachments, &m.Auth}, extra...)
+		&m.Subject, &m.FromName, &m.FromAddr, &m.To, &m.Cc, &m.MessageID, &m.InReplyTo, &m.Preview, &m.HasAttachments, &m.Auth, &m.SpamScore}, extra...)
 	err := row.Scan(dst...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return m, ErrNotFound
@@ -159,10 +161,10 @@ func insertMessage(ctx context.Context, tx *Tx, nm NewMessage) (Message, error) 
 	threadID := findThread(ctx, tx, nm.UserID, append([]string{nm.InReplyTo}, nm.References...))
 	var id int64
 	err := tx.QueryRowContext(ctx, `INSERT INTO messages(mailbox_id, uid, modseq, blob_id, thread_id, flags, internal_date, size, sent_date,
-		subject, from_name, from_addr, to_addrs, cc_addrs, message_id, in_reply_to, preview, has_attachments, auth_results, search)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, `+searchVector+`) RETURNING id`,
+		subject, from_name, from_addr, to_addrs, cc_addrs, message_id, in_reply_to, preview, has_attachments, auth_results, spam_score, search)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, `+searchVector+`) RETURNING id`,
 		mailboxID, uid, modseq, blobID, threadID, nm.Flags, nm.InternalDate, nm.Size, nm.SentDate,
-		nm.Subject, nm.FromName, nm.FromAddr, nm.To, nm.Cc, nm.MessageID, nm.InReplyTo, nm.Preview, nm.HasAttachments, nm.Auth,
+		nm.Subject, nm.FromName, nm.FromAddr, nm.To, nm.Cc, nm.MessageID, nm.InReplyTo, nm.Preview, nm.HasAttachments, nm.Auth, nm.SpamScore,
 		searchText(nm.Subject+" "+strings.Join([]string{nm.FromName, nm.FromAddr, nm.To, nm.Cc}, " ")+" "+nm.SearchText)).Scan(&id)
 	if err != nil {
 		return Message{}, err
@@ -179,7 +181,7 @@ func insertMessage(ctx context.Context, tx *Tx, nm NewMessage) (Message, error) 
 	return Message{ID: id, MailboxID: mailboxID, UID: uid, ModSeq: modseq, BlobID: blobID, BlobHash: nm.BlobHash, ThreadID: threadID,
 		Flags: nm.Flags, InternalDate: nm.InternalDate, Size: nm.Size, SentDate: nm.SentDate, Subject: nm.Subject,
 		FromName: nm.FromName, FromAddr: nm.FromAddr, To: nm.To, Cc: nm.Cc, MessageID: nm.MessageID, InReplyTo: nm.InReplyTo,
-		Preview: nm.Preview, HasAttachments: nm.HasAttachments, Auth: nm.Auth}, nil
+		Preview: nm.Preview, HasAttachments: nm.HasAttachments, Auth: nm.Auth, SpamScore: nm.SpamScore}, nil
 }
 
 func findThread(ctx context.Context, tx *Tx, userID int64, ids []string) int64 {
@@ -447,6 +449,9 @@ func (s *Store) MoveMessagesUIDs(ctx context.Context, userID int64, ids []int64,
 					return err
 				}
 			}
+			if err := queueTraining(ctx, tx, userID, src, destID, mids, s.unix()); err != nil {
+				return err
+			}
 			touched = append(touched, src)
 		}
 		touched = append(touched, destID)
@@ -478,6 +483,10 @@ func (s *Store) CopyMessages(ctx context.Context, tenantID, userID int64, ids []
 			nm.SearchText = nm.Preview
 			m, err := insertMessage(ctx, tx, nm)
 			if err != nil {
+				return err
+			}
+			// The copy is found by the same words as the original.
+			if _, err := tx.ExecContext(ctx, `UPDATE messages SET search=o.search, spam_score=o.spam_score FROM messages o WHERE messages.id=? AND o.id=?`, m.ID, id); err != nil {
 				return err
 			}
 			out = append(out, m)

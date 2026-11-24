@@ -14,9 +14,9 @@ optional and talk to Talaria over a socket.
 1. **Connection filtering** (done). DNS blocklists, greylisting, reverse DNS and
    HELO checks, per-IP rate limits, and per-tenant allow and block lists,
    applied before a message is accepted.
-2. **Anti-spam.** A built-in scorer in Go using SPF, DKIM and DMARC results,
-   header and content heuristics, and per-user Bayesian learning from
-   moving mail to and from Junk. Rspamd can be plugged in instead.
+2. **Anti-spam** (done). A built-in scorer in Go using SPF, DKIM and DMARC
+   results, header and content heuristics, and per-user Bayesian learning
+   from moving mail to and from Junk. Rspamd's score can be added.
 3. **Anti-malware.** Block dangerous attachment types and Office files with
    macros, with built-in YARA rules. ClamAV is optional, because it needs
    about 1 GB of memory on its own.

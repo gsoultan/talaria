@@ -98,3 +98,15 @@ greylist_delay = "5m"
 require_rdns = false
 # Messages per hour from one address (IPv6: one /64). 0 = no limit.
 max_per_ip_hour = 500
+
+[spam]
+# Score inbound mail. Each user's filter also learns from what they move
+# into and out of Junk, in the webmail or any IMAP app.
+enabled = true
+# File in Junk at or above this score.
+junk_score = 6
+# Refuse during SMTP at or above this score. 0 never refuses.
+reject_score = 15
+# Optional: add the score of a local Rspamd worker.
+# rspamd_url = "http://127.0.0.1:11333"
+# rspamd_password_file = "/etc/talaria/rspamd-password"
