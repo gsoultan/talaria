@@ -29,7 +29,7 @@ optional and talk to Talaria over a socket.
 7. **Data loss prevention** (done). Per-tenant policies for outgoing mail that
    match patterns (card numbers, national IDs, custom ones) and block, warn,
    encrypt or notify.
-8. **Audit logs.** Append-only in PostgreSQL: sign-ins, admin changes,
+8. **Audit logs** (done). Append-only in PostgreSQL: sign-ins, admin changes,
    message access by admins, policy hits. Searchable and exportable.
 9. **S/MIME.** Sign and encrypt in the webmail with keys that stay in the
    browser (WebCrypto in a worker), and certificates published in the

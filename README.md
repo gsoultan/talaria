@@ -16,8 +16,8 @@ A fast, low-footprint mail server with built-in webmail, sized for a
   behind Cloudflare Tunnel. See [doc/deployment.md](doc/deployment.md).
 
 Status: phase 6 (mail security) is under way: connection filtering,
-anti-spam, anti-malware, quarantine, safe links, safe attachments and data
-loss prevention are done, see [doc/roadmap.md](doc/roadmap.md). Talaria receives
+anti-spam, anti-malware, quarantine, safe links, safe attachments, data loss
+prevention and audit logs are done, see [doc/roadmap.md](doc/roadmap.md). Talaria receives
 mail on port 25 or through the HTTP ingest endpoint, checks SPF, DKIM and
 DMARC, scores it for spam with a filter that learns from each user, refuses
 dangerous attachments, and files it into

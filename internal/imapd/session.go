@@ -13,6 +13,7 @@ import (
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapserver"
 
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/store"
@@ -60,10 +61,12 @@ func (s *session) Login(username, password string) error {
 	if err != nil && !errors.Is(err, store.ErrNotFound) {
 		return errServer
 	}
-	if !auth.CheckPassword(u.PasswordHash, password) || u.Suspended {
+	if pwOK := auth.CheckPassword(u.PasswordHash, password); !pwOK || u.Suspended {
 		s.b.fails.Fail(s.ip)
+		s.b.cfg.Audit.SignIn(ctx(), "imap", username, u, s.ip, false, audit.FailReason(u, pwOK))
 		return imapserver.ErrAuthFailed
 	}
+	s.b.cfg.Audit.SignIn(ctx(), "imap", username, u, s.ip, true, "")
 	s.user = &u
 	s.events, s.unsub = s.b.hub.Subscribe(u.ID)
 	return nil

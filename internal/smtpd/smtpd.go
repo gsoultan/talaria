@@ -18,6 +18,7 @@ import (
 
 	"github.com/emersion/go-smtp"
 
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/filter"
 	"github.com/gsoultan/talaria/internal/mail"
@@ -34,6 +35,8 @@ type Config struct {
 	UpstreamTLS bool
 	// Filter runs the connection checks; nil skips them.
 	Filter *filter.Filter
+	// Audit records submission sign-ins; nil records nothing.
+	Audit *audit.Recorder
 }
 
 // Inbound is the port 25 backend.

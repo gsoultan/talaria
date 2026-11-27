@@ -18,6 +18,7 @@ import (
 	"github.com/gsoultan/kakarot"
 
 	"github.com/gsoultan/talaria/domain"
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/mail"
@@ -40,6 +41,8 @@ type Mail struct {
 	// Endpoints lists the mail-app listeners, for the settings screen.
 	Endpoints  []domain.MailEndpoint
 	Quarantine QuarantinePolicy
+	// Audit records releases from quarantine; nil skips it.
+	Audit *audit.Recorder
 	// Keepalive is how often Watch sends an empty change; default 25 s,
 	// under the idle timeouts of Cloudflare (100 s) and most gateways.
 	Keepalive time.Duration

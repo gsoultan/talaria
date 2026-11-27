@@ -202,6 +202,41 @@ not, so what happens after the relay is up to the relay.
 The admin page has a box to try your policies on sample text before you
 turn them on.
 
+## Audit log
+
+**Admin → Audit log** lists what happened in a tenant, newest first, with
+filters and a CSV export (up to 100,000 rows, and the export is itself
+recorded):
+
+- **Sign-ins** to the webmail, IMAP, POP3 and SMTP submission, and failed
+  ones with the reason. Mail apps sign in every few minutes, so their
+  successful sign-ins are recorded once a day per account, IP and
+  protocol, and failures at most once a minute. Attempts on an address
+  that does not exist go to the tenant that owns its domain.
+- **Admin actions**: every change made in the admin pages or API, with the
+  request (passwords and secrets hidden) and the result, including
+  refused ones. A tenant admin's attempt on another tenant shows in their
+  own tenant's log.
+- **Admins reading held mail** in the quarantine review.
+- **Policy matches**: data loss prevention hits (policy names and counts,
+  never the data), and links that were blocked or warned about when
+  clicked. Users releasing their own held mail.
+- **Command line** changes (`talaria user`, `passwd` and so on).
+
+Platform admins see entries that belong to no tenant, such as command line
+changes, under their own tenant.
+
+The table is append-only: PostgreSQL refuses to update, delete or truncate
+it. The only exception is the nightly retention purge (`[audit] keep_days`,
+365 by default, 0 to keep everything), and even it cannot remove anything
+less than a day old. Each entry also carries a hash over the one before it,
+so an entry edited or removed by someone who bypasses the database rules
+breaks the chain. Check it with:
+
+```
+talaria audit-verify -config /etc/talaria/talaria.toml
+```
+
 ## Outbound mail
 
 Most VPS providers block outbound port 25, so `outbound.mode = "relay"` is the

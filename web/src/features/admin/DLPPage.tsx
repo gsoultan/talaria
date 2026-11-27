@@ -30,6 +30,9 @@ function ActionBadge({ a }: { a: string }) {
 
 type Form = { id: number; name: string; detector: string; pattern: string; minCount: number; action: string; externalOnly: boolean; notify: string; enabled: boolean }
 
+/** The editable fields of a saved policy. */
+const formOf = (p: DLPPolicy): Form => ({ id: p.id, name: p.name, detector: p.detector, pattern: p.pattern, minCount: p.minCount, action: p.action, externalOnly: p.externalOnly, notify: p.notify, enabled: p.enabled })
+
 const blank: Form = { id: 0, name: '', detector: 'credit_card', pattern: '', minCount: 1, action: 'warn', externalOnly: true, notify: '', enabled: true }
 
 function Editor({ tenant, detectors, value, onClose }: { tenant: number; detectors: DLPDetector[]; value: Form | null; onClose: () => void }) {
@@ -164,7 +167,7 @@ export function DLPPage() {
   })
   const detectors = q.data?.detectors ?? []
   const label = (k: string) => detectors.find((d) => d.kind === k)?.label ?? k
-  const edit = (p: DLPPolicy) => setEditing({ id: p.id, name: p.name, detector: p.detector, pattern: p.pattern, minCount: p.minCount, action: p.action, externalOnly: p.externalOnly, notify: p.notify, enabled: p.enabled })
+  const edit = (p: DLPPolicy) => setEditing(formOf(p))
   return (
     <>
       <PageTitle
@@ -215,7 +218,7 @@ export function DLPPage() {
                     <Text size="sm">{p.externalOnly ? 'Outside recipients' : 'All mail'}</Text>
                   </Table.Td>
                   <Table.Td>
-                    <Switch aria-label={`Enable ${p.name}`} checked={p.enabled} onChange={(e) => toggle.mutate({ ...p, tenantId: tenant, enabled: e.currentTarget.checked })} />
+                    <Switch aria-label={`Enable ${p.name}`} checked={p.enabled} onChange={(e) => toggle.mutate({ ...formOf(p), tenantId: tenant, enabled: e.currentTarget.checked })} />
                   </Table.Td>
                   <Table.Td>
                     <Group gap={4} wrap="nowrap" justify="flex-end">

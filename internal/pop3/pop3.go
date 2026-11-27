@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
@@ -33,6 +34,8 @@ type Config struct {
 	TLS      *tls.Config
 	// IdleTimeout closes silent sessions; RFC 1939 asks for at least 10 minutes.
 	IdleTimeout time.Duration
+	// Audit records sign-ins; nil records nothing.
+	Audit *audit.Recorder
 }
 
 // Server is a POP3 server.
@@ -402,11 +405,13 @@ func (c *conn) login(username, password string) {
 		c.err("[SYS/TEMP] try again later")
 		return
 	}
-	if !auth.CheckPassword(u.PasswordHash, password) || u.Suspended {
+	if pwOK := auth.CheckPassword(u.PasswordHash, password); !pwOK || u.Suspended {
 		c.s.fails.Fail(c.ip)
+		c.s.cfg.Audit.SignIn(ctx, "pop3", username, u, c.ip, false, audit.FailReason(u, pwOK))
 		c.err("[AUTH] invalid credentials")
 		return
 	}
+	c.s.cfg.Audit.SignIn(ctx, "pop3", username, u, c.ip, true, "")
 	if !c.s.lock(u.ID) {
 		c.err("[IN-USE] mailbox is open in another POP3 session")
 		return

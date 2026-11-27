@@ -49,6 +49,7 @@ func RegisterAdminHTTP(r *httpx.Router, eps endpoint.AdminEndpoints, mws ...kaka
 	g.Handle("GET /api/v1/admin/sender-rules", eps.ListSenderRules, httpx.Name("ListSenderRules"))
 	g.Handle("POST /api/v1/admin/sender-rules", eps.CreateSenderRule, httpx.Name("CreateSenderRule"))
 	g.Handle("DELETE /api/v1/admin/sender-rules/{id}", eps.DeleteSenderRule, httpx.Name("DeleteSenderRule"))
+	g.Handle("GET /api/v1/admin/audit", eps.ListAudit, httpx.Name("ListAudit"))
 	g.Handle("GET /api/v1/admin/dlp-policies", eps.ListDLPPolicies, httpx.Name("ListDLPPolicies"))
 	g.Handle("POST /api/v1/admin/dlp-policies", eps.SaveDLPPolicy, httpx.Name("SaveDLPPolicy"))
 	g.Handle("DELETE /api/v1/admin/dlp-policies/{id}", eps.DeleteDLPPolicy, httpx.Name("DeleteDLPPolicy"))

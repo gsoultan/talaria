@@ -39,6 +39,7 @@ type Config struct {
 	Spam        Spam       `toml:"spam"`
 	Malware     Malware    `toml:"malware"`
 	Quarantine  Quarantine `toml:"quarantine"`
+	Audit       Audit      `toml:"audit"`
 	SafeLinks   SafeLinks  `toml:"safe_links"`
 }
 
@@ -58,6 +59,12 @@ type LinkFeed struct {
 	Name  string `toml:"name"`
 	URL   string `toml:"url"`
 	Hosts bool   `toml:"hosts"`
+}
+
+// Audit configures the audit log.
+type Audit struct {
+	// KeepDays removes entries after this many days; 0 keeps them forever.
+	KeepDays int `toml:"keep_days"`
 }
 
 // Quarantine configures held mail.
@@ -260,6 +267,7 @@ func Default() Config {
 		Spam:       Spam{Enabled: true, JunkScore: 6, QuarantineScore: 10, RejectScore: 15},
 		Malware:    Malware{Enabled: true, BlockMacros: true, Action: "quarantine"},
 		Quarantine: Quarantine{KeepDays: 30, Digest: true, DigestHour: 8},
+		Audit:      Audit{KeepDays: 365},
 		SafeLinks:  SafeLinks{Enabled: true, Refresh: Duration(30 * time.Minute)},
 		Log:        Log{Level: "info", Format: "text"},
 		HTTP:       HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
@@ -366,6 +374,9 @@ func (c Config) Validate() error {
 	}
 	if a := c.Malware.Action; a != "quarantine" && a != "reject" {
 		errs = append(errs, fmt.Errorf("malware.action %q: must be quarantine or reject", a))
+	}
+	if c.Audit.KeepDays < 0 {
+		errs = append(errs, errors.New("audit.keep_days must be 0 (keep forever) or more"))
 	}
 	if c.Quarantine.KeepDays < 1 {
 		errs = append(errs, errors.New("quarantine.keep_days must be at least 1"))

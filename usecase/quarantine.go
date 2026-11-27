@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/gsoultan/talaria/domain"
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/store"
 )
@@ -66,6 +67,9 @@ func (s *Mail) ReleaseQuarantined(ctx context.Context, in domain.ReleaseQuaranti
 	if _, err := s.Deliver.Release(ctx, h); err != nil {
 		return domain.Done{}, storeErr(err)
 	}
+	u := userOf(ctx)
+	s.Audit.Record(ctx, store.AuditEntry{TenantID: u.TenantID, ActorID: u.ID, Actor: u.Address(), IP: s.IP(ctx), Action: audit.QuarantineOut,
+		Target: h.Recipient, Detail: audit.Detail(map[string]any{"from": h.FromAddr, "subject": h.Subject, "reason": h.Reason, "detail": h.Detail})})
 	return domain.Done{}, nil
 }
 

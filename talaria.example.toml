@@ -143,6 +143,10 @@ digest_hour = 8
 # The webmail address the digest links to. Default https://<hostname>.
 # web_url = "https://mail.example.com"
 
+[audit]
+# Audit log entries are removed after this many days; 0 keeps them forever.
+keep_days = 365
+
 [safe_links]
 # Links opened from the webmail are checked when clicked, against threat
 # feeds and a few tells of phishing, and blocked or warned about.

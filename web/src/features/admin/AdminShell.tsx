@@ -94,6 +94,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     { to: '/admin/filtering', label: 'Sender filtering' },
     { to: '/admin/quarantine', label: 'Quarantine' },
     { to: '/admin/dlp', label: 'Data loss prevention' },
+    { to: '/admin/audit', label: 'Audit log' },
     ...(isPlatformAdmin(me) ? [{ to: '/admin/tenants', label: 'Tenants' }] : []),
   ]
   return (

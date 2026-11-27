@@ -15,6 +15,7 @@ import (
 	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
 
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/outbound"
@@ -86,10 +87,12 @@ func (s *subSession) Auth(mech string) (sasl.Server, error) {
 		if err != nil && !errors.Is(err, store.ErrNotFound) {
 			return errTemporary
 		}
-		if !auth.CheckPassword(u.PasswordHash, password) || u.Suspended {
+		if pwOK := auth.CheckPassword(u.PasswordHash, password); !pwOK || u.Suspended {
 			s.b.fails.Fail(s.key)
+			s.b.cfg.Audit.SignIn(context.Background(), "smtp", username, u, s.key, false, audit.FailReason(u, pwOK))
 			return errBadAuth
 		}
+		s.b.cfg.Audit.SignIn(context.Background(), "smtp", username, u, s.key, true, "")
 		s.user = &u
 		return nil
 	}

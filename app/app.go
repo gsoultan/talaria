@@ -21,6 +21,7 @@ import (
 
 	"github.com/gsoultan/talaria/domain"
 	"github.com/gsoultan/talaria/endpoint"
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/clientip"
 	"github.com/gsoultan/talaria/internal/hub"
@@ -62,10 +63,17 @@ type Deps struct {
 	// Who may release held mail, and how long it is kept.
 	UserReleaseMalware bool
 	QuarantineDays     int
-	Logger             *slog.Logger
+	// Audit records sign-ins, admin changes and policy hits; nil skips it.
+	Audit  *audit.Recorder
+	Logger *slog.Logger
 }
 
-func ipOf(ctx context.Context) string { return clientip.From(ctx).String() }
+func ipOf(ctx context.Context) string {
+	if ip := clientip.From(ctx); ip.IsValid() {
+		return ip.String()
+	}
+	return ""
+}
 
 // Build returns the API router. Mount it at /api/; the client-IP middleware
 // must run before it.
@@ -76,9 +84,10 @@ func Build(d Deps) *httpx.Router {
 	}
 	qp := usecase.QuarantinePolicy{UserReleaseMalware: d.UserReleaseMalware, KeepDays: d.QuarantineDays}
 	authUC := usecase.NewAuth(d.Store, cookies{}, ipOf)
+	authUC.Audit = d.Audit
 	mailUC := &usecase.Mail{Store: d.Store, Blobs: d.Blobs, Hub: d.Hub, Submit: d.Submit, Deliver: d.Deliver, Uploads: d.Uploads,
-		IP: ipOf, Hostname: d.Hostname, MaxSize: d.MaxSize, Endpoints: d.Endpoints, Quarantine: qp}
-	adminUC := &usecase.Admin{Store: d.Store, Blobs: d.Blobs, Deliver: d.Deliver, Quarantine: qp, Keys: d.Keys, Hostname: d.Hostname, Route: d.Route, RelayHost: d.RelayHost, Wake: d.Wake}
+		IP: ipOf, Hostname: d.Hostname, MaxSize: d.MaxSize, Endpoints: d.Endpoints, Quarantine: qp, Audit: d.Audit}
+	adminUC := &usecase.Admin{Store: d.Store, Blobs: d.Blobs, Deliver: d.Deliver, Quarantine: qp, Keys: d.Keys, Hostname: d.Hostname, Route: d.Route, RelayHost: d.RelayHost, Wake: d.Wake, Audit: d.Audit, IP: ipOf}
 
 	// Shared endpoint middleware. Mail has no timeout because Watch is a
 	// long-lived stream; its calls are bounded by the HTTP server instead.
@@ -87,14 +96,15 @@ func Build(d Deps) *httpx.Router {
 	mailMW := kakarot.Chain(middleware.Recover(log), middleware.Logging(log), signedIn)
 
 	r := httpx.NewRouter()
-	r.Use(sameOrigin, sessions(authUC))
+	r.Use(sameOrigin, sessions(authUC), captureAdmin)
 	transport.RegisterSystemHTTP(r, endpoint.MakeSystemEndpoints(usecase.System{}), public)
 	transport.RegisterSessionHTTP(r, endpoint.MakeSessionEndpoints(authUC), public)
 	transport.RegisterAccountHTTP(r, endpoint.MakeAccountEndpoints(authUC), public, signedIn)
 	transport.RegisterMailHTTP(r, endpoint.MakeMailEndpoints(mailUC), mailMW)
-	transport.RegisterAdminHTTP(r, endpoint.MakeAdminEndpoints(adminUC), public, signedIn)
+	transport.RegisterAdminHTTP(r, endpoint.MakeAdminEndpoints(adminUC), public, signedIn, auditAdmin(d.Audit))
 	(&files{store: d.Store, blobs: d.Blobs, uploads: d.Uploads}).register(r)
-	(&links{check: d.SafeLinks, log: log}).register(r)
+	(&links{check: d.SafeLinks, log: log, clicked: linkClicked(d.Audit)}).register(r)
+	(&auditExport{admin: adminUC}).register(r)
 	r.ServeOpenAPI("GET /api/v1/openapi.json", APIInfo)
 	return r
 }

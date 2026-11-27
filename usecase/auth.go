@@ -13,6 +13,7 @@ import (
 	"github.com/gsoultan/kakarot"
 
 	"github.com/gsoultan/talaria/domain"
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/store"
 )
@@ -35,6 +36,8 @@ type Auth struct {
 	Store   *store.Store
 	Cookies Cookies
 	IP      ClientIP
+	// Audit records sign-ins; nil skips it.
+	Audit *audit.Recorder
 
 	byIP    *auth.Limiter
 	byEmail *auth.Limiter
@@ -71,6 +74,7 @@ func (a *Auth) Login(ctx context.Context, in domain.Login) (domain.Session, erro
 	ip := a.IP(ctx)
 	email := strings.ToLower(strings.TrimSpace(in.Email))
 	if !a.byIP.Allowed(ip) || !a.byEmail.Allowed(email) {
+		a.Audit.SignIn(ctx, "web", email, store.User{}, ip, false, "too many attempts")
 		return domain.Session{}, kakarot.E(domain.CodeRateLimited, "too many attempts, try again in a few minutes", nil)
 	}
 	u, err := a.Store.UserByAddress(ctx, email)
@@ -80,9 +84,11 @@ func (a *Auth) Login(ctx context.Context, in domain.Login) (domain.Session, erro
 	if !auth.CheckPassword(u.PasswordHash, in.Password) {
 		a.byIP.Fail(ip)
 		a.byEmail.Fail(email)
+		a.Audit.SignIn(ctx, "web", email, u, ip, false, audit.FailReason(u, false))
 		return domain.Session{}, errBadLogin
 	}
 	if u.Suspended {
+		a.Audit.SignIn(ctx, "web", email, u, ip, false, audit.FailReason(u, true))
 		return domain.Session{}, forbidden("account suspended")
 	}
 	a.byEmail.Reset(email)
@@ -95,15 +101,17 @@ func (a *Auth) Login(ctx context.Context, in domain.Login) (domain.Session, erro
 		return domain.Session{}, internal(err)
 	}
 	a.Cookies.SetSession(ctx, tok, ttl, in.Remember)
+	a.Audit.SignIn(ctx, "web", email, u, ip, true, "")
 	return domain.Session{User: a.withTenant(ctx, u)}, nil
 }
 
 // Logout ends the current session.
 func (a *Auth) Logout(ctx context.Context, _ domain.Logout) (domain.Done, error) {
-	if tok := CallerFrom(ctx).Token; tok != "" {
-		if err := a.Store.DeleteSession(ctx, tok); err != nil {
+	if c := CallerFrom(ctx); c.Token != "" {
+		if err := a.Store.DeleteSession(ctx, c.Token); err != nil {
 			return domain.Done{}, internal(err)
 		}
+		a.Audit.Record(ctx, store.AuditEntry{TenantID: c.User.TenantID, ActorID: c.User.ID, Actor: c.User.Address(), IP: a.IP(ctx), Action: audit.SignOut})
 	}
 	a.Cookies.ClearSession(ctx)
 	return domain.Done{}, nil
@@ -128,6 +136,7 @@ func (a *Auth) ChangePassword(ctx context.Context, in domain.ChangePassword) (do
 	if err := a.Store.SetPassword(ctx, u.ID, hash); err != nil {
 		return domain.Done{}, storeErr(err)
 	}
+	a.Audit.Record(ctx, store.AuditEntry{TenantID: u.TenantID, ActorID: u.ID, Actor: u.Address(), IP: a.IP(ctx), Action: audit.PasswordSet, Target: u.Address()})
 	a.Cookies.ClearSession(ctx)
 	return domain.Done{}, nil
 }

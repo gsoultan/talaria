@@ -47,6 +47,22 @@ export type AttachmentPreview = {
   truncated: boolean
 }
 
+export type AuditEntry = {
+  action: string
+  actor: string
+  at: number
+  detail: string
+  id: number
+  ip: string
+  outcome: string
+  target: string
+}
+
+export type AuditLog = {
+  entries: AuditEntry[]
+  more: boolean
+}
+
 export type CancelQueue = {
   id: number
   tenantId?: number
@@ -542,6 +558,7 @@ export interface Ops {
   "admin.GetHeldMail": { input: { id: number }; output: HeldMailDetail }
   "admin.GetStats": { input: { tenantId?: number; server?: boolean }; output: Stats }
   "admin.ListAliases": { input: { tenantId?: number; userId?: number }; output: Aliases }
+  "admin.ListAudit": { input: { tenantId?: number; action?: string; q?: string; since?: number; until?: number; before?: number }; output: AuditLog }
   "admin.ListDLPPolicies": { input: { tenantId?: number }; output: DLPPolicies }
   "admin.ListDomains": { input: { tenantId?: number }; output: Domains }
   "admin.ListHeldMail": { input: { tenantId?: number; q?: string; reason?: string; before?: number }; output: HeldMessages }
@@ -603,6 +620,7 @@ export const ops = {
   "admin.GetHeldMail": { method: 'GET', path: '/api/v1/admin/quarantine/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.GetStats": { method: 'GET', path: '/api/v1/admin/stats', pathParams: [], query: ["tenantId","server"], body: false, stream: false },
   "admin.ListAliases": { method: 'GET', path: '/api/v1/admin/aliases', pathParams: [], query: ["tenantId","userId"], body: false, stream: false },
+  "admin.ListAudit": { method: 'GET', path: '/api/v1/admin/audit', pathParams: [], query: ["tenantId","action","q","since","until","before"], body: false, stream: false },
   "admin.ListDLPPolicies": { method: 'GET', path: '/api/v1/admin/dlp-policies', pathParams: [], query: ["tenantId"], body: false, stream: false },
   "admin.ListDomains": { method: 'GET', path: '/api/v1/admin/domains', pathParams: [], query: ["tenantId"], body: false, stream: false },
   "admin.ListHeldMail": { method: 'GET', path: '/api/v1/admin/quarantine', pathParams: [], query: ["tenantId","q","reason","before"], body: false, stream: false },

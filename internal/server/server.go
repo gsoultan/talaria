@@ -26,9 +26,11 @@ import (
 
 	"github.com/gsoultan/talaria/app"
 	"github.com/gsoultan/talaria/domain"
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/clientip"
 	"github.com/gsoultan/talaria/internal/config"
+	"github.com/gsoultan/talaria/internal/dlp"
 	"github.com/gsoultan/talaria/internal/filter"
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/imapd"
@@ -55,6 +57,7 @@ type Server struct {
 	Blobs   *blob.Store
 	Hub     *hub.Hub
 	Filter  *filter.Filter // inbound connection checks
+	Audit   *audit.Recorder
 	learner *spam.Learner
 	links   *safelinks.Checker
 	Deliver *mail.Deliverer
@@ -180,8 +183,9 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 	}
 	s.Keys = &outbound.Keys{Store: st}
 	s.Queue = &outbound.Queue{Store: st, Blobs: bl, Transport: transport, Deliver: s.Deliver, Hostname: cfg.Hostname, Log: log}
+	s.Audit = &audit.Recorder{Store: st, Log: log}
 	s.Submit = &outbound.Submitter{Store: st, Blobs: bl, Deliver: s.Deliver, Keys: s.Keys, Queue: s.Queue, Hostname: cfg.Hostname,
-		TmpDir: s.Deliver.TmpDir, MaxSize: int64(cfg.SMTP.MaxMessageSize), Log: log}
+		TmpDir: s.Deliver.TmpDir, MaxSize: int64(cfg.SMTP.MaxMessageSize), Log: log, PolicyHit: s.policyHit}
 
 	ups, err := uploads.New(filepath.Join(cfg.DataDir, "tmp", "uploads"), int64(cfg.SMTP.MaxMessageSize))
 	if err != nil {
@@ -191,7 +195,7 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 	deps := app.Deps{Store: st, Blobs: bl, Hub: s.Hub, Submit: s.Submit, Deliver: s.Deliver, Keys: s.Keys, Uploads: ups,
 		Hostname: cfg.Hostname, MaxSize: int64(cfg.SMTP.MaxMessageSize), Endpoints: mailEndpoints(cfg),
 		Route: route, Wake: s.Queue.Wake, Logger: log,
-		UserReleaseMalware: cfg.Malware.UserRelease, QuarantineDays: cfg.Quarantine.KeepDays}
+		UserReleaseMalware: cfg.Malware.UserRelease, QuarantineDays: cfg.Quarantine.KeepDays, Audit: s.Audit}
 	if cfg.Outbound.Mode == "relay" {
 		deps.RelayHost = cfg.Outbound.Relay.Host
 	}
@@ -261,7 +265,7 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 			MaxHeaderBytes:    64 << 10,
 		}
 	}
-	smtpCfg := smtpd.Config{Hostname: cfg.Hostname, MaxMessageSize: int64(cfg.SMTP.MaxMessageSize), TLS: s.tls}
+	smtpCfg := smtpd.Config{Hostname: cfg.Hostname, MaxMessageSize: int64(cfg.SMTP.MaxMessageSize), TLS: s.tls, Audit: s.Audit}
 	if cfg.SMTP.Listen != "" {
 		in := smtpCfg
 		s.Filter = filter.New(filter.Config{
@@ -281,7 +285,7 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 		}
 	}
 	if cfg.IMAP.Listen != "" || cfg.IMAP.ListenTLS != "" {
-		imapCfg := imapd.Config{TLS: s.tls, MaxSize: int64(cfg.SMTP.MaxMessageSize)}
+		imapCfg := imapd.Config{TLS: s.tls, MaxSize: int64(cfg.SMTP.MaxMessageSize), Audit: s.Audit}
 		s.imap = imapd.New(imapCfg, st, s.Blobs, s.Hub, s.Deliver, log)
 		if cfg.IMAP.UpstreamTLS && cfg.IMAP.ListenTLS != "" {
 			imapCfg.UpstreamTLS = true
@@ -289,7 +293,7 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 		}
 	}
 	if cfg.POP3.Listen != "" || cfg.POP3.ListenTLS != "" {
-		s.pop = pop3.New(pop3.Config{Hostname: cfg.Hostname, TLS: s.tls}, st, s.Blobs, s.Hub, log)
+		s.pop = pop3.New(pop3.Config{Hostname: cfg.Hostname, TLS: s.tls, Audit: s.Audit}, st, s.Blobs, s.Hub, log)
 	}
 	return s, nil
 }
@@ -580,6 +584,13 @@ func (s *Server) sweep(ctx context.Context) {
 	} else if n > 0 {
 		s.log.Info("purged quarantine", "n", n)
 	}
+	if days := s.cfg.Audit.KeepDays; days > 0 {
+		if n, err := s.Store.PurgeAudit(ctx, time.Now().Add(-time.Duration(days)*24*time.Hour).Unix()); err != nil {
+			s.log.Warn("purge audit log", "err", err)
+		} else if n > 0 {
+			s.log.Info("purged audit log", "n", n)
+		}
+	}
 	if err := s.Store.PruneQueue(ctx, 30*86400); err != nil {
 		s.log.Warn("prune queue", "err", err)
 	}
@@ -593,4 +604,19 @@ type noRelay struct{}
 
 func (noRelay) Send(context.Context, string, string, io.Reader) (string, error) {
 	return "", errors.New("no outbound relay configured (outbound.relay.host)")
+}
+
+// policyHit records a data loss prevention match in the audit log. It
+// names the policies and counts, never the data found.
+func (s *Server) policyHit(ctx context.Context, sub outbound.Submission, subject string, rcpts []string, ms []dlp.Match, action string) {
+	var pols []map[string]any
+	for _, m := range ms {
+		pols = append(pols, map[string]any{"policy": m.Policy.Name, "action": m.Policy.Action, "found": m.Count})
+	}
+	if len(rcpts) > 20 {
+		rcpts = append(rcpts[:20:20], fmt.Sprintf("and %d more", len(rcpts)-20))
+	}
+	s.Audit.Record(ctx, store.AuditEntry{TenantID: sub.User.TenantID, ActorID: sub.User.ID, Actor: sub.User.Address(), IP: sub.ClientIP,
+		Action: audit.PolicyDLP, Target: strings.Join(rcpts, ", "), Outcome: action,
+		Detail: audit.Detail(map[string]any{"subject": subject, "via": sub.Proto, "matches": pols})})
 }

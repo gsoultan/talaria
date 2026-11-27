@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/gsoultan/talaria/domain"
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
@@ -60,7 +61,8 @@ func setup(t *testing.T) *env {
 	d := &mail.Deliverer{Store: st, Blobs: bl, Hub: h, Hostname: "mx.test", TmpDir: dir}
 	links := &safelinks.Checker{Block: []string{"blocked.example"}}
 	sub := &outbound.Submitter{Store: st, Blobs: bl, Deliver: d, Keys: &outbound.Keys{Store: st}, Hostname: "mx.test", TmpDir: dir}
-	r := Build(Deps{Store: st, Blobs: bl, Hub: h, Deliver: d, Submit: sub, Uploads: ups, Hostname: "mx.test", MaxSize: 1 << 20, SafeLinks: links})
+	r := Build(Deps{Store: st, Blobs: bl, Hub: h, Deliver: d, Submit: sub, Uploads: ups, Hostname: "mx.test", MaxSize: 1 << 20, SafeLinks: links,
+		Audit: &audit.Recorder{Store: st}})
 	srv := httptest.NewTLSServer(r) // Secure cookies need https
 	t.Cleanup(srv.Close)
 	c := srv.Client()
@@ -289,8 +291,8 @@ func TestOpenAPI(t *testing.T) {
 	for _, ops := range doc.Paths {
 		n += len(ops)
 	}
-	if n != 57 { // the generated routes; uploads and downloads are raw HTTP
-		t.Fatalf("%d operations, want 57", n)
+	if n != 58 { // the generated routes; uploads and downloads are raw HTTP
+		t.Fatalf("%d operations, want 58", n)
 	}
 }
 
@@ -376,5 +378,81 @@ func TestDLPPolicies(t *testing.T) {
 	}
 	if st, _ := e.call("DELETE", fmt.Sprintf("/api/v1/admin/dlp-policies/%d", saved.Policy.ID), nil, nil); st != 404 {
 		t.Fatalf("delete again: %d", st)
+	}
+}
+
+func TestAuditLog(t *testing.T) {
+	e := setup(t)
+	ctx := context.Background()
+	if st, _ := e.call("POST", "/api/v1/session", domain.Login{Email: "ana@northwind.example", Password: "wrong one"}, nil); st != 401 {
+		t.Fatalf("bad login: %d", st)
+	}
+	e.user.Role = store.RoleTenantAdmin
+	e.st.UpdateUser(ctx, e.user)
+	e.login()
+	if st, _ := e.call("POST", "/api/v1/admin/users", domain.CreateUser{Email: "lena@northwind.example", Password: "hunter2-hunter2"}, nil); st >= 300 {
+		t.Fatalf("create user: %d", st)
+	}
+	if st, _ := e.call("GET", "/api/v1/admin/users?tenantId=999", nil, nil); st != 403 {
+		t.Fatalf("other tenant read: %d", st)
+	}
+	if st, _ := e.call("POST", "/api/v1/admin/users", domain.CreateUser{TenantID: 999, Email: "x@else.example", Password: "hunter2-hunter2"}, nil); st != 403 {
+		t.Fatalf("other tenant write: %d", st)
+	}
+	e.client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	if res, err := e.client.Get(e.srv.URL + "/api/v1/link?u=" + url.QueryEscape("https://x.blocked.example/login")); err == nil {
+		res.Body.Close()
+	}
+
+	var log domain.AuditLog
+	if st, _ := e.call("GET", "/api/v1/admin/audit", nil, &log); st != 200 {
+		t.Fatalf("list: %d", st)
+	}
+	var got []string
+	for _, x := range log.Entries {
+		got = append(got, x.Action+"/"+x.Outcome)
+		if strings.Contains(x.Detail, "hunter2") {
+			t.Fatalf("password logged: %s", x.Detail)
+		}
+	}
+	// Newest first; reads are not logged, refused changes are.
+	want := "policy.link/blocked admin.CreateUser/forbidden admin.CreateUser/ok sign_in/ok sign_in_failed/wrong password"
+	if strings.Join(got, " ") != want {
+		t.Fatalf("entries:\n got %v\nwant %s", got, want)
+	}
+	if c := log.Entries[2]; c.Target != "POST /api/v1/admin/users" || !strings.Contains(c.Detail, `"password":"(hidden)"`) || c.Actor != "ana@northwind.example" {
+		t.Fatalf("create entry: %+v", c)
+	}
+	if st, _ := e.call("GET", "/api/v1/admin/audit?action=sign_in_failed", nil, &log); st != 200 || len(log.Entries) != 1 {
+		t.Fatalf("filter: %d %+v", st, log)
+	}
+
+	res, err := e.client.Get(e.srv.URL + "/api/v1/admin/audit.csv?action=admin.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
+	if res.Header.Get("Content-Type") != "text/csv; charset=utf-8" || lines[0] != "id,time,actor,ip,action,target,outcome,detail" || len(lines) != 4 {
+		t.Fatalf("csv: %s\n%s", res.Header.Get("Content-Type"), body)
+	}
+	// The export itself is on record.
+	e.call("GET", "/api/v1/admin/audit?action=admin.ExportAudit", nil, &log)
+	if len(log.Entries) != 1 {
+		t.Fatalf("export not recorded: %+v", log)
+	}
+
+	// A plain user sees nothing.
+	e.user.Role = store.RoleUser
+	e.st.UpdateUser(ctx, e.user)
+	if st, _ := e.call("GET", "/api/v1/admin/audit", nil, nil); st != 403 {
+		t.Fatalf("user: %d", st)
+	}
+	if res, _ := e.client.Get(e.srv.URL + "/api/v1/admin/audit.csv"); res.StatusCode != 403 {
+		t.Fatalf("user csv: %d", res.StatusCode)
+	}
+	if n, broken, err := e.st.AuditChain(ctx); err != nil || broken != 0 || n < 6 {
+		t.Fatalf("chain: %d %d %v", n, broken, err)
 	}
 }

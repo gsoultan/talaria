@@ -18,6 +18,7 @@ import (
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapserver"
 
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
@@ -32,6 +33,8 @@ type Config struct {
 	// terminated TLS in front of them.
 	UpstreamTLS bool
 	MaxSize     int64
+	// Audit records sign-ins; nil records nothing.
+	Audit *audit.Recorder
 }
 
 // Backend holds what sessions share.

@@ -15,6 +15,7 @@ import (
 
 	"golang.org/x/term"
 
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/config"
 	"github.com/gsoultan/talaria/internal/server"
@@ -30,6 +31,7 @@ const adminUsage = `Usage:
   talaria user     -tenant NAME -email EMAIL [-name NAME] [-role user|admin|platform]
   talaria alias    -tenant NAME -alias EMAIL -to EMAIL
   talaria passwd   -email EMAIL
+  talaria audit-verify                           check that no audit log entry was changed or removed
 
 Passwords are read from the terminal, or from stdin when it is not a terminal.
 Every command also takes -config FILE (or TALARIA_CONFIG).
@@ -37,7 +39,7 @@ Every command also takes -config FILE (or TALARIA_CONFIG).
 
 // runAdmin handles the management subcommands. It reports whether args named
 // one.
-func runAdmin(args []string) (bool, error) {
+func runAdmin(args []string) (handled bool, err error) {
 	if len(args) == 0 {
 		return false, nil
 	}
@@ -55,7 +57,7 @@ func runAdmin(args []string) (bool, error) {
 	to := fs.String("to", "", "user the alias delivers to")
 	seats := fs.Int64("seats", 0, "seat limit (0 = unlimited)")
 	switch cmd {
-	case "init", "tenant", "domain", "user", "alias", "passwd":
+	case "init", "tenant", "domain", "user", "alias", "passwd", "audit-verify":
 	case "help", "-h", "-help", "--help":
 		fmt.Print(adminUsage)
 		return true, nil
@@ -76,6 +78,25 @@ func runAdmin(args []string) (bool, error) {
 	}
 	defer st.Close()
 	ctx := context.Background()
+	if cmd == "audit-verify" {
+		n, broken, err := st.AuditChain(ctx)
+		if err != nil {
+			return true, err
+		}
+		if broken != 0 {
+			return true, fmt.Errorf("audit log: entry %d does not follow from the one before it; entries were changed or removed", broken)
+		}
+		fmt.Printf("Audit log intact: %d entries checked.\n", n)
+		return true, nil
+	}
+	// Record each change made from the command line. The flags never hold
+	// a password; those are read from the terminal.
+	defer func() {
+		if err == nil {
+			st.Audit(ctx, store.AuditEntry{Actor: "cli", Action: "cli." + cmd, Target: firstOf(*alias, *email, *admin, *domain, *name, *tenant),
+				Detail: audit.Detail(map[string]any{"args": args[1:]})})
+		}
+	}()
 
 	tenantID := func() (int64, error) {
 		t, err := st.TenantByName(ctx, *tenant)
@@ -191,6 +212,15 @@ func parseRole(s string) (store.Role, error) {
 		return store.RolePlatformAdmin, nil
 	}
 	return 0, fmt.Errorf("role %q: use user, admin or platform", s)
+}
+
+func firstOf(vs ...string) string {
+	for _, v := range vs {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 func orDefault(v, d string) string {

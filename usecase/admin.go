@@ -9,6 +9,7 @@ import (
 	"github.com/gsoultan/kakarot"
 
 	"github.com/gsoultan/talaria/domain"
+	"github.com/gsoultan/talaria/internal/audit"
 	"github.com/gsoultan/talaria/internal/auth"
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/mail"
@@ -32,6 +33,16 @@ type Admin struct {
 	RelayHost string
 	// Wake nudges the outbound queue after "retry now".
 	Wake func()
+	// Audit records exports of the audit log; IP names the caller's address.
+	Audit *audit.Recorder
+	IP    ClientIP
+}
+
+func (s *Admin) ip(ctx context.Context) string {
+	if s.IP == nil {
+		return ""
+	}
+	return s.IP(ctx)
 }
 
 var (
