@@ -116,6 +116,9 @@ func (q *Queue) attempt(ctx context.Context, it store.QueueItem) {
 	defer r.Close()
 	sctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
+	if it.RequireTLS {
+		sctx = WithRequireTLS(sctx)
+	}
 	reply, err := q.Transport.Send(sctx, it.MailFrom, it.RcptTo, r)
 	ctx = rctx
 	if err == nil {

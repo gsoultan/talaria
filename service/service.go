@@ -144,6 +144,14 @@ type AdminService interface {
 	CreateSenderRule(ctx context.Context, in domain.CreateSenderRule) (domain.SenderRuleCreated, error)
 	//kakarot:http DELETE /api/v1/admin/sender-rules/{id}
 	DeleteSenderRule(ctx context.Context, in domain.DeleteSenderRule) (domain.Done, error)
+	//kakarot:http GET /api/v1/admin/dlp-policies
+	ListDLPPolicies(ctx context.Context, in domain.ListDLPPolicies) (domain.DLPPolicies, error)
+	//kakarot:http POST /api/v1/admin/dlp-policies
+	SaveDLPPolicy(ctx context.Context, in domain.SaveDLPPolicy) (domain.DLPPolicySaved, error)
+	//kakarot:http DELETE /api/v1/admin/dlp-policies/{id}
+	DeleteDLPPolicy(ctx context.Context, in domain.DeleteDLPPolicy) (domain.Done, error)
+	//kakarot:http POST /api/v1/admin/dlp-policies/test
+	TestDLP(ctx context.Context, in domain.TestDLP) (domain.DLPTestResult, error)
 	//kakarot:http GET /api/v1/admin/quarantine
 	ListHeldMail(ctx context.Context, in domain.ListHeldMail) (domain.HeldMessages, error)
 	//kakarot:http GET /api/v1/admin/quarantine/{id}

@@ -26,7 +26,7 @@ optional and talk to Talaria over a socket.
    webmail to a redirect that checks the target against phishing lists and URLhaus when clicked.
 6. **Safe attachments** (done). Attachments open in a preview built on the
    server (text, file lists, redrawn images) instead of downloading.
-7. **Data loss prevention.** Per-tenant policies for outgoing mail that
+7. **Data loss prevention** (done). Per-tenant policies for outgoing mail that
    match patterns (card numbers, national IDs, custom ones) and block, warn,
    encrypt or notify.
 8. **Audit logs.** Append-only in PostgreSQL: sign-ins, admin changes,

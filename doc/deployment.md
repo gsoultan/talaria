@@ -165,6 +165,43 @@ finds in the file. Download is a separate button, and is not offered at
 all for a file the scanner flags. PDFs drawn from scanned pages or fonts
 with their own encodings have no readable text; the preview says so.
 
+## Data loss prevention
+
+Tenant admins set policies under **Admin → Data loss prevention**. Each
+policy looks for one kind of data in outgoing mail: the subject, the body
+and the text of attachments (the same reader as the attachment preview).
+
+- **Detectors**: payment card numbers (with the Luhn check digit), IBANs
+  (with their check digits), US Social Security numbers, Indonesian NIK
+  numbers, a regular expression of your own, or a list of words.
+- **Matches needed**: how many different values must be found.
+- **Outside recipients only** (the default): skip mail that stays in the
+  tenant's own domains.
+
+What a policy does when it matches, strongest first:
+
+| Action | Webmail | Mail apps (587/465) |
+| --- | --- | --- |
+| Block | Refused with a message naming the policy | Refused, `550 5.7.1` |
+| Warn | Asks the sender to confirm, then sends | Sent; the contact is told |
+| Require encryption | Sent only over a verified TLS connection | Same |
+| Notify | Sent; the contact is told | Same |
+
+Notices go to the policy's contact address (a user in the tenant) or, when
+it has none, to the tenant's admins. They name the policy, the sender, the
+recipients and the subject, and show masked samples such as
+`••••••••••••1111`, never the message.
+
+**Require encryption** with `outbound.mode = "direct"` sends only when the
+recipient's server offers STARTTLS with a certificate that verifies, and
+otherwise retries and then bounces. With a relay, the hop to the relay is
+always encrypted; Talaria also asks the relay to keep it encrypted to the
+recipient (REQUIRETLS, RFC 8689) when the relay offers that. Most relays do
+not, so what happens after the relay is up to the relay.
+
+The admin page has a box to try your policies on sample text before you
+turn them on.
+
 ## Outbound mail
 
 Most VPS providers block outbound port 25, so `outbound.mode = "relay"` is the

@@ -38,6 +38,8 @@ var APIInfo = httpx.Info{Title: "Talaria webmail API", Version: "1"}
 
 func init() {
 	httpx.RegisterStatus(domain.CodeLimit, http.StatusUnprocessableEntity)
+	httpx.RegisterStatus(domain.CodePolicyBlocked, http.StatusUnprocessableEntity)
+	httpx.RegisterStatus(domain.CodePolicyWarning, http.StatusConflict)
 }
 
 // Deps is what the API needs from the server.

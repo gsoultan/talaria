@@ -306,6 +306,9 @@ type Compose struct {
 // SendMessage sends a message and files a copy in Sent.
 type SendMessage struct {
 	Message Compose `json:"message"`
+	// ConfirmSensitive sends after the sender saw a data loss prevention
+	// warning (error code policy_warning).
+	ConfirmSensitive bool `json:"confirmSensitive,omitzero"`
 }
 
 // Validate checks there is someone to send to.

@@ -6,6 +6,7 @@ package outbound
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +24,15 @@ import (
 type Transport interface {
 	Send(ctx context.Context, from, to string, body io.Reader) (reply string, err error)
 }
+
+type requireTLSKey struct{}
+
+// WithRequireTLS marks a send as needing a verified encrypted connection.
+func WithRequireTLS(ctx context.Context) context.Context {
+	return context.WithValue(ctx, requireTLSKey{}, true)
+}
+
+func requireTLS(ctx context.Context) bool { v, _ := ctx.Value(requireTLSKey{}).(bool); return v }
 
 // PermanentError is a failure that retrying will not fix (5xx, null MX).
 type PermanentError struct{ Err error }
@@ -96,7 +106,14 @@ func (r *Relay) Send(ctx context.Context, from, to string, body io.Reader) (stri
 			return "", fmt.Errorf("relay auth: %w", err)
 		}
 	}
-	return transact(c, conn, r.Timeout, from, to, body)
+	// The hop to the relay is encrypted. When policy requires it, ask the
+	// relay to keep the message encrypted all the way (REQUIRETLS, RFC
+	// 8689), if it offers that.
+	keepTLS := false
+	if requireTLS(ctx) {
+		keepTLS, _ = c.Extension("REQUIRETLS")
+	}
+	return transact(c, conn, r.Timeout, from, to, body, keepTLS)
 }
 
 func setDeadline(conn net.Conn, t time.Duration) {
@@ -105,8 +122,27 @@ func setDeadline(conn net.Conn, t time.Duration) {
 	}
 }
 
-func transact(c *smtp.Client, conn net.Conn, timeout time.Duration, from, to string, body io.Reader) (string, error) {
-	if err := c.Mail(from); err != nil {
+func transact(c *smtp.Client, conn net.Conn, timeout time.Duration, from, to string, body io.Reader, keepTLS bool) (string, error) {
+	if keepTLS {
+		// net/smtp has no MAIL parameters, so send the command directly.
+		if strings.ContainsAny(from, "\r\n") {
+			return "", &PermanentError{errors.New("bad sender address")}
+		}
+		params := " REQUIRETLS"
+		if ok, _ := c.Extension("8BITMIME"); ok {
+			params += " BODY=8BITMIME"
+		}
+		id, err := c.Text.Cmd("MAIL FROM:<%s>%s", from, params)
+		if err != nil {
+			return "", err
+		}
+		c.Text.StartResponse(id)
+		_, _, err = c.Text.ReadResponse(250)
+		c.Text.EndResponse(id)
+		if err != nil {
+			return "", classify(err)
+		}
+	} else if err := c.Mail(from); err != nil {
 		return "", classify(err)
 	}
 	if err := c.Rcpt(to); err != nil {
@@ -137,6 +173,9 @@ type Direct struct {
 	Port    int // 25; tests override
 	// LookupMX defaults to the system resolver.
 	LookupMX func(ctx context.Context, domain string) ([]*net.MX, error)
+	// RootCAs verifies certificates when TLS is required; nil uses the
+	// system roots.
+	RootCAs *x509.CertPool
 }
 
 // Send delivers one message to the best reachable MX.
@@ -203,12 +242,22 @@ func (d *Direct) try(ctx context.Context, host string, port int, from, to string
 	if err := c.Hello(d.Hello); err != nil {
 		return "", err
 	}
-	if ok, _ := c.Extension("STARTTLS"); ok {
+	if requireTLS(ctx) {
+		// A policy says this message must travel encrypted: refuse servers
+		// without STARTTLS or with a certificate that does not verify.
+		if ok, _ := c.Extension("STARTTLS"); !ok {
+			return "", fmt.Errorf("%s does not offer STARTTLS, and policy requires an encrypted connection", host)
+		}
+		cfg := &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12, RootCAs: d.RootCAs}
+		if err := c.StartTLS(cfg); err != nil {
+			return "", fmt.Errorf("encrypted connection to %s required by policy: %w", host, err)
+		}
+	} else if ok, _ := c.Extension("STARTTLS"); ok {
 		// Opportunistic TLS: most MX certificates do not match their host
 		// name, and refusing them would only fall back to clear text.
 		if err := c.StartTLS(&tls.Config{ServerName: host, InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}); err != nil {
 			return "", err
 		}
 	}
-	return transact(c, conn, d.Timeout, from, to, body)
+	return transact(c, conn, d.Timeout, from, to, body, false)
 }

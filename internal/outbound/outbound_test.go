@@ -49,6 +49,7 @@ type fakeRelay struct {
 	mu     sync.Mutex
 	got    []string
 	authed string
+	reqTLS []bool // REQUIRETLS on each MAIL
 }
 
 type relaySession struct{ r *fakeRelay }
@@ -66,7 +67,12 @@ func (s *relaySession) Auth(string) (sasl.Server, error) {
 		return nil
 	}), nil
 }
-func (s *relaySession) Mail(string, *smtp.MailOptions) error { return nil }
+func (s *relaySession) Mail(_ string, o *smtp.MailOptions) error {
+	s.r.mu.Lock()
+	s.r.reqTLS = append(s.r.reqTLS, o != nil && o.RequireTLS)
+	s.r.mu.Unlock()
+	return nil
+}
 func (s *relaySession) Rcpt(to string, _ *smtp.RcptOptions) error {
 	if strings.HasPrefix(to, "bad@") {
 		return &smtp.SMTPError{Code: 550, EnhancedCode: smtp.EnhancedCode{5, 1, 1}, Message: "User unknown"}

@@ -23,6 +23,7 @@ import (
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/mail"
+	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/safelinks"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/store/pgtest"
@@ -58,7 +59,8 @@ func setup(t *testing.T) *env {
 	ups, _ := uploads.New(dir+"/uploads", 1<<20)
 	d := &mail.Deliverer{Store: st, Blobs: bl, Hub: h, Hostname: "mx.test", TmpDir: dir}
 	links := &safelinks.Checker{Block: []string{"blocked.example"}}
-	r := Build(Deps{Store: st, Blobs: bl, Hub: h, Deliver: d, Uploads: ups, Hostname: "mx.test", MaxSize: 1 << 20, SafeLinks: links})
+	sub := &outbound.Submitter{Store: st, Blobs: bl, Deliver: d, Keys: &outbound.Keys{Store: st}, Hostname: "mx.test", TmpDir: dir}
+	r := Build(Deps{Store: st, Blobs: bl, Hub: h, Deliver: d, Submit: sub, Uploads: ups, Hostname: "mx.test", MaxSize: 1 << 20, SafeLinks: links})
 	srv := httptest.NewTLSServer(r) // Secure cookies need https
 	t.Cleanup(srv.Close)
 	c := srv.Client()
@@ -104,7 +106,7 @@ func (e *env) login() {
 	if st, code := e.call("POST", "/api/v1/session", domain.Login{Email: "ana@northwind.example", Password: "correct horse"}, &s); st != 201 {
 		e.t.Fatalf("login: %d %s", st, code)
 	}
-	if s.User.Email != "ana@northwind.example" || s.User.TenantName != "Northwind" || s.User.Role != domain.RoleUser {
+	if s.User.Email != "ana@northwind.example" || s.User.TenantName != "Northwind" || (e.user.Role == store.RoleUser && s.User.Role != domain.RoleUser) {
 		e.t.Fatalf("session: %+v", s)
 	}
 }
@@ -287,8 +289,8 @@ func TestOpenAPI(t *testing.T) {
 	for _, ops := range doc.Paths {
 		n += len(ops)
 	}
-	if n != 53 { // the generated routes; uploads and downloads are raw HTTP
-		t.Fatalf("%d operations, want 53", n)
+	if n != 57 { // the generated routes; uploads and downloads are raw HTTP
+		t.Fatalf("%d operations, want 57", n)
 	}
 }
 
@@ -324,5 +326,55 @@ func TestSafeLinks(t *testing.T) {
 	}
 	if _, _, body := get(`https://evil.example/"><script>alert(1)</script>`); strings.Contains(body, "<script>alert") {
 		t.Fatal("not escaped")
+	}
+}
+
+func TestDLPPolicies(t *testing.T) {
+	e := setup(t)
+	ctx := context.Background()
+	e.user.Role = store.RoleTenantAdmin
+	if err := e.st.UpdateUser(ctx, e.user); err != nil {
+		t.Fatal(err)
+	}
+	e.login()
+	var list domain.DLPPolicies
+	if st, _ := e.call("GET", "/api/v1/admin/dlp-policies", nil, &list); st != 200 || len(list.Detectors) != 6 || len(list.Policies) != 0 {
+		t.Fatalf("list: %d %+v", st, list)
+	}
+	if st, code := e.call("POST", "/api/v1/admin/dlp-policies", domain.SaveDLPPolicy{Name: "Bad", Detector: "pattern", Pattern: "(", Action: domain.DLPBlock}, nil); st != 400 || code != "invalid" {
+		t.Fatalf("bad pattern: %d %s", st, code)
+	}
+	if st, _ := e.call("POST", "/api/v1/admin/dlp-policies", domain.SaveDLPPolicy{Name: "Cards", Detector: "credit_card", Action: domain.DLPWarn, Notify: "someone@else.example"}, nil); st != 400 {
+		t.Fatalf("outside notify: %d", st)
+	}
+	var saved domain.DLPPolicySaved
+	if st, _ := e.call("POST", "/api/v1/admin/dlp-policies", domain.SaveDLPPolicy{Name: "Cards", Detector: "credit_card", Action: domain.DLPWarn, Enabled: true}, &saved); st != 201 || saved.Policy.ID == 0 || saved.Policy.MinCount != 1 {
+		t.Fatalf("create: %d %+v", st, saved)
+	}
+	var res domain.DLPTestResult
+	if st, _ := e.call("POST", "/api/v1/admin/dlp-policies/test", domain.TestDLP{Text: "pay 4111 1111 1111 1111"}, &res); st >= 300 || len(res.Matches) != 1 || res.Matches[0].Samples[0] != "••••••••••••1111" {
+		t.Fatalf("test: %d %+v", st, res)
+	}
+
+	msg := domain.SendMessage{Message: domain.Compose{From: "ana@northwind.example", To: []string{"priya@lumen.example"}, Subject: "card", TextBody: "4111 1111 1111 1111"}}
+	if st, code := e.call("POST", "/api/v1/messages/send", msg, nil); st != 409 || code != "policy_warning" {
+		t.Fatalf("warn: %d %s", st, code)
+	}
+	msg.ConfirmSensitive = true
+	if st, code := e.call("POST", "/api/v1/messages/send", msg, nil); st >= 300 {
+		t.Fatalf("confirmed: %d %s", st, code)
+	}
+	if st, _ := e.call("POST", "/api/v1/admin/dlp-policies", domain.SaveDLPPolicy{ID: saved.Policy.ID, Name: "Cards", Detector: "credit_card", Action: domain.DLPBlock, Enabled: true}, nil); st >= 300 {
+		t.Fatalf("update: %d", st)
+	}
+	msg.ConfirmSensitive = false
+	if st, code := e.call("POST", "/api/v1/messages/send", msg, nil); st != 422 || code != "policy_blocked" {
+		t.Fatalf("block: %d %s", st, code)
+	}
+	if st, _ := e.call("DELETE", fmt.Sprintf("/api/v1/admin/dlp-policies/%d", saved.Policy.ID), nil, nil); st != 200 {
+		t.Fatalf("delete: %d", st)
+	}
+	if st, _ := e.call("DELETE", fmt.Sprintf("/api/v1/admin/dlp-policies/%d", saved.Policy.ID), nil, nil); st != 404 {
+		t.Fatalf("delete again: %d", st)
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/emersion/go-message/textproto"
 
 	"github.com/gsoultan/talaria/internal/blob"
+	"github.com/gsoultan/talaria/internal/dlp"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/store"
 )
@@ -36,6 +37,8 @@ type Submitter struct {
 	TmpDir   string
 	MaxSize  int64
 	Log      *slog.Logger
+	// PolicyHit, if set, is told about every data loss prevention match.
+	PolicyHit func(ctx context.Context, sub Submission, subject string, rcpts []string, matches []dlp.Match, action string)
 }
 
 // Submission is one message from a local user.
@@ -49,6 +52,10 @@ type Submission struct {
 	// Received describes where the submission came from, for the trace header.
 	ClientIP string
 	Proto    string
+	// CanConfirm is true when the sender can be asked to confirm a policy
+	// warning (the webmail); Confirmed when they did.
+	CanConfirm bool
+	Confirmed  bool
 }
 
 // Errors returned by Submit.
@@ -132,6 +139,10 @@ func (s *Submitter) Submit(ctx context.Context, sub Submission, r io.Reader) (Re
 	}
 
 	rewind := func() io.Reader { spool.Seek(0, io.SeekStart); return spool }
+	pol, err := s.checkPolicies(ctx, sub, h, rewind)
+	if err != nil {
+		return res, err
+	}
 	_, fromDomain, _ := store.SplitAddress(from[0].Address)
 	sig, err := s.Keys.Sign(ctx, fromDomain, rewind())
 	if err != nil {
@@ -161,7 +172,7 @@ func (s *Submitter) Submit(ctx context.Context, sub Submission, r io.Reader) (Re
 		release := s.Blobs.Hold()
 		b, err := s.Blobs.Put(sub.User.TenantID, signed(), 0)
 		if err == nil {
-			err = s.Store.Enqueue(ctx, sub.User.TenantID, sub.User.ID, b.Hash, b.Size, b.StoredSize, sub.MailFrom, remote)
+			err = s.Store.Enqueue(ctx, sub.User.TenantID, sub.User.ID, b.Hash, b.Size, b.StoredSize, sub.MailFrom, remote, pol.requireTLS)
 		}
 		release()
 		if err != nil {
@@ -186,6 +197,7 @@ func (s *Submitter) Submit(ctx context.Context, sub Submission, r io.Reader) (Re
 			s.log().Warn("save to Sent", "err", err)
 		}
 	}
+	s.notifyPolicies(ctx, sub, pol)
 	s.log().Info("submitted", "user", sub.User.Address(), "local", res.Local, "queued", res.Queued, "size", n)
 	return res, nil
 }

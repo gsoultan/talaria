@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { ActionIcon, Alert, Anchor, Box, Button, CloseButton, Group, Paper, Portal, Select, Stack, TagsInput, Text, TextInput, Textarea, Tooltip } from '@mantine/core'
+import { ActionIcon, Alert, Anchor, Box, Button, CloseButton, Group, Modal, Paper, Portal, Select, Stack, TagsInput, Text, TextInput, Textarea, Tooltip } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useForm, useStore } from '@tanstack/react-form'
@@ -13,7 +13,7 @@ import { queueOffline } from '../../lib/outbox'
 import { useMe } from '../auth/useMe'
 import { closeCompose, useCompose, type Draft } from './composeStore'
 import { Icon, icons } from './Shell'
-import { type Compose, ofOps, upload, useApiMutation, useApiQuery } from '../../lib/api'
+import { ApiError, type Compose, ofOps, upload, useApiMutation, useApiQuery } from '../../lib/api'
 
 // A file being attached. It is uploaded as soon as it is added, so sending
 // only waits for files still on their way.
@@ -39,6 +39,9 @@ function Composer({ draft }: { draft: Draft }) {
   const [draftId, setDraftId] = useState(draft.draftId ?? 0)
   const [savedAt, setSavedAt] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Set when a policy asks the sender to confirm sensitive content.
+  const [warning, setWarning] = useState<string | null>(null)
+  const confirmed = useRef(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const phone = useMediaQuery('(max-width: 48em)', false)
 
@@ -57,7 +60,7 @@ function Composer({ draft }: { draft: Draft }) {
       let msg = build(value)
       try {
         msg = await withUploads(msg)
-        const res = await send.mutateAsync({ message: msg })
+        const res = await send.mutateAsync({ message: msg, confirmSensitive: confirmed.current })
         notifications.show({
           color: 'green',
           message: res.queued > 0 ? 'Sent. Outside recipients get it in a moment.' : 'Sent',
@@ -74,7 +77,13 @@ function Composer({ draft }: { draft: Draft }) {
           closeCompose()
           return
         }
+        if (err instanceof ApiError && err.code === 'policy_warning') {
+          setWarning(err.message)
+          return
+        }
         setError(errorText(err))
+      } finally {
+        confirmed.current = false
       }
     },
   })
@@ -255,6 +264,27 @@ function Composer({ draft }: { draft: Draft }) {
             {error}
           </Alert>
         )}
+        <Modal opened={warning !== null} onClose={() => setWarning(null)} title="Send sensitive data?" centered zIndex={350}>
+          <Text size="sm">{warning ? warning.charAt(0).toUpperCase() + warning.slice(1) + '.' : ''}</Text>
+          <Text size="sm" c="dimmed" mt="xs">
+            Your organization asks you to check before this leaves. Your admin may be told that you sent it.
+          </Text>
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={() => setWarning(null)}>
+              Go back
+            </Button>
+            <Button
+              color="orange"
+              onClick={() => {
+                setWarning(null)
+                confirmed.current = true
+                void form.handleSubmit()
+              }}
+            >
+              Send anyway
+            </Button>
+          </Group>
+        </Modal>
       </Stack>
       <Group px="md" py="sm" gap="xs" style={{ borderTop: '1px solid var(--t-border)' }}>
         <form.Subscribe selector={(s) => s.isSubmitting}>

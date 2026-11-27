@@ -13,6 +13,12 @@ import "github.com/gsoultan/kakarot"
 
 // Codes the API adds to kakarot's own. The transport maps each to a status.
 var (
+	// CodePolicyBlocked means a data loss prevention policy refused the
+	// message.
+	CodePolicyBlocked = kakarot.NewCode("policy_blocked")
+	// CodePolicyWarning means the message may hold sensitive data; send it
+	// again with confirmSensitive to go ahead.
+	CodePolicyWarning = kakarot.NewCode("policy_warning")
 	// CodeLimit means a quota, seat limit or sending limit was reached.
 	CodeLimit = kakarot.NewCode("limit_reached")
 	// CodeRateLimited means too many attempts; try again later.

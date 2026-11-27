@@ -56,6 +56,10 @@ type AdminEndpoints struct {
 	ListSenderRules  kakarot.Endpoint[domain.ListSenderRules, domain.SenderRules]
 	CreateSenderRule kakarot.Endpoint[domain.CreateSenderRule, domain.SenderRuleCreated]
 	DeleteSenderRule kakarot.Endpoint[domain.DeleteSenderRule, domain.Done]
+	ListDLPPolicies  kakarot.Endpoint[domain.ListDLPPolicies, domain.DLPPolicies]
+	SaveDLPPolicy    kakarot.Endpoint[domain.SaveDLPPolicy, domain.DLPPolicySaved]
+	DeleteDLPPolicy  kakarot.Endpoint[domain.DeleteDLPPolicy, domain.Done]
+	TestDLP          kakarot.Endpoint[domain.TestDLP, domain.DLPTestResult]
 	ListHeldMail     kakarot.Endpoint[domain.ListHeldMail, domain.HeldMessages]
 	GetHeldMail      kakarot.Endpoint[domain.GetHeldMail, domain.HeldMailDetail]
 	ReleaseHeldMail  kakarot.Endpoint[domain.ReleaseHeldMail, domain.Done]
@@ -90,6 +94,10 @@ func MakeAdminEndpoints(svc service.AdminService) AdminEndpoints {
 		ListSenderRules:  svc.ListSenderRules,
 		CreateSenderRule: middleware.Validated(svc.CreateSenderRule),
 		DeleteSenderRule: svc.DeleteSenderRule,
+		ListDLPPolicies:  svc.ListDLPPolicies,
+		SaveDLPPolicy:    svc.SaveDLPPolicy,
+		DeleteDLPPolicy:  svc.DeleteDLPPolicy,
+		TestDLP:          svc.TestDLP,
 		ListHeldMail:     svc.ListHeldMail,
 		GetHeldMail:      svc.GetHeldMail,
 		ReleaseHeldMail:  svc.ReleaseHeldMail,

@@ -39,11 +39,13 @@ type QueueItem struct {
 	LastError   string
 	CreatedAt   int64
 	UpdatedAt   int64
+	// RequireTLS sends only over a verified encrypted connection.
+	RequireTLS bool
 }
 
 // Enqueue adds one row per recipient, all sharing the blob (stored by the
 // caller), and enforces the tenant's daily sending limit.
-func (s *Store) Enqueue(ctx context.Context, tenantID, userID int64, hash []byte, size, storedSize int64, from string, rcpts []string) error {
+func (s *Store) Enqueue(ctx context.Context, tenantID, userID int64, hash []byte, size, storedSize int64, from string, rcpts []string, requireTLS bool) error {
 	now := s.unix()
 	return s.tx(ctx, func(tx *Tx) error {
 		var limit, sent int64
@@ -64,8 +66,8 @@ func (s *Store) Enqueue(ctx context.Context, tenantID, userID int64, hash []byte
 			if i := strings.LastIndexByte(r, '@'); i >= 0 {
 				dom = strings.ToLower(r[i+1:])
 			}
-			if _, err := tx.ExecContext(ctx, `INSERT INTO queue(tenant_id, user_id, blob_id, mail_from, rcpt_to, rcpt_domain, size, next_attempt, created_at, updated_at)
-				VALUES (?, NULLIF(?, 0), ?, ?, ?, ?, ?, ?, ?, ?)`, tenantID, userID, blobID, from, r, dom, size, now, now, now); err != nil {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO queue(tenant_id, user_id, blob_id, mail_from, rcpt_to, rcpt_domain, size, next_attempt, created_at, updated_at, require_tls)
+				VALUES (?, NULLIF(?, 0), ?, ?, ?, ?, ?, ?, ?, ?, ?)`, tenantID, userID, blobID, from, r, dom, size, now, now, now, requireTLS); err != nil {
 				return err
 			}
 		}
@@ -74,7 +76,7 @@ func (s *Store) Enqueue(ctx context.Context, tenantID, userID int64, hash []byte
 }
 
 const queueCols = `q.id, q.tenant_id, COALESCE(q.user_id, 0), q.blob_id, b.hash, q.mail_from, q.rcpt_to, q.rcpt_domain, q.size, q.status, q.attempts,
-	q.next_attempt, q.last_error, q.created_at, q.updated_at`
+	q.next_attempt, q.last_error, q.created_at, q.updated_at, q.require_tls`
 
 func scanQueue(rows *sql.Rows) ([]QueueItem, error) {
 	defer rows.Close()
@@ -82,7 +84,7 @@ func scanQueue(rows *sql.Rows) ([]QueueItem, error) {
 	for rows.Next() {
 		var q QueueItem
 		if err := rows.Scan(&q.ID, &q.TenantID, &q.UserID, &q.BlobID, &q.BlobHash, &q.MailFrom, &q.RcptTo, &q.RcptDomain, &q.Size, &q.Status,
-			&q.Attempts, &q.NextAttempt, &q.LastError, &q.CreatedAt, &q.UpdatedAt); err != nil {
+			&q.Attempts, &q.NextAttempt, &q.LastError, &q.CreatedAt, &q.UpdatedAt, &q.RequireTLS); err != nil {
 			return nil, err
 		}
 		out = append(out, q)

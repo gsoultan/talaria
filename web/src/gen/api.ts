@@ -123,6 +123,46 @@ export type DKIMRotated = {
   record: DNSRecord
 }
 
+export type DLPDetector = {
+  kind: string
+  label: string
+}
+
+export type DLPMatch = {
+  action: string
+  count: number
+  name: string
+  policyId: number
+  samples: string[]
+}
+
+export type DLPPolicies = {
+  detectors: DLPDetector[]
+  policies: DLPPolicy[]
+}
+
+export type DLPPolicy = {
+  action: string
+  createdAt: number
+  detector: string
+  enabled: boolean
+  externalOnly: boolean
+  id: number
+  minCount: number
+  name: string
+  notify: string
+  pattern: string
+  tenantId: number
+}
+
+export type DLPPolicySaved = {
+  policy: DLPPolicy
+}
+
+export type DLPTestResult = {
+  matches: DLPMatch[]
+}
+
 export type DNSRecord = {
   found: string
   name: string
@@ -335,6 +375,19 @@ export type RotateDKIM = {
   tenantId?: number
 }
 
+export type SaveDLPPolicy = {
+  action: string
+  detector: string
+  enabled: boolean
+  externalOnly: boolean
+  id?: number
+  minCount?: number
+  name: string
+  notify?: string
+  pattern?: string
+  tenantId?: number
+}
+
 export type SaveDraft = {
   message: Compose
 }
@@ -358,6 +411,7 @@ export type SenderRules = {
 }
 
 export type SendMessage = {
+  confirmSensitive?: boolean
   message: Compose
 }
 
@@ -417,6 +471,11 @@ export type Tenants = {
   tenants: Tenant[]
 }
 
+export type TestDLP = {
+  tenantId?: number
+  text: string
+}
+
 export type UpdateFlags = {
   add?: string[]
   addKeywords?: string[]
@@ -473,6 +532,7 @@ export interface Ops {
   "admin.CreateTenant": { input: CreateTenant; output: TenantCreated }
   "admin.CreateUser": { input: CreateUser; output: UserCreated }
   "admin.DeleteAlias": { input: { tenantId?: number; id: number }; output: Done }
+  "admin.DeleteDLPPolicy": { input: { tenantId?: number; id: number }; output: Done }
   "admin.DeleteDomain": { input: { tenantId?: number; id: number }; output: Done }
   "admin.DeleteHeldMail": { input: { id: number }; output: Done }
   "admin.DeleteSenderRule": { input: { tenantId?: number; id: number }; output: Done }
@@ -482,6 +542,7 @@ export interface Ops {
   "admin.GetHeldMail": { input: { id: number }; output: HeldMailDetail }
   "admin.GetStats": { input: { tenantId?: number; server?: boolean }; output: Stats }
   "admin.ListAliases": { input: { tenantId?: number; userId?: number }; output: Aliases }
+  "admin.ListDLPPolicies": { input: { tenantId?: number }; output: DLPPolicies }
   "admin.ListDomains": { input: { tenantId?: number }; output: Domains }
   "admin.ListHeldMail": { input: { tenantId?: number; q?: string; reason?: string; before?: number }; output: HeldMessages }
   "admin.ListQueue": { input: { tenantId?: number; status?: string; limit?: number }; output: Queue }
@@ -491,7 +552,9 @@ export interface Ops {
   "admin.ReleaseHeldMail": { input: { id: number }; output: Done }
   "admin.RetryQueue": { input: RetryQueue; output: Done }
   "admin.RotateDKIM": { input: { domainId: number } & RotateDKIM; output: DKIMRotated }
+  "admin.SaveDLPPolicy": { input: SaveDLPPolicy; output: DLPPolicySaved }
   "admin.SetUserPassword": { input: { id: number } & SetUserPassword; output: Done }
+  "admin.TestDLP": { input: TestDLP; output: DLPTestResult }
   "admin.UpdateTenant": { input: { id: number } & UpdateTenant; output: Done }
   "admin.UpdateUser": { input: { id: number } & UpdateUser; output: Done }
   "mail.CreateMailbox": { input: CreateMailbox; output: MailboxCreated }
@@ -530,6 +593,7 @@ export const ops = {
   "admin.CreateTenant": { method: 'POST', path: '/api/v1/admin/tenants', pathParams: [], query: [], body: true, stream: false },
   "admin.CreateUser": { method: 'POST', path: '/api/v1/admin/users', pathParams: [], query: [], body: true, stream: false },
   "admin.DeleteAlias": { method: 'DELETE', path: '/api/v1/admin/aliases/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
+  "admin.DeleteDLPPolicy": { method: 'DELETE', path: '/api/v1/admin/dlp-policies/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
   "admin.DeleteDomain": { method: 'DELETE', path: '/api/v1/admin/domains/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
   "admin.DeleteHeldMail": { method: 'DELETE', path: '/api/v1/admin/quarantine/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.DeleteSenderRule": { method: 'DELETE', path: '/api/v1/admin/sender-rules/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
@@ -539,6 +603,7 @@ export const ops = {
   "admin.GetHeldMail": { method: 'GET', path: '/api/v1/admin/quarantine/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.GetStats": { method: 'GET', path: '/api/v1/admin/stats', pathParams: [], query: ["tenantId","server"], body: false, stream: false },
   "admin.ListAliases": { method: 'GET', path: '/api/v1/admin/aliases', pathParams: [], query: ["tenantId","userId"], body: false, stream: false },
+  "admin.ListDLPPolicies": { method: 'GET', path: '/api/v1/admin/dlp-policies', pathParams: [], query: ["tenantId"], body: false, stream: false },
   "admin.ListDomains": { method: 'GET', path: '/api/v1/admin/domains', pathParams: [], query: ["tenantId"], body: false, stream: false },
   "admin.ListHeldMail": { method: 'GET', path: '/api/v1/admin/quarantine', pathParams: [], query: ["tenantId","q","reason","before"], body: false, stream: false },
   "admin.ListQueue": { method: 'GET', path: '/api/v1/admin/queue', pathParams: [], query: ["tenantId","status","limit"], body: false, stream: false },
@@ -548,7 +613,9 @@ export const ops = {
   "admin.ReleaseHeldMail": { method: 'POST', path: '/api/v1/admin/quarantine/{id}/release', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.RetryQueue": { method: 'POST', path: '/api/v1/admin/queue/retry', pathParams: [], query: [], body: true, stream: false },
   "admin.RotateDKIM": { method: 'POST', path: '/api/v1/admin/domains/{domainId}/dkim', pathParams: ["domainId"], query: [], body: true, stream: false },
+  "admin.SaveDLPPolicy": { method: 'POST', path: '/api/v1/admin/dlp-policies', pathParams: [], query: [], body: true, stream: false },
   "admin.SetUserPassword": { method: 'POST', path: '/api/v1/admin/users/{id}/password', pathParams: ["id"], query: [], body: true, stream: false },
+  "admin.TestDLP": { method: 'POST', path: '/api/v1/admin/dlp-policies/test', pathParams: [], query: [], body: true, stream: false },
   "admin.UpdateTenant": { method: 'PUT', path: '/api/v1/admin/tenants/{id}', pathParams: ["id"], query: [], body: true, stream: false },
   "admin.UpdateUser": { method: 'PUT', path: '/api/v1/admin/users/{id}', pathParams: ["id"], query: [], body: true, stream: false },
   "mail.CreateMailbox": { method: 'POST', path: '/api/v1/mailboxes', pathParams: [], query: [], body: true, stream: false },

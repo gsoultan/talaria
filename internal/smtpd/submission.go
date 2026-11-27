@@ -167,6 +167,10 @@ func (s *subSession) Data(r io.Reader) error {
 	if errors.As(err, &rerr) {
 		return &smtp.SMTPError{Code: 550, EnhancedCode: smtp.EnhancedCode{5, 1, 1}, Message: rerr.Msg}
 	}
+	var perr *outbound.PolicyError
+	if errors.As(err, &perr) {
+		return &smtp.SMTPError{Code: 550, EnhancedCode: smtp.EnhancedCode{5, 7, 1}, Message: perr.Error()}
+	}
 	s.b.log.Error("submission", "user", s.user.Address(), "err", err)
 	return errTemporary
 }

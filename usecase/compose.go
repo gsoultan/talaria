@@ -14,6 +14,7 @@ import (
 	"github.com/gsoultan/kakarot"
 
 	"github.com/gsoultan/talaria/domain"
+	"github.com/gsoultan/talaria/internal/dlp"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/store"
@@ -106,12 +107,17 @@ func (s *Mail) SendMessage(ctx context.Context, in domain.SendMessage) (domain.S
 		return domain.Sent{}, internal(err)
 	}
 	res, err := s.Submit.Submit(ctx, outbound.Submission{User: u, MailFrom: c.From.Address, Rcpts: rcpts, SaveSent: true,
-		ClientIP: s.IP(ctx), Proto: "HTTPS"}, &buf)
+		ClientIP: s.IP(ctx), Proto: "HTTPS", CanConfirm: true, Confirmed: in.ConfirmSensitive}, &buf)
 	var rerr *outbound.RecipientError
+	var perr *outbound.PolicyError
 	switch {
 	case err == nil:
 	case errors.As(err, &rerr):
 		return domain.Sent{}, badField("to", err)
+	case errors.As(err, &perr) && perr.Action == dlp.Warn:
+		return domain.Sent{}, kakarot.E(domain.CodePolicyWarning, perr.Error(), err)
+	case errors.As(err, &perr):
+		return domain.Sent{}, kakarot.E(domain.CodePolicyBlocked, perr.Error(), err)
 	default:
 		return domain.Sent{}, storeErr(err)
 	}
