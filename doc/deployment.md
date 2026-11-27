@@ -85,6 +85,30 @@ not delivered. The score comes from:
 Senders on a tenant's allow list are never junked or refused for their
 score.
 
+## Malware
+
+Inbound mail with a dangerous attachment is refused during SMTP
+(`[malware]`), so the sender gets a bounce that names the file. Talaria
+looks inside each attachment, and inside zip files up to three levels
+deep:
+
+- **File types that run code:** `.exe`, `.js`, `.vbs`, `.lnk`, `.iso`,
+  `.img`, `.hta`, `.scr`, `.one` and about fifty more, by name and also
+  by content, so a program renamed to `.pdf` is still caught.
+- **Office macros** (`block_macros`): `.docm`, `.xlsm` and the like, and
+  `.docx`, `.xlsx` or old `.doc` and `.xls` files that carry a VBA project.
+- **YARA rules.** Built-in rules catch the EICAR test file, HTML
+  smuggling, PDFs that run JavaScript when opened, script downloaders
+  and Office DDE commands. Add your own `.yar` files in
+  `malware.rules_dir`; YARA modules such as `pe` are not supported.
+- **Password-protected archives** (`block_encrypted_archives`, off by
+  default). The names inside are still checked.
+- **ClamAV, optional** (`malware.clamav`). It needs about 1 GB of memory,
+  so only add it on a larger machine. When it is down, mail is deferred
+  with a temporary error rather than let in unscanned.
+
+To test it, send a message with the EICAR test file attached.
+
 ## Outbound mail
 
 Most VPS providers block outbound port 25, so `outbound.mode = "relay"` is the

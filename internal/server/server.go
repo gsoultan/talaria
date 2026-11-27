@@ -35,6 +35,7 @@ import (
 	"github.com/gsoultan/talaria/internal/ingest"
 	"github.com/gsoultan/talaria/internal/listener"
 	"github.com/gsoultan/talaria/internal/mail"
+	"github.com/gsoultan/talaria/internal/malware"
 	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/pop3"
 	"github.com/gsoultan/talaria/internal/smtpd"
@@ -138,6 +139,24 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 			}
 		}
 		s.Deliver.Spam = spam.New(sc, st, log)
+	}
+	if m := cfg.Malware; m.Enabled {
+		mc := malware.Config{BlockedExtensions: m.BlockedExtensions, BlockMacros: m.BlockMacros,
+			BlockEncryptedArchives: m.BlockEncryptedArchives, Rules: malware.Builtin()}
+		if len(m.BlockedExtensions) == 0 {
+			mc.BlockedExtensions = nil
+		}
+		if m.RulesDir != "" {
+			rules, errs := malware.LoadDir(m.RulesDir)
+			for _, err := range errs {
+				log.Warn("yara rules skipped", "err", err)
+			}
+			mc.Rules = append(mc.Rules, rules...)
+		}
+		if m.ClamAV != "" {
+			mc.ClamAV = &malware.ClamAV{Address: m.ClamAV}
+		}
+		s.Deliver.Malware = malware.New(mc, log)
 	}
 	// Training runs even with scoring off, so the filters are ready when
 	// it is turned on.

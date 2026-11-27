@@ -17,7 +17,7 @@ optional and talk to Talaria over a socket.
 2. **Anti-spam** (done). A built-in scorer in Go using SPF, DKIM and DMARC
    results, header and content heuristics, and per-user Bayesian learning
    from moving mail to and from Junk. Rspamd's score can be added.
-3. **Anti-malware.** Block dangerous attachment types and Office files with
+3. **Anti-malware** (done). Block dangerous attachment types and Office files with
    macros, with built-in YARA rules. ClamAV is optional, because it needs
    about 1 GB of memory on its own.
 4. **Quarantine.** Per tenant, with a digest that lets people release or

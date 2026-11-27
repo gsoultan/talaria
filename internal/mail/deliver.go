@@ -16,6 +16,7 @@ import (
 
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
+	"github.com/gsoultan/talaria/internal/malware"
 	"github.com/gsoultan/talaria/internal/spam"
 	"github.com/gsoultan/talaria/internal/store"
 )
@@ -27,6 +28,7 @@ type Deliverer struct {
 	Hub      *hub.Hub
 	Checker  *Checker
 	Spam     *spam.Scorer // nil turns spam scoring off
+	Malware  *malware.Scanner
 	Hostname string
 	TmpDir   string
 	MaxSize  int64
@@ -98,6 +100,20 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 		}
 	}
 
+	// Malware is refused outright, so the sender learns it did not arrive.
+	if !in.Trusted && d.Malware != nil {
+		res := d.Malware.Scan(ctx, rewind)
+		if res.Infected() {
+			d.log().Warn("refused malware", "from", in.Env.MailFrom, "ip", in.Env.RemoteIP, "found", res.Summary())
+			return nil, &RejectError{Reason: "Message refused: dangerous content (" + clean(res.Summary(), 200) + ")"}
+		}
+		if res.Err != nil {
+			// A scanner is down: have the sender retry rather than let
+			// unscanned mail in.
+			return nil, fmt.Errorf("malware scan: %w", res.Err)
+		}
+	}
+
 	// Spam: the shared part of the score first, so the worst mail is
 	// refused before it is stored; each recipient's own filter adds to it.
 	var score spam.Result
@@ -117,7 +133,7 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 		})
 		if d.Spam.Rejects(score.Score) && in.Env.RemoteIP != nil && !d.allowed(ctx, in, sum.FromAddr) {
 			d.log().Info("refused as spam", "from", in.Env.MailFrom, "ip", in.Env.RemoteIP, "spam", score.Header())
-			return nil, &RejectError{Reason: "5.7.1 Message refused as spam"}
+			return nil, &RejectError{Reason: "Message refused as spam"}
 		}
 		toks = spam.Tokens(sum.Subject, sum.FromAddr, sum.Text)
 	}

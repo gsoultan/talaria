@@ -20,6 +20,7 @@ import (
 
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
+	"github.com/gsoultan/talaria/internal/malware"
 	"github.com/gsoultan/talaria/internal/spam"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/store/pgtest"
@@ -263,4 +264,22 @@ func mustUse(t *testing.T, d *Deliverer, u store.User, use string) int64 {
 		t.Fatal(err)
 	}
 	return mb.ID
+}
+
+func TestDeliverMalware(t *testing.T) {
+	d, u := setup(t, fakeDNS{})
+	d.Malware = malware.New(malware.Config{BlockMacros: true, Rules: malware.Builtin()}, nil)
+	ctx := context.Background()
+	env := Envelope{RemoteIP: net.ParseIP("203.0.113.9"), Helo: "mx.example", MailFrom: "x@evil.example"}
+	bad := "From: x@evil.example\r\nSubject: invoice\r\nContent-Type: multipart/mixed; boundary=B\r\n\r\n" +
+		"--B\r\nContent-Type: text/plain\r\n\r\nsee attached\r\n" +
+		"--B\r\nContent-Type: application/octet-stream\r\nContent-Disposition: attachment; filename=\"invoice.pdf.js\"\r\n\r\nalert(1)\r\n--B--\r\n"
+	_, err := d.Deliver(ctx, Inbound{Env: env, Rcpts: []store.User{u}, Proto: "ESMTP"}, strings.NewReader(bad))
+	var rej *RejectError
+	if !errors.As(err, &rej) || !strings.Contains(rej.Reason, "invoice.pdf.js: blocked file type .js") {
+		t.Fatalf("want reject, got %v", err)
+	}
+	if _, err := d.Deliver(ctx, Inbound{Env: env, Rcpts: []store.User{u}, Proto: "ESMTP"}, strings.NewReader(multipart)); err != nil {
+		t.Fatal(err)
+	}
 }

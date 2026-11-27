@@ -110,3 +110,18 @@ reject_score = 15
 # Optional: add the score of a local Rspamd worker.
 # rspamd_url = "http://127.0.0.1:11333"
 # rspamd_password_file = "/etc/talaria/rspamd-password"
+
+[malware]
+# Refuse inbound mail with dangerous attachments: programs and scripts
+# (.exe, .js, .iso, .lnk and more, also inside zip files), Office files
+# with macros, and files that match the built-in YARA rules.
+enabled = true
+block_macros = true
+# Password-protected archives cannot be looked inside.
+block_encrypted_archives = false
+# Replace the built-in list of refused file types.
+# blocked_extensions = ["exe", "js", "vbs"]
+# Extra YARA rules (.yar files). Modules such as "pe" are not supported.
+# rules_dir = "/etc/talaria/yara"
+# ClamAV adds signature scanning. It needs about 1 GB of memory.
+# clamav = "unix:/run/clamav/clamd.ctl"

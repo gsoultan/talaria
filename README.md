@@ -15,10 +15,11 @@ A fast, low-footprint mail server with built-in webmail, sized for a
 - Runs on a public IP, behind a gateway such as Gateon (PROXY protocol), or
   behind Cloudflare Tunnel. See [doc/deployment.md](doc/deployment.md).
 
-Status: phase 6 (mail security) is under way: connection filtering and
-anti-spam are done, see [doc/roadmap.md](doc/roadmap.md). Talaria receives
+Status: phase 6 (mail security) is under way: connection filtering,
+anti-spam and anti-malware are done, see [doc/roadmap.md](doc/roadmap.md). Talaria receives
 mail on port 25 or through the HTTP ingest endpoint, checks SPF, DKIM and
-DMARC, scores it for spam with a filter that learns from each user, and files it into
+DMARC, scores it for spam with a filter that learns from each user, refuses
+dangerous attachments, and files it into
 compressed, deduplicated storage with full-text search. Users send from the
 webmail or from mail apps on 587/465; mail is DKIM-signed and leaves through
 a relay or directly, with retries and bounce reports. Mail apps read mail

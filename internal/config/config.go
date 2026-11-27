@@ -37,6 +37,23 @@ type Config struct {
 	Ingest      Ingest   `toml:"ingest"`
 	Filter      Filter   `toml:"filter"`
 	Spam        Spam     `toml:"spam"`
+	Malware     Malware  `toml:"malware"`
+}
+
+// Malware configures attachment scanning of inbound mail.
+type Malware struct {
+	Enabled bool `toml:"enabled"`
+	// BlockedExtensions replaces the built-in list of refused file types.
+	BlockedExtensions []string `toml:"blocked_extensions"`
+	// BlockMacros refuses Office files with VBA macros.
+	BlockMacros bool `toml:"block_macros"`
+	// BlockEncryptedArchives refuses password-protected archives.
+	BlockEncryptedArchives bool `toml:"block_encrypted_archives"`
+	// RulesDir holds extra YARA rules (.yar, .yara).
+	RulesDir string `toml:"rules_dir"`
+	// ClamAV is the clamd address: unix:/run/clamav/clamd.ctl or
+	// tcp:127.0.0.1:3310. Empty means no ClamAV.
+	ClamAV string `toml:"clamav"`
 }
 
 // Spam configures spam scoring of inbound mail.
@@ -198,10 +215,11 @@ func Default() Config {
 			GreylistDelay: Duration(5 * time.Minute),
 			MaxPerIPHour:  500,
 		},
-		Spam: Spam{Enabled: true, JunkScore: 6, RejectScore: 15},
-		Log:  Log{Level: "info", Format: "text"},
-		HTTP: HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
-		TLS:  TLS{Mode: "off"},
+		Spam:    Spam{Enabled: true, JunkScore: 6, RejectScore: 15},
+		Malware: Malware{Enabled: true, BlockMacros: true},
+		Log:     Log{Level: "info", Format: "text"},
+		HTTP:    HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
+		TLS:     TLS{Mode: "off"},
 		SMTP: SMTP{
 			Listen:         ":25",
 			Submission:     ":587",
@@ -298,6 +316,9 @@ func (c Config) Validate() error {
 	}
 	if u := c.Spam.RspamdURL; u != "" && !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
 		errs = append(errs, errors.New("spam.rspamd_url must be an http:// or https:// URL"))
+	}
+	if a := c.Malware.ClamAV; a != "" && !strings.HasPrefix(a, "unix:") && !strings.HasPrefix(a, "tcp:") {
+		errs = append(errs, errors.New("malware.clamav must be unix:/path/to/clamd.ctl or tcp:host:port"))
 	}
 	if c.Ingest.Enabled && c.Ingest.TokenFile == "" {
 		errs = append(errs, errors.New("ingest.enabled needs ingest.token_file"))
