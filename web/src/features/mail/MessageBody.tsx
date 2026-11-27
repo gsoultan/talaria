@@ -85,20 +85,21 @@ function HtmlFrame({ html }: { html: string }) {
   )
 }
 
-export function MessageBody({ id, detail, sender }: { id: number; detail: MessageDetail; sender: string }) {
+/** Shows a message's body. cids, when given, maps inline images (decrypted mail). */
+export function MessageBody({ id, detail, sender, cids: given }: { id: number; detail: MessageDetail; sender: string; cids?: Record<string, string> }) {
   const [allow, setAllow] = useState(() => allowedSenders().has(sender.toLowerCase()))
   const [prepared, setPrepared] = useState<{ html: string; hasRemote: boolean } | null>(null)
 
   useEffect(() => {
     if (!detail.htmlBody) return
-    const cids: Record<string, string> = {}
-    for (const a of detail.attachments) if (a.contentId) cids[a.contentId] = `/api/v1/messages/${id}/parts/${a.part}?inline=1`
+    const cids: Record<string, string> = { ...given }
+    if (!given) for (const a of detail.attachments) if (a.contentId) cids[a.contentId] = `/api/v1/messages/${id}/parts/${a.part}?inline=1`
     let live = true
     void prepareHtml(detail.htmlBody, cids, allow).then((r) => live && setPrepared(r))
     return () => {
       live = false
     }
-  }, [id, detail, allow])
+  }, [id, detail, allow, given])
 
   if (!detail.htmlBody) return <PlainText text={detail.textBody} />
   return (

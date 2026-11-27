@@ -96,6 +96,12 @@ func (s *Mail) SendMessage(ctx context.Context, in domain.SendMessage) (domain.S
 	if err != nil {
 		return domain.Sent{}, err
 	}
+	return s.send(ctx, u, c, in.Message.DraftID, in.ConfirmSensitive, nil)
+}
+
+// send submits a built message. plain, when set, is what the policies
+// check in place of the message (which the webmail encrypted).
+func (s *Mail) send(ctx context.Context, u store.User, c *mail.Compose, draftID int64, confirmed bool, plain []byte) (domain.Sent, error) {
 	var rcpts []string
 	for _, l := range [][]*gomail.Address{c.To, c.Cc, c.Bcc} {
 		for _, a := range l {
@@ -104,10 +110,13 @@ func (s *Mail) SendMessage(ctx context.Context, in domain.SendMessage) (domain.S
 	}
 	var buf bytes.Buffer
 	if err := c.Write(&buf); err != nil {
+		if c.Entity != nil {
+			return domain.Sent{}, badField("entity", err)
+		}
 		return domain.Sent{}, internal(err)
 	}
 	res, err := s.Submit.Submit(ctx, outbound.Submission{User: u, MailFrom: c.From.Address, Rcpts: rcpts, SaveSent: true,
-		ClientIP: s.IP(ctx), Proto: "HTTPS", CanConfirm: true, Confirmed: in.ConfirmSensitive}, &buf)
+		ClientIP: s.IP(ctx), Proto: "HTTPS", CanConfirm: true, Confirmed: confirmed, Plain: plain}, &buf)
 	var rerr *outbound.RecipientError
 	var perr *outbound.PolicyError
 	switch {
@@ -128,7 +137,7 @@ func (s *Mail) SendMessage(ctx context.Context, in domain.SendMessage) (domain.S
 			}
 		}
 	}
-	s.dropDraft(ctx, u, in.Message.DraftID)
+	s.dropDraft(ctx, u, draftID)
 	return domain.Sent{MessageID: c.MessageID, Queued: res.Queued, DeliveredLocally: res.Local}, nil
 }
 

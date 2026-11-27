@@ -31,6 +31,7 @@ type Detail struct {
 	Parts       []Part
 	AuthResults string
 	ReplyTo     string
+	ContentType string // of the message as a whole
 }
 
 const maxBody = 2 << 20
@@ -50,6 +51,7 @@ func ReadDetail(r io.Reader) (Detail, error) {
 	if e == nil {
 		return d, err
 	}
+	d.ContentType = e.Header.Get("Content-Type")
 	f := e.Header.Fields()
 	for f.Next() {
 		k := f.Key()

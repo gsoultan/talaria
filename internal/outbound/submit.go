@@ -56,6 +56,9 @@ type Submission struct {
 	// warning (the webmail); Confirmed when they did.
 	CanConfirm bool
 	Confirmed  bool
+	// Plain is the message before the webmail encrypted it, for the data
+	// loss prevention policies, which cannot read the encrypted one.
+	Plain []byte
 }
 
 // Errors returned by Submit.

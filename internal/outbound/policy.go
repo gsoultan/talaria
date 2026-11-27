@@ -4,6 +4,7 @@
 package outbound
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -70,7 +71,11 @@ func (s *Submitter) checkPolicies(ctx context.Context, sub Submission, h gomail.
 	if len(policies) == 0 {
 		return res, nil
 	}
-	matches := dlp.Evaluate(dlp.Text(rewind()), policies)
+	src := rewind()
+	if sub.Plain != nil {
+		src = bytes.NewReader(sub.Plain)
+	}
+	matches := dlp.Evaluate(dlp.Text(src), policies)
 	if len(matches) == 0 {
 		return res, nil
 	}

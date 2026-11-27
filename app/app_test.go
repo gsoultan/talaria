@@ -42,7 +42,7 @@ type env struct {
 	dir    string
 }
 
-func setup(t *testing.T) *env {
+func setup(t *testing.T, opts ...func(*Deps)) *env {
 	t.Helper()
 	dir := t.TempDir()
 	st, err := store.Open(context.Background(), pgtest.URL(t), store.Options{})
@@ -61,8 +61,12 @@ func setup(t *testing.T) *env {
 	d := &mail.Deliverer{Store: st, Blobs: bl, Hub: h, Hostname: "mx.test", TmpDir: dir}
 	links := &safelinks.Checker{Block: []string{"blocked.example"}}
 	sub := &outbound.Submitter{Store: st, Blobs: bl, Deliver: d, Keys: &outbound.Keys{Store: st}, Hostname: "mx.test", TmpDir: dir}
-	r := Build(Deps{Store: st, Blobs: bl, Hub: h, Deliver: d, Submit: sub, Uploads: ups, Hostname: "mx.test", MaxSize: 1 << 20, SafeLinks: links,
-		Audit: &audit.Recorder{Store: st}})
+	deps := Deps{Store: st, Blobs: bl, Hub: h, Deliver: d, Submit: sub, Uploads: ups, Hostname: "mx.test", MaxSize: 1 << 20, SafeLinks: links,
+		Audit: &audit.Recorder{Store: st}}
+	for _, o := range opts {
+		o(&deps)
+	}
+	r := Build(deps)
 	srv := httptest.NewTLSServer(r) // Secure cookies need https
 	t.Cleanup(srv.Close)
 	c := srv.Client()
@@ -291,8 +295,8 @@ func TestOpenAPI(t *testing.T) {
 	for _, ops := range doc.Paths {
 		n += len(ops)
 	}
-	if n != 58 { // the generated routes; uploads and downloads are raw HTTP
-		t.Fatalf("%d operations, want 58", n)
+	if n != 65 { // the generated routes; uploads and downloads are raw HTTP
+		t.Fatalf("%d operations, want 65", n)
 	}
 }
 

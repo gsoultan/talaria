@@ -1488,6 +1488,195 @@
         }
       }
     },
+    "/api/v1/certificates": {
+      "get": {
+        "operationId": "mail.ListCertificates",
+        "tags": [
+          "mail"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Certificates"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "mail.ImportCertificate",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportCertificate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Certificates"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/check": {
+      "post": {
+        "operationId": "mail.CheckCertificates",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckCertificates"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificateCheck"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/find": {
+      "post": {
+        "operationId": "mail.FindCertificates",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FindCertificates"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FoundCertificates"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/{id}": {
+      "delete": {
+        "operationId": "mail.DeleteCertificate",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Done"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/drafts": {
       "post": {
         "operationId": "mail.SaveDraft",
@@ -2048,6 +2237,86 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SendMessage"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sent"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/messages/smime/prepare": {
+      "post": {
+        "operationId": "mail.PrepareSMIME",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepareSMIME"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SMIMEEntity"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/messages/smime/send": {
+      "post": {
+        "operationId": "mail.SendSMIME",
+        "tags": [
+          "mail"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendSMIME"
               }
             }
           }
@@ -2786,6 +3055,89 @@
           "id"
         ]
       },
+      "Certificate": {
+        "type": "object",
+        "properties": {
+          "der": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "notAfter": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "notBefore": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "problem": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "subject",
+          "issuer",
+          "notBefore",
+          "notAfter",
+          "fingerprint",
+          "source",
+          "problem",
+          "der"
+        ]
+      },
+      "CertificateCheck": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "problem": {
+            "type": "string"
+          },
+          "trusted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "trusted",
+          "email",
+          "problem"
+        ]
+      },
+      "Certificates": {
+        "type": "object",
+        "properties": {
+          "certificates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Certificate"
+            }
+          }
+        },
+        "required": [
+          "certificates"
+        ]
+      },
       "Change": {
         "type": "object",
         "properties": {
@@ -2814,6 +3166,23 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "CheckCertificates": {
+        "type": "object",
+        "properties": {
+          "chain": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "from": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chain"
         ]
       },
       "Compose": {
@@ -3283,6 +3652,41 @@
           "draftId"
         ]
       },
+      "FindCertificates": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "emails"
+        ]
+      },
+      "FoundCertificates": {
+        "type": "object",
+        "properties": {
+          "certificates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Certificate"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "certificates",
+          "missing"
+        ]
+      },
       "Header": {
         "type": "object",
         "properties": {
@@ -3436,6 +3840,20 @@
         "required": [
           "address",
           "displayName"
+        ]
+      },
+      "ImportCertificate": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "own": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data"
         ]
       },
       "Info": {
@@ -3623,6 +4041,9 @@
           },
           "replyTo": {
             "type": "string"
+          },
+          "smime": {
+            "$ref": "#/components/schemas/SMIMEStatus"
           },
           "summary": {
             "$ref": "#/components/schemas/MessageSummary"
@@ -3813,6 +4234,17 @@
           "uploadId"
         ]
       },
+      "PrepareSMIME": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/Compose"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
       "Queue": {
         "type": "object",
         "properties": {
@@ -3932,6 +4364,44 @@
           }
         }
       },
+      "SMIMEEntity": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity"
+        ]
+      },
+      "SMIMEStatus": {
+        "type": "object",
+        "properties": {
+          "encrypted": {
+            "type": "boolean"
+          },
+          "problem": {
+            "type": "string"
+          },
+          "signed": {
+            "type": "boolean"
+          },
+          "signer": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "signed",
+          "encrypted",
+          "verified",
+          "signer",
+          "problem"
+        ]
+      },
       "SaveDLPPolicy": {
         "type": "object",
         "properties": {
@@ -4000,6 +4470,24 @@
         },
         "required": [
           "message"
+        ]
+      },
+      "SendSMIME": {
+        "type": "object",
+        "properties": {
+          "confirmSensitive": {
+            "type": "boolean"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "message": {
+            "$ref": "#/components/schemas/Compose"
+          }
+        },
+        "required": [
+          "message",
+          "entity"
         ]
       },
       "SenderRule": {

@@ -28,6 +28,7 @@ import (
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/safelinks"
+	"github.com/gsoultan/talaria/internal/smime"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/uploads"
 	"github.com/gsoultan/talaria/transport"
@@ -63,6 +64,8 @@ type Deps struct {
 	// Who may release held mail, and how long it is kept.
 	UserReleaseMalware bool
 	QuarantineDays     int
+	// SMIME checks signatures on mail being read; nil trusts the system's roots.
+	SMIME *smime.Checker
 	// Audit records sign-ins, admin changes and policy hits; nil skips it.
 	Audit  *audit.Recorder
 	Logger *slog.Logger
@@ -86,7 +89,7 @@ func Build(d Deps) *httpx.Router {
 	authUC := usecase.NewAuth(d.Store, cookies{}, ipOf)
 	authUC.Audit = d.Audit
 	mailUC := &usecase.Mail{Store: d.Store, Blobs: d.Blobs, Hub: d.Hub, Submit: d.Submit, Deliver: d.Deliver, Uploads: d.Uploads,
-		IP: ipOf, Hostname: d.Hostname, MaxSize: d.MaxSize, Endpoints: d.Endpoints, Quarantine: qp, Audit: d.Audit}
+		IP: ipOf, Hostname: d.Hostname, MaxSize: d.MaxSize, Endpoints: d.Endpoints, Quarantine: qp, Audit: d.Audit, SMIME: d.SMIME}
 	adminUC := &usecase.Admin{Store: d.Store, Blobs: d.Blobs, Deliver: d.Deliver, Quarantine: qp, Keys: d.Keys, Hostname: d.Hostname, Route: d.Route, RelayHost: d.RelayHost, Wake: d.Wake, Audit: d.Audit, IP: ipOf}
 
 	// Shared endpoint middleware. Mail has no timeout because Watch is a

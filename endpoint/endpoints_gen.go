@@ -123,6 +123,13 @@ type MailEndpoints struct {
 	DeleteMessages       kakarot.Endpoint[domain.DeleteMessages, domain.Done]
 	ListIdentities       kakarot.Endpoint[domain.ListIdentities, domain.Identities]
 	SendMessage          kakarot.Endpoint[domain.SendMessage, domain.Sent]
+	PrepareSMIME         kakarot.Endpoint[domain.PrepareSMIME, domain.SMIMEEntity]
+	SendSMIME            kakarot.Endpoint[domain.SendSMIME, domain.Sent]
+	ListCertificates     kakarot.Endpoint[domain.ListCertificates, domain.Certificates]
+	ImportCertificate    kakarot.Endpoint[domain.ImportCertificate, domain.Certificates]
+	DeleteCertificate    kakarot.Endpoint[domain.DeleteCertificate, domain.Done]
+	FindCertificates     kakarot.Endpoint[domain.FindCertificates, domain.FoundCertificates]
+	CheckCertificates    kakarot.Endpoint[domain.CheckCertificates, domain.CertificateCheck]
 	SaveDraft            kakarot.Endpoint[domain.SaveDraft, domain.DraftSaved]
 	ListQuarantine       kakarot.Endpoint[domain.ListQuarantine, domain.HeldMessages]
 	ReleaseQuarantined   kakarot.Endpoint[domain.ReleaseQuarantined, domain.Done]
@@ -149,6 +156,13 @@ func MakeMailEndpoints(svc service.MailService) MailEndpoints {
 		DeleteMessages:       middleware.Validated(svc.DeleteMessages),
 		ListIdentities:       svc.ListIdentities,
 		SendMessage:          middleware.Validated(svc.SendMessage),
+		PrepareSMIME:         svc.PrepareSMIME,
+		SendSMIME:            svc.SendSMIME,
+		ListCertificates:     svc.ListCertificates,
+		ImportCertificate:    svc.ImportCertificate,
+		DeleteCertificate:    svc.DeleteCertificate,
+		FindCertificates:     svc.FindCertificates,
+		CheckCertificates:    svc.CheckCertificates,
 		SaveDraft:            svc.SaveDraft,
 		ListQuarantine:       svc.ListQuarantine,
 		ReleaseQuarantined:   svc.ReleaseQuarantined,

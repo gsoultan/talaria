@@ -24,6 +24,7 @@ import (
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/preview"
+	"github.com/gsoultan/talaria/internal/smime"
 	"github.com/gsoultan/talaria/internal/store"
 )
 
@@ -43,6 +44,9 @@ type Mail struct {
 	Quarantine QuarantinePolicy
 	// Audit records releases from quarantine; nil skips it.
 	Audit *audit.Recorder
+	// SMIME checks signatures on mail being read; nil uses the system's
+	// trusted roots.
+	SMIME *smime.Checker
 	// Keepalive is how often Watch sends an empty change; default 25 s,
 	// under the idle timeouts of Cloudflare (100 s) and most gateways.
 	Keepalive time.Duration
@@ -186,7 +190,28 @@ func (s *Mail) GetMessage(ctx context.Context, in domain.GetMessage) (domain.Mes
 	for _, h := range d.Headers {
 		out.Headers = append(out.Headers, domain.Header{Name: h[0], Value: h[1]})
 	}
+	if signed, encrypted := smime.Kind(d.ContentType); signed || encrypted {
+		var content []byte
+		out.SMIME, content = s.smimeStatus(ctx, u, func() ([]byte, error) {
+			r, err := s.Blobs.Open(u.TenantID, m.BlobHash)
+			if err != nil {
+				return nil, err
+			}
+			defer r.Close()
+			return io.ReadAll(io.LimitReader(r, 64<<20))
+		})
+		if content != nil {
+			// Opaque signed: show what was signed. Its attachments are
+			// inside the signature, so they are not listed.
+			if inner, err := mail.ReadDetail(bytes.NewReader(content)); err == nil {
+				out.TextBody, out.HTMLBody, d.Parts = inner.Text, inner.HTML, nil
+			}
+		}
+	}
 	for _, p := range d.Parts {
+		if out.SMIME != nil && isSignaturePart(p.ContentType) {
+			continue // the signature, shown as a badge instead
+		}
 		out.Attachments = append(out.Attachments, domain.Attachment{Part: p.Path, Filename: p.Filename, ContentType: p.ContentType,
 			Size: p.Size, ContentID: p.ContentID, Inline: p.Inline, Risky: preview.Risky(p.Filename, p.ContentType)})
 	}
@@ -352,4 +377,9 @@ func (s *Mail) Watch(ctx context.Context, _ domain.Watch) iter.Seq2[domain.Chang
 			}
 		}
 	}
+}
+
+func isSignaturePart(ct string) bool {
+	ct = strings.ToLower(ct)
+	return strings.HasPrefix(ct, "application/pkcs7-signature") || strings.HasPrefix(ct, "application/x-pkcs7-signature")
 }

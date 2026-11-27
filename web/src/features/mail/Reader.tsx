@@ -11,7 +11,7 @@ import { useMailActions } from './actions'
 import { openCompose } from './composeStore'
 import { bySpecial, displayName, sortMailboxes, useMailboxes } from './mailboxes'
 import { AttachmentPreview } from './AttachmentPreview'
-import { MessageBody } from './MessageBody'
+import { SecureMessage } from './SecureMessage'
 import { forward, reply } from './reply'
 import { Icon, icons } from './Shell'
 import { type Attachment, type MessageSummary, useApiQuery } from '../../lib/api'
@@ -252,8 +252,7 @@ export function Reader({ summary, onClose, me }: { summary: MessageSummary; onCl
             </Text>
           ) : d ? (
             <>
-              <MessageBody id={summary.id} detail={d} sender={summary.fromAddr} />
-              <Attachments id={summary.id} list={d.attachments} />
+              <SecureMessage id={summary.id} detail={d} sender={summary.fromAddr} />
             </>
           ) : null}
         </Box>

@@ -9,8 +9,7 @@ import { errorText, isNetworkError } from '../../lib/errors'
 import { avatarColor, fullDate, initials, listDate, plural, splitAddresses } from '../../lib/format'
 import { queueOffline } from '../../lib/outbox'
 import { useMailActions } from './actions'
-import { MessageBody } from './MessageBody'
-import { Attachments } from './Reader'
+import { SecureMessage } from './SecureMessage'
 import { reply } from './reply'
 import { Icon, icons } from './Shell'
 import { useMyAddresses } from './MailPage'
@@ -48,8 +47,7 @@ function Expanded({ m }: { m: MessageSummary }) {
       </Group>
       {d ? (
         <>
-          <MessageBody id={m.id} detail={d} sender={m.fromAddr} />
-          <Attachments id={m.id} list={d.attachments} />
+          <SecureMessage id={m.id} detail={d} sender={m.fromAddr} />
         </>
       ) : q.error ? (
         <Text c="red" size="sm">

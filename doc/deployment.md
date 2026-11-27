@@ -237,6 +237,39 @@ breaks the chain. Check it with:
 talaria audit-verify -config /etc/talaria/talaria.toml
 ```
 
+## S/MIME
+
+People sign and encrypt mail in the webmail with their own S/MIME
+certificate. In **Settings → Signing and encryption** they import a .p12
+or .pfx file. The private key is decrypted in a web worker and stored in
+that browser's IndexedDB, wrapped with a WebCrypto key that cannot be
+exported; it never reaches the server. Each browser needs its own import.
+The certificate (public) is published to the server, so colleagues in the
+tenant can encrypt to that address.
+
+Compose shows **Sign** and **Encrypt** when the From address has a key in
+this browser. Encrypting needs a certificate for every recipient: one the
+user added, one a colleague published, or one kept from signed mail that
+verified. The message is also encrypted to the sender, so the copy in Sent
+stays readable. Signed or encrypted messages are not kept in the offline
+outbox. Data loss prevention checks what was written, before encryption.
+
+When reading, the server checks signatures and shows "Signed by" when the
+signature matches, the certificate chains to a trusted root, is valid for
+email protection and names the From address; otherwise it shows why not.
+Encrypted mail is decrypted in the browser, and a signature inside is
+checked the same way. Roots are the system's; add a company CA with:
+
+```toml
+[smime]
+ca_file = "/etc/talaria/smime-ca.pem"
+```
+
+Limits: RSA certificates only; .p12 files must use PBES2 (AES), which
+OpenSSL 3 and current Windows and macOS exports do, not the older 3DES or
+RC2 encryption; mail is encrypted with AES-256-CBC, and AES-128 and
+AES-256 can be decrypted. Search does not look inside encrypted mail.
+
 ## Outbound mail
 
 Most VPS providers block outbound port 25, so `outbound.mode = "relay"` is the

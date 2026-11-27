@@ -11,10 +11,12 @@ import { bytes } from '../../lib/format'
 import { Link, useLocation } from '../../lib/router'
 import { useMe } from '../auth/useMe'
 import { useApiMutation, useApiQuery } from '../../lib/api'
+import { SmimeSettings } from './SmimeSettings'
 
 const sections = [
   { id: 'account', label: 'Account and password' },
   { id: 'apps', label: 'Mail apps' },
+  { id: 'smime', label: 'Signing and encryption' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'shortcuts', label: 'Keyboard shortcuts' },
 ]
@@ -210,7 +212,17 @@ export function SettingsPage({ section }: { section?: string }) {
   const { path } = useLocation()
   const narrow = useMediaQuery('(max-width: 62em)', false)
   const cur = sections.find((s) => s.id === section)?.id ?? 'account'
-  const body = { account: <Account />, apps: <Apps />, appearance: <Appearance />, shortcuts: <Shortcuts /> }[cur]
+  const body = {
+    account: <Account />,
+    apps: <Apps />,
+    smime: (
+      <Section title="Signing and encryption" sub="S/MIME signs your mail so people know it came from you, and encrypts it so only the recipients can read it.">
+        <SmimeSettings />
+      </Section>
+    ),
+    appearance: <Appearance />,
+    shortcuts: <Shortcuts />,
+  }[cur]
   return (
     <Box style={{ flex: 1, minWidth: 0, overflow: 'auto' }} p={narrow ? 'sm' : 0}>
       <Group align="flex-start" gap="lg" wrap={narrow ? 'wrap' : 'nowrap'} maw={1100}>

@@ -40,6 +40,7 @@ type Config struct {
 	Malware     Malware    `toml:"malware"`
 	Quarantine  Quarantine `toml:"quarantine"`
 	Audit       Audit      `toml:"audit"`
+	SMIME       SMIME      `toml:"smime"`
 	SafeLinks   SafeLinks  `toml:"safe_links"`
 }
 
@@ -59,6 +60,13 @@ type LinkFeed struct {
 	Name  string `toml:"name"`
 	URL   string `toml:"url"`
 	Hosts bool   `toml:"hosts"`
+}
+
+// SMIME configures checking S/MIME signatures.
+type SMIME struct {
+	// CAFile adds trusted roots (PEM) to the system's, such as an
+	// organisation's own certificate authority.
+	CAFile string `toml:"ca_file"`
 }
 
 // Audit configures the audit log.

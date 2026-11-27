@@ -14,6 +14,7 @@ require (
 	github.com/klauspost/compress v1.20.5
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/pires/go-proxyproto v0.16.0
+	github.com/smallstep/pkcs7 v0.2.3
 	golang.org/x/crypto v0.59.0
 	golang.org/x/net v0.63.0
 	golang.org/x/term v0.48.0

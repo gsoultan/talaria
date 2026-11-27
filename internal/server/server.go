@@ -7,6 +7,7 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -41,6 +42,7 @@ import (
 	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/pop3"
 	"github.com/gsoultan/talaria/internal/safelinks"
+	"github.com/gsoultan/talaria/internal/smime"
 	"github.com/gsoultan/talaria/internal/smtpd"
 	"github.com/gsoultan/talaria/internal/spam"
 	"github.com/gsoultan/talaria/internal/store"
@@ -196,6 +198,9 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 		Hostname: cfg.Hostname, MaxSize: int64(cfg.SMTP.MaxMessageSize), Endpoints: mailEndpoints(cfg),
 		Route: route, Wake: s.Queue.Wake, Logger: log,
 		UserReleaseMalware: cfg.Malware.UserRelease, QuarantineDays: cfg.Quarantine.KeepDays, Audit: s.Audit}
+	if deps.SMIME, err = smimeChecker(cfg.SMIME); err != nil {
+		return nil, err
+	}
 	if cfg.Outbound.Mode == "relay" {
 		deps.RelayHost = cfg.Outbound.Relay.Host
 	}
@@ -619,4 +624,23 @@ func (s *Server) policyHit(ctx context.Context, sub outbound.Submission, subject
 	s.Audit.Record(ctx, store.AuditEntry{TenantID: sub.User.TenantID, ActorID: sub.User.ID, Actor: sub.User.Address(), IP: sub.ClientIP,
 		Action: audit.PolicyDLP, Target: strings.Join(rcpts, ", "), Outcome: action,
 		Detail: audit.Detail(map[string]any{"subject": subject, "via": sub.Proto, "matches": pols})})
+}
+
+// smimeChecker trusts the system's roots plus any in the configured file.
+func smimeChecker(c config.SMIME) (*smime.Checker, error) {
+	if c.CAFile == "" {
+		return &smime.Checker{}, nil
+	}
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		pool = x509.NewCertPool()
+	}
+	b, err := os.ReadFile(c.CAFile)
+	if err != nil {
+		return nil, fmt.Errorf("smime.ca_file: %w", err)
+	}
+	if !pool.AppendCertsFromPEM(b) {
+		return nil, fmt.Errorf("smime.ca_file: no certificates in %s", c.CAFile)
+	}
+	return &smime.Checker{Roots: pool}, nil
 }

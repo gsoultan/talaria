@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
+# SPDX-License-Identifier: MIT
+
 # Talaria configuration. Domains, users and mailboxes are managed in the
 # admin UI / API and stored in the database, not in this file.
 
@@ -146,6 +149,11 @@ digest_hour = 8
 [audit]
 # Audit log entries are removed after this many days; 0 keeps them forever.
 keep_days = 365
+
+[smime]
+# Signatures on S/MIME mail are checked against the system's trusted roots.
+# Add a company CA (PEM) here to trust certificates it issued.
+# ca_file = "/etc/talaria/smime-ca.pem"
 
 [safe_links]
 # Links opened from the webmail are checked when clicked, against threat

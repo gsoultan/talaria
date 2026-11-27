@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-import { ActionIcon, Alert, Anchor, Box, Button, CloseButton, Group, Modal, Paper, Portal, Select, Stack, TagsInput, Text, TextInput, Textarea, Tooltip } from '@mantine/core'
+import { ActionIcon, Alert, Anchor, Box, Button, Chip, CloseButton, Group, Modal, Paper, Portal, Select, Stack, TagsInput, Text, TextInput, Textarea, Tooltip } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { useForm, useStore } from '@tanstack/react-form'
@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react'
 import { errorText, isNetworkError } from '../../lib/errors'
 import { bytes } from '../../lib/format'
 import { queueOffline } from '../../lib/outbox'
+import { encryptEntity, identityFor, signEntity, useIdentities } from '../../lib/smime'
 import { useMe } from '../auth/useMe'
 import { closeCompose, useCompose, type Draft } from './composeStore'
 import { Icon, icons } from './Shell'
@@ -32,6 +33,12 @@ function Composer({ draft }: { draft: Draft }) {
   const me = useMe().data?.user
   const identities = useApiQuery('mail.ListIdentities', {}, { staleTime: 10 * 60_000 }).data?.identities ?? []
   const send = useApiMutation('mail.SendMessage')
+  const prepareSmime = useApiMutation('mail.PrepareSMIME')
+  const sendSmime = useApiMutation('mail.SendSMIME')
+  const findCerts = useApiMutation('mail.FindCertificates')
+  const ids = useIdentities().data
+  const [signIt, setSignIt] = useState(false)
+  const [encryptIt, setEncryptIt] = useState(false)
   const save = useApiMutation('mail.SaveDraft')
   const [files, setFiles] = useState<Att[]>([])
   const uploads = useRef(new Map<string, Promise<string>>())
@@ -60,7 +67,8 @@ function Composer({ draft }: { draft: Draft }) {
       let msg = build(value)
       try {
         msg = await withUploads(msg)
-        const res = await send.mutateAsync({ message: msg, confirmSensitive: confirmed.current })
+        const smime = canSmime && (signIt || encryptIt)
+        const res = smime ? await sendSigned(msg) : await send.mutateAsync({ message: msg, confirmSensitive: confirmed.current })
         notifications.show({
           color: 'green',
           message: res.queued > 0 ? 'Sent. Outside recipients get it in a moment.' : 'Sent',
@@ -69,7 +77,7 @@ function Composer({ draft }: { draft: Draft }) {
         void qc.invalidateQueries({ predicate: ofOps('mail.ListMailboxes', 'mail.ListMessages') })
         closeCompose()
       } catch (err) {
-        if (isNetworkError(err)) {
+        if (isNetworkError(err) && !(canSmime && (signIt || encryptIt))) {
           const done = new Set(msg.attachments?.map((a) => a.uploadId))
           const pending = files.filter((f) => !f.uploadId || !done.has(f.uploadId)).map((f) => ({ file: f.file }))
           await queueOffline({ ...msg, attachments: msg.attachments?.filter((a) => done.has(a.uploadId)) }, pending)
@@ -87,6 +95,27 @@ function Composer({ draft }: { draft: Draft }) {
       }
     },
   })
+
+  const from = useStore(form.store, (st) => st.values.from)
+  const canSmime = !!identityFor(ids, from)
+
+  // Signs and encrypts in this browser: the server renders the body, the
+  // key here signs or encrypts it, and the server sends the result.
+  const sendSigned = async (msg: Compose) => {
+    let { entity } = await prepareSmime.mutateAsync({ message: msg })
+    if (signIt) entity = await signEntity(from, entity)
+    if (encryptIt) {
+      const rcpts = [...(msg.to ?? []), ...(msg.cc ?? []), ...(msg.bcc ?? [])].map((a) => (/<([^>]+)>/.exec(a)?.[1] ?? a).trim())
+      const found = await findCerts.mutateAsync({ emails: rcpts })
+      if (found.missing.length > 0) throw new Error(`There is no certificate to encrypt to ${found.missing.join(', ')}. Ask them to send you a signed message, or turn off Encrypt`)
+      entity = await encryptEntity(
+        from,
+        entity,
+        found.certificates.map((c) => c.der),
+      )
+    }
+    return sendSmime.mutateAsync({ message: msg, entity, confirmSensitive: confirmed.current })
+  }
 
   const startUpload = (a: Att): Promise<string> => {
     let p = uploads.current.get(a.key)
@@ -294,6 +323,20 @@ function Composer({ draft }: { draft: Draft }) {
             </Button>
           )}
         </form.Subscribe>
+        {canSmime && (
+          <>
+            <Tooltip label="Sign with your certificate, so recipients know it came from you">
+              <Chip size="xs" checked={signIt} onChange={setSignIt} variant="light">
+                Sign
+              </Chip>
+            </Tooltip>
+            <Tooltip label="Encrypt, so only the recipients can read it. Needs a certificate for each of them">
+              <Chip size="xs" checked={encryptIt} onChange={setEncryptIt} variant="light" color="teal">
+                Encrypt
+              </Chip>
+            </Tooltip>
+          </>
+        )}
         <Tooltip label="Attach files">
           <ActionIcon variant="subtle" color="gray" size="lg" onClick={() => fileInput.current?.click()} aria-label="Attach files">
             <Icon d={icons.paperclip} />

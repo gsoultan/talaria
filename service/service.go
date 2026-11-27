@@ -76,6 +76,20 @@ type MailService interface {
 	ListIdentities(ctx context.Context, in domain.ListIdentities) (domain.Identities, error)
 	//kakarot:http POST /api/v1/messages/send
 	SendMessage(ctx context.Context, in domain.SendMessage) (domain.Sent, error)
+	//kakarot:http POST /api/v1/messages/smime/prepare
+	PrepareSMIME(ctx context.Context, in domain.PrepareSMIME) (domain.SMIMEEntity, error)
+	//kakarot:http POST /api/v1/messages/smime/send
+	SendSMIME(ctx context.Context, in domain.SendSMIME) (domain.Sent, error)
+	//kakarot:http GET /api/v1/certificates
+	ListCertificates(ctx context.Context, in domain.ListCertificates) (domain.Certificates, error)
+	//kakarot:http POST /api/v1/certificates
+	ImportCertificate(ctx context.Context, in domain.ImportCertificate) (domain.Certificates, error)
+	//kakarot:http DELETE /api/v1/certificates/{id}
+	DeleteCertificate(ctx context.Context, in domain.DeleteCertificate) (domain.Done, error)
+	//kakarot:http POST /api/v1/certificates/find
+	FindCertificates(ctx context.Context, in domain.FindCertificates) (domain.FoundCertificates, error)
+	//kakarot:http POST /api/v1/certificates/check
+	CheckCertificates(ctx context.Context, in domain.CheckCertificates) (domain.CertificateCheck, error)
 	//kakarot:http POST /api/v1/drafts
 	SaveDraft(ctx context.Context, in domain.SaveDraft) (domain.DraftSaved, error)
 	//kakarot:http GET /api/v1/quarantine

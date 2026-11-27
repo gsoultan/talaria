@@ -31,8 +31,8 @@ optional and talk to Talaria over a socket.
    encrypt or notify.
 8. **Audit logs** (done). Append-only in PostgreSQL: sign-ins, admin changes,
    message access by admins, policy hits. Searchable and exportable.
-9. **S/MIME.** Sign and encrypt in the webmail with keys that stay in the
-   browser (WebCrypto in a worker), and certificates published in the
-   address book.
+9. **S/MIME** (done). Sign and encrypt in the webmail with keys that stay in
+   the browser (WebCrypto in a worker), and certificates published for
+   colleagues and kept from signed mail.
 
 Not planned yet: calendar, contacts and Exchange ActiveSync.

@@ -68,6 +68,29 @@ export type CancelQueue = {
   tenantId?: number
 }
 
+export type Certificate = {
+  der: string
+  email: string
+  fingerprint: string
+  id: number
+  issuer: string
+  notAfter: number
+  notBefore: number
+  problem: string
+  source: string
+  subject: string
+}
+
+export type CertificateCheck = {
+  email: string
+  problem: string
+  trusted: boolean
+}
+
+export type Certificates = {
+  certificates: Certificate[]
+}
+
 export type Change = {
   mailboxIds: number[]
 }
@@ -75,6 +98,11 @@ export type Change = {
 export type ChangePassword = {
   currentPassword: string
   newPassword: string
+}
+
+export type CheckCertificates = {
+  chain: string[]
+  from?: string
 }
 
 export type Compose = {
@@ -213,6 +241,15 @@ export type DraftSaved = {
   draftId: number
 }
 
+export type FindCertificates = {
+  emails: string[]
+}
+
+export type FoundCertificates = {
+  certificates: Certificate[]
+  missing: string[]
+}
+
 export type Header = {
   name: string
   value: string
@@ -253,6 +290,11 @@ export type Identities = {
 export type Identity = {
   address: string
   displayName: string
+}
+
+export type ImportCertificate = {
+  data: string
+  own?: boolean
 }
 
 export type Info = {
@@ -309,6 +351,7 @@ export type MessageDetail = {
   keywords: string[]
   messageId: string
   replyTo: string
+  smime?: SMIMEStatus
   summary: MessageSummary
   textBody: string
 }
@@ -355,6 +398,10 @@ export type MoveMessages = {
 export type NewAttachment = {
   contentId?: string
   uploadId: string
+}
+
+export type PrepareSMIME = {
+  message: Compose
 }
 
 export type Queue = {
@@ -431,6 +478,12 @@ export type SendMessage = {
   message: Compose
 }
 
+export type SendSMIME = {
+  confirmSensitive?: boolean
+  entity: string
+  message: Compose
+}
+
 export type Sent = {
   deliveredLocally: number
   messageId: string
@@ -443,6 +496,18 @@ export type Session = {
 
 export type SetUserPassword = {
   password: string
+}
+
+export type SMIMEEntity = {
+  entity: string
+}
+
+export type SMIMEStatus = {
+  encrypted: boolean
+  problem: string
+  signed: boolean
+  signer: string
+  verified: boolean
 }
 
 export type Stats = {
@@ -574,24 +639,31 @@ export interface Ops {
   "admin.TestDLP": { input: TestDLP; output: DLPTestResult }
   "admin.UpdateTenant": { input: { id: number } & UpdateTenant; output: Done }
   "admin.UpdateUser": { input: { id: number } & UpdateUser; output: Done }
+  "mail.CheckCertificates": { input: CheckCertificates; output: CertificateCheck }
   "mail.CreateMailbox": { input: CreateMailbox; output: MailboxCreated }
+  "mail.DeleteCertificate": { input: { id: number }; output: Done }
   "mail.DeleteMailbox": { input: { id: number }; output: Done }
   "mail.DeleteMessages": { input: DeleteMessages; output: Done }
   "mail.DeleteQuarantined": { input: { id: number }; output: Done }
+  "mail.FindCertificates": { input: FindCertificates; output: FoundCertificates }
   "mail.GetAttachmentPreview": { input: { id: number; part: string }; output: AttachmentPreview }
   "mail.GetMailSettings": { input: Record<string, never>; output: MailSettings }
   "mail.GetMessage": { input: { id: number }; output: Message }
   "mail.GetThread": { input: { threadId: number }; output: Messages }
+  "mail.ImportCertificate": { input: ImportCertificate; output: Certificates }
+  "mail.ListCertificates": { input: Record<string, never>; output: Certificates }
   "mail.ListIdentities": { input: Record<string, never>; output: Identities }
   "mail.ListMailboxes": { input: Record<string, never>; output: Mailboxes }
   "mail.ListMessages": { input: { mailboxId: number; limit?: number; cursor?: string; unreadOnly?: boolean; flaggedOnly?: boolean }; output: MessagePage }
   "mail.ListQuarantine": { input: { q?: string; before?: number }; output: HeldMessages }
   "mail.MoveMessages": { input: MoveMessages; output: Done }
+  "mail.PrepareSMIME": { input: PrepareSMIME; output: SMIMEEntity }
   "mail.ReleaseQuarantined": { input: { id: number }; output: Done }
   "mail.RenameMailbox": { input: { id: number } & RenameMailbox; output: Done }
   "mail.SaveDraft": { input: SaveDraft; output: DraftSaved }
   "mail.Search": { input: { query?: string; mailboxId?: number; from?: string; unread?: boolean; flagged?: boolean; hasAttachments?: boolean; after?: number; before?: number; limit?: number }; output: Messages }
   "mail.SendMessage": { input: SendMessage; output: Sent }
+  "mail.SendSMIME": { input: SendSMIME; output: Sent }
   "mail.UpdateFlags": { input: UpdateFlags; output: Done }
   "mail.Watch": { input: Record<string, never>; output: Change }
   "session.Login": { input: Login; output: Session }
@@ -636,24 +708,31 @@ export const ops = {
   "admin.TestDLP": { method: 'POST', path: '/api/v1/admin/dlp-policies/test', pathParams: [], query: [], body: true, stream: false },
   "admin.UpdateTenant": { method: 'PUT', path: '/api/v1/admin/tenants/{id}', pathParams: ["id"], query: [], body: true, stream: false },
   "admin.UpdateUser": { method: 'PUT', path: '/api/v1/admin/users/{id}', pathParams: ["id"], query: [], body: true, stream: false },
+  "mail.CheckCertificates": { method: 'POST', path: '/api/v1/certificates/check', pathParams: [], query: [], body: true, stream: false },
   "mail.CreateMailbox": { method: 'POST', path: '/api/v1/mailboxes', pathParams: [], query: [], body: true, stream: false },
+  "mail.DeleteCertificate": { method: 'DELETE', path: '/api/v1/certificates/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.DeleteMailbox": { method: 'DELETE', path: '/api/v1/mailboxes/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.DeleteMessages": { method: 'POST', path: '/api/v1/messages/delete', pathParams: [], query: [], body: true, stream: false },
   "mail.DeleteQuarantined": { method: 'DELETE', path: '/api/v1/quarantine/{id}', pathParams: ["id"], query: [], body: false, stream: false },
+  "mail.FindCertificates": { method: 'POST', path: '/api/v1/certificates/find', pathParams: [], query: [], body: true, stream: false },
   "mail.GetAttachmentPreview": { method: 'GET', path: '/api/v1/messages/{id}/parts/{part}/preview', pathParams: ["id","part"], query: [], body: false, stream: false },
   "mail.GetMailSettings": { method: 'GET', path: '/api/v1/mail-settings', pathParams: [], query: [], body: false, stream: false },
   "mail.GetMessage": { method: 'GET', path: '/api/v1/messages/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.GetThread": { method: 'GET', path: '/api/v1/threads/{threadId}', pathParams: ["threadId"], query: [], body: false, stream: false },
+  "mail.ImportCertificate": { method: 'POST', path: '/api/v1/certificates', pathParams: [], query: [], body: true, stream: false },
+  "mail.ListCertificates": { method: 'GET', path: '/api/v1/certificates', pathParams: [], query: [], body: false, stream: false },
   "mail.ListIdentities": { method: 'GET', path: '/api/v1/identities', pathParams: [], query: [], body: false, stream: false },
   "mail.ListMailboxes": { method: 'GET', path: '/api/v1/mailboxes', pathParams: [], query: [], body: false, stream: false },
   "mail.ListMessages": { method: 'GET', path: '/api/v1/mailboxes/{mailboxId}/messages', pathParams: ["mailboxId"], query: ["limit","cursor","unreadOnly","flaggedOnly"], body: false, stream: false },
   "mail.ListQuarantine": { method: 'GET', path: '/api/v1/quarantine', pathParams: [], query: ["q","before"], body: false, stream: false },
   "mail.MoveMessages": { method: 'POST', path: '/api/v1/messages/move', pathParams: [], query: [], body: true, stream: false },
+  "mail.PrepareSMIME": { method: 'POST', path: '/api/v1/messages/smime/prepare', pathParams: [], query: [], body: true, stream: false },
   "mail.ReleaseQuarantined": { method: 'POST', path: '/api/v1/quarantine/{id}/release', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.RenameMailbox": { method: 'PATCH', path: '/api/v1/mailboxes/{id}', pathParams: ["id"], query: [], body: true, stream: false },
   "mail.SaveDraft": { method: 'POST', path: '/api/v1/drafts', pathParams: [], query: [], body: true, stream: false },
   "mail.Search": { method: 'GET', path: '/api/v1/search', pathParams: [], query: ["query","mailboxId","from","unread","flagged","hasAttachments","after","before","limit"], body: false, stream: false },
   "mail.SendMessage": { method: 'POST', path: '/api/v1/messages/send', pathParams: [], query: [], body: true, stream: false },
+  "mail.SendSMIME": { method: 'POST', path: '/api/v1/messages/smime/send', pathParams: [], query: [], body: true, stream: false },
   "mail.UpdateFlags": { method: 'POST', path: '/api/v1/messages/flags', pathParams: [], query: [], body: true, stream: false },
   "mail.Watch": { method: 'GET', path: '/api/v1/watch', pathParams: [], query: [], body: false, stream: true },
   "session.Login": { method: 'POST', path: '/api/v1/session', pathParams: [], query: [], body: true, stream: false },

@@ -4,6 +4,8 @@
 package mail
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	gomail "github.com/emersion/go-message/mail"
+	"github.com/emersion/go-message/textproto"
 )
 
 // Compose is a message written in the webmail.
@@ -27,6 +30,10 @@ type Compose struct {
 	Attachments []NewAttachment
 	// KeepBcc writes the Bcc header (drafts and the Sent copy).
 	KeepBcc bool
+	// Entity, when set, is the body to send in place of Text, HTML and
+	// Attachments: a MIME entity (its Content-* header fields, a blank
+	// line, then the body) such as one the webmail signed or encrypted.
+	Entity []byte
 }
 
 // NewAttachment is a file attached in the composer.
@@ -60,6 +67,69 @@ func (c *Compose) Write(w io.Writer) error {
 	if c.From == nil {
 		return errors.New("from is required")
 	}
+	h := c.header()
+	if c.Entity != nil {
+		return writeWithEntity(w, h, c.Entity)
+	}
+	return c.writeBody(w, h)
+}
+
+// WriteEntity renders only the body of the message: the MIME entity that
+// Write would put under the headers, with its Content-* fields. This is
+// what the webmail signs or encrypts.
+func (c *Compose) WriteEntity(w io.Writer) error {
+	if c.From == nil {
+		return errors.New("from is required")
+	}
+	plain := *c
+	plain.Entity = nil
+	var buf bytes.Buffer
+	if err := plain.writeBody(&buf, gomail.Header{}); err != nil {
+		return err
+	}
+	br := bufio.NewReader(&buf)
+	h, err := textproto.ReadHeader(br)
+	if err != nil {
+		return err
+	}
+	var eh textproto.Header
+	for f := h.Fields(); f.Next(); {
+		if strings.HasPrefix(strings.ToLower(f.Key()), "content-") {
+			eh.AddRaw([]byte(f.Key() + ": " + f.Value() + "\r\n"))
+		}
+	}
+	if err := textproto.WriteHeader(w, eh); err != nil {
+		return err
+	}
+	_, err = io.Copy(w, br)
+	return err
+}
+
+// writeWithEntity writes the message headers, then the entity's own
+// Content-* fields and body unchanged, as signed.
+func writeWithEntity(w io.Writer, h gomail.Header, entity []byte) error {
+	br := bufio.NewReader(bytes.NewReader(entity))
+	eh, err := textproto.ReadHeader(br)
+	if err != nil {
+		return fmt.Errorf("signed body: %w", err)
+	}
+	if !eh.Has("Content-Type") {
+		return errors.New("signed body has no Content-Type")
+	}
+	h.Set("MIME-Version", "1.0")
+	for f := eh.Fields(); f.Next(); {
+		if strings.HasPrefix(strings.ToLower(f.Key()), "content-") {
+			h.Set(f.Key(), f.Value())
+		}
+	}
+	if err := textproto.WriteHeader(w, h.Header.Header); err != nil {
+		return err
+	}
+	_, err = io.Copy(w, br)
+	return err
+}
+
+func (c *Compose) header() gomail.Header {
 	var h gomail.Header
 	h.SetDate(time.Now())
 	h.SetAddressList("From", []*gomail.Address{c.From})
@@ -84,6 +154,10 @@ func (c *Compose) Write(w io.Writer) error {
 		}
 		h.SetMsgIDList("References", refs)
 	}
+	return h
+}
+
+func (c *Compose) writeBody(w io.Writer, h gomail.Header) error {
 	text := c.Text
 	if text == "" && c.HTML != "" {
 		text = HTMLToText(c.HTML)

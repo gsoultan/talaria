@@ -197,6 +197,8 @@ type MessageDetail struct {
 	Headers               []Header       `json:"headers"`
 	Keywords              []string       `json:"keywords"`
 	AuthenticationResults string         `json:"authenticationResults"`
+	// SMIME is set for signed or encrypted messages.
+	SMIME *SMIMEStatus `json:"smime,omitzero"`
 }
 
 // Message wraps one message.
