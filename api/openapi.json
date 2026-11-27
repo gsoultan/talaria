@@ -1872,6 +1872,55 @@
         }
       }
     },
+    "/api/v1/messages/{id}/parts/{part}/preview": {
+      "get": {
+        "operationId": "mail.GetAttachmentPreview",
+        "tags": [
+          "mail"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "part",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentPreview"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/errorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/quarantine": {
       "get": {
         "operationId": "mail.ListQuarantine",
@@ -2307,6 +2356,26 @@
           "aliases"
         ]
       },
+      "ArchiveItem": {
+        "type": "object",
+        "properties": {
+          "encrypted": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "name",
+          "size",
+          "encrypted"
+        ]
+      },
       "Attachment": {
         "type": "object",
         "properties": {
@@ -2325,6 +2394,9 @@
           "part": {
             "type": "string"
           },
+          "risky": {
+            "type": "boolean"
+          },
           "size": {
             "type": "integer",
             "format": "int64"
@@ -2336,7 +2408,62 @@
           "contentType",
           "size",
           "contentId",
-          "inline"
+          "inline",
+          "risky"
+        ]
+      },
+      "AttachmentPreview": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArchiveItem"
+            }
+          },
+          "kind": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "text": {
+            "type": "string"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "filename",
+          "contentType",
+          "kind",
+          "text",
+          "items",
+          "note",
+          "truncated",
+          "size",
+          "sha256",
+          "findings"
         ]
       },
       "CancelQueue": {

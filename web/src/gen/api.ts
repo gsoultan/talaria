@@ -18,13 +18,33 @@ export type Aliases = {
   aliases: Alias[]
 }
 
+export type ArchiveItem = {
+  encrypted: boolean
+  name: string
+  size: number
+}
+
 export type Attachment = {
   contentId: string
   contentType: string
   filename: string
   inline: boolean
   part: string
+  risky: boolean
   size: number
+}
+
+export type AttachmentPreview = {
+  contentType: string
+  filename: string
+  findings: string[]
+  items: ArchiveItem[]
+  kind: string
+  note: string
+  sha256: string
+  size: number
+  text: string
+  truncated: boolean
 }
 
 export type CancelQueue = {
@@ -478,6 +498,7 @@ export interface Ops {
   "mail.DeleteMailbox": { input: { id: number }; output: Done }
   "mail.DeleteMessages": { input: DeleteMessages; output: Done }
   "mail.DeleteQuarantined": { input: { id: number }; output: Done }
+  "mail.GetAttachmentPreview": { input: { id: number; part: string }; output: AttachmentPreview }
   "mail.GetMailSettings": { input: Record<string, never>; output: MailSettings }
   "mail.GetMessage": { input: { id: number }; output: Message }
   "mail.GetThread": { input: { threadId: number }; output: Messages }
@@ -534,6 +555,7 @@ export const ops = {
   "mail.DeleteMailbox": { method: 'DELETE', path: '/api/v1/mailboxes/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.DeleteMessages": { method: 'POST', path: '/api/v1/messages/delete', pathParams: [], query: [], body: true, stream: false },
   "mail.DeleteQuarantined": { method: 'DELETE', path: '/api/v1/quarantine/{id}', pathParams: ["id"], query: [], body: false, stream: false },
+  "mail.GetAttachmentPreview": { method: 'GET', path: '/api/v1/messages/{id}/parts/{part}/preview', pathParams: ["id","part"], query: [], body: false, stream: false },
   "mail.GetMailSettings": { method: 'GET', path: '/api/v1/mail-settings', pathParams: [], query: [], body: false, stream: false },
   "mail.GetMessage": { method: 'GET', path: '/api/v1/messages/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.GetThread": { method: 'GET', path: '/api/v1/threads/{threadId}', pathParams: ["threadId"], query: [], body: false, stream: false },

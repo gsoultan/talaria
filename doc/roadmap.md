@@ -24,8 +24,8 @@ optional and talk to Talaria over a socket.
    delete their own held mail, and an admin review screen.
 5. **Safe links** (done). Links in incoming mail are rewritten in the
    webmail to a redirect that checks the target against phishing lists and URLhaus when clicked.
-6. **Safe attachments.** Risky files open in a sandboxed preview instead of
-   downloading.
+6. **Safe attachments** (done). Attachments open in a preview built on the
+   server (text, file lists, redrawn images) instead of downloading.
 7. **Data loss prevention.** Per-tenant policies for outgoing mail that
    match patterns (card numbers, national IDs, custom ones) and block, warn,
    encrypt or notify.

@@ -4,10 +4,12 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"iter"
 	"strconv"
 	"strings"
@@ -20,6 +22,7 @@ import (
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/outbound"
+	"github.com/gsoultan/talaria/internal/preview"
 	"github.com/gsoultan/talaria/internal/store"
 )
 
@@ -182,9 +185,50 @@ func (s *Mail) GetMessage(ctx context.Context, in domain.GetMessage) (domain.Mes
 	}
 	for _, p := range d.Parts {
 		out.Attachments = append(out.Attachments, domain.Attachment{Part: p.Path, Filename: p.Filename, ContentType: p.ContentType,
-			Size: p.Size, ContentID: p.ContentID, Inline: p.Inline})
+			Size: p.Size, ContentID: p.ContentID, Inline: p.Inline, Risky: preview.Risky(p.Filename, p.ContentType)})
 	}
 	return domain.Message{Message: out}, nil
+}
+
+// GetAttachmentPreview reads an attachment without running anything in it.
+func (s *Mail) GetAttachmentPreview(ctx context.Context, in domain.GetAttachmentPreview) (domain.AttachmentPreview, error) {
+	u := userOf(ctx)
+	m, err := s.Store.Message(ctx, u.ID, in.ID)
+	if err != nil {
+		return domain.AttachmentPreview{}, storeErr(err)
+	}
+	rc, err := s.Blobs.Open(u.TenantID, m.BlobHash)
+	if err != nil {
+		return domain.AttachmentPreview{}, internal(err)
+	}
+	defer rc.Close()
+	hdr, body, err := mail.OpenPart(rc, in.Part)
+	if err != nil {
+		return domain.AttachmentPreview{}, storeErr(store.ErrNotFound)
+	}
+	ct, params, _ := hdr.ContentType()
+	_, dparams, _ := hdr.ContentDisposition()
+	name := dparams["filename"]
+	if name == "" {
+		name = params["name"]
+	}
+	name = mail.DecodeHeader(name)
+	var data bytes.Buffer
+	if _, err := io.Copy(&data, io.LimitReader(body, preview.MaxInput+1)); err != nil {
+		return domain.AttachmentPreview{}, internal(err)
+	}
+	p := preview.Of(name, ct, bytes.NewReader(data.Bytes()))
+	out := domain.AttachmentPreview{Filename: name, ContentType: ct, Kind: domain.PreviewKind(p.Kind), Text: p.Text, Note: p.Note,
+		Truncated: p.Truncated, Size: p.Size, SHA256: p.SHA256, Items: make([]domain.ArchiveItem, len(p.Items)), Findings: []string{}}
+	for i, it := range p.Items {
+		out.Items[i] = domain.ArchiveItem{Name: it.Name, Size: it.Size, Encrypted: it.Encrypted}
+	}
+	if s.Deliver != nil && s.Deliver.Malware != nil && data.Len() <= preview.MaxInput {
+		for _, f := range s.Deliver.Malware.ScanFile(name, data.Bytes()).Findings {
+			out.Findings = append(out.Findings, f.Reason)
+		}
+	}
+	return out, nil
 }
 
 // GetThread returns a conversation, oldest first.

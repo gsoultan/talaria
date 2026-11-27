@@ -99,50 +99,52 @@ func MakeAdminEndpoints(svc service.AdminService) AdminEndpoints {
 
 // MailEndpoints holds one typed endpoint or stream per MailService method.
 type MailEndpoints struct {
-	ListMailboxes      kakarot.Endpoint[domain.ListMailboxes, domain.Mailboxes]
-	CreateMailbox      kakarot.Endpoint[domain.CreateMailbox, domain.MailboxCreated]
-	RenameMailbox      kakarot.Endpoint[domain.RenameMailbox, domain.Done]
-	DeleteMailbox      kakarot.Endpoint[domain.DeleteMailbox, domain.Done]
-	ListMessages       kakarot.Endpoint[domain.ListMessages, domain.MessagePage]
-	Search             kakarot.Endpoint[domain.Search, domain.Messages]
-	GetMessage         kakarot.Endpoint[domain.GetMessage, domain.Message]
-	GetThread          kakarot.Endpoint[domain.GetThread, domain.Messages]
-	UpdateFlags        kakarot.Endpoint[domain.UpdateFlags, domain.Done]
-	MoveMessages       kakarot.Endpoint[domain.MoveMessages, domain.Done]
-	DeleteMessages     kakarot.Endpoint[domain.DeleteMessages, domain.Done]
-	ListIdentities     kakarot.Endpoint[domain.ListIdentities, domain.Identities]
-	SendMessage        kakarot.Endpoint[domain.SendMessage, domain.Sent]
-	SaveDraft          kakarot.Endpoint[domain.SaveDraft, domain.DraftSaved]
-	ListQuarantine     kakarot.Endpoint[domain.ListQuarantine, domain.HeldMessages]
-	ReleaseQuarantined kakarot.Endpoint[domain.ReleaseQuarantined, domain.Done]
-	DeleteQuarantined  kakarot.Endpoint[domain.DeleteQuarantined, domain.Done]
-	GetMailSettings    kakarot.Endpoint[domain.GetMailSettings, domain.MailSettings]
-	Watch              kakarot.ServerStream[domain.Watch, domain.Change]
+	ListMailboxes        kakarot.Endpoint[domain.ListMailboxes, domain.Mailboxes]
+	CreateMailbox        kakarot.Endpoint[domain.CreateMailbox, domain.MailboxCreated]
+	RenameMailbox        kakarot.Endpoint[domain.RenameMailbox, domain.Done]
+	DeleteMailbox        kakarot.Endpoint[domain.DeleteMailbox, domain.Done]
+	ListMessages         kakarot.Endpoint[domain.ListMessages, domain.MessagePage]
+	Search               kakarot.Endpoint[domain.Search, domain.Messages]
+	GetMessage           kakarot.Endpoint[domain.GetMessage, domain.Message]
+	GetAttachmentPreview kakarot.Endpoint[domain.GetAttachmentPreview, domain.AttachmentPreview]
+	GetThread            kakarot.Endpoint[domain.GetThread, domain.Messages]
+	UpdateFlags          kakarot.Endpoint[domain.UpdateFlags, domain.Done]
+	MoveMessages         kakarot.Endpoint[domain.MoveMessages, domain.Done]
+	DeleteMessages       kakarot.Endpoint[domain.DeleteMessages, domain.Done]
+	ListIdentities       kakarot.Endpoint[domain.ListIdentities, domain.Identities]
+	SendMessage          kakarot.Endpoint[domain.SendMessage, domain.Sent]
+	SaveDraft            kakarot.Endpoint[domain.SaveDraft, domain.DraftSaved]
+	ListQuarantine       kakarot.Endpoint[domain.ListQuarantine, domain.HeldMessages]
+	ReleaseQuarantined   kakarot.Endpoint[domain.ReleaseQuarantined, domain.Done]
+	DeleteQuarantined    kakarot.Endpoint[domain.DeleteQuarantined, domain.Done]
+	GetMailSettings      kakarot.Endpoint[domain.GetMailSettings, domain.MailSettings]
+	Watch                kakarot.ServerStream[domain.Watch, domain.Change]
 }
 
 // MakeMailEndpoints builds the endpoints. Requests with a Validate
 // method are wrapped with middleware.Validated.
 func MakeMailEndpoints(svc service.MailService) MailEndpoints {
 	return MailEndpoints{
-		ListMailboxes:      svc.ListMailboxes,
-		CreateMailbox:      middleware.Validated(svc.CreateMailbox),
-		RenameMailbox:      middleware.Validated(svc.RenameMailbox),
-		DeleteMailbox:      svc.DeleteMailbox,
-		ListMessages:       svc.ListMessages,
-		Search:             svc.Search,
-		GetMessage:         svc.GetMessage,
-		GetThread:          svc.GetThread,
-		UpdateFlags:        middleware.Validated(svc.UpdateFlags),
-		MoveMessages:       middleware.Validated(svc.MoveMessages),
-		DeleteMessages:     middleware.Validated(svc.DeleteMessages),
-		ListIdentities:     svc.ListIdentities,
-		SendMessage:        middleware.Validated(svc.SendMessage),
-		SaveDraft:          svc.SaveDraft,
-		ListQuarantine:     svc.ListQuarantine,
-		ReleaseQuarantined: svc.ReleaseQuarantined,
-		DeleteQuarantined:  svc.DeleteQuarantined,
-		GetMailSettings:    svc.GetMailSettings,
-		Watch:              svc.Watch,
+		ListMailboxes:        svc.ListMailboxes,
+		CreateMailbox:        middleware.Validated(svc.CreateMailbox),
+		RenameMailbox:        middleware.Validated(svc.RenameMailbox),
+		DeleteMailbox:        svc.DeleteMailbox,
+		ListMessages:         svc.ListMessages,
+		Search:               svc.Search,
+		GetMessage:           svc.GetMessage,
+		GetAttachmentPreview: svc.GetAttachmentPreview,
+		GetThread:            svc.GetThread,
+		UpdateFlags:          middleware.Validated(svc.UpdateFlags),
+		MoveMessages:         middleware.Validated(svc.MoveMessages),
+		DeleteMessages:       middleware.Validated(svc.DeleteMessages),
+		ListIdentities:       svc.ListIdentities,
+		SendMessage:          middleware.Validated(svc.SendMessage),
+		SaveDraft:            svc.SaveDraft,
+		ListQuarantine:       svc.ListQuarantine,
+		ReleaseQuarantined:   svc.ReleaseQuarantined,
+		DeleteQuarantined:    svc.DeleteQuarantined,
+		GetMailSettings:      svc.GetMailSettings,
+		Watch:                svc.Watch,
 	}
 }
 

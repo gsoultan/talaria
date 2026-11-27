@@ -3,13 +3,14 @@
 
 import { ActionIcon, Anchor, Avatar, Badge, Box, Button, Center, Group, Loader, Menu, Paper, ScrollArea, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { useHotkeys } from '@mantine/hooks'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { errorText } from '../../lib/errors'
 import { avatarColor, bytes, fullDate, initials } from '../../lib/format'
 import { Link } from '../../lib/router'
 import { useMailActions } from './actions'
 import { openCompose } from './composeStore'
 import { bySpecial, displayName, sortMailboxes, useMailboxes } from './mailboxes'
+import { AttachmentPreview } from './AttachmentPreview'
 import { MessageBody } from './MessageBody'
 import { forward, reply } from './reply'
 import { Icon, icons } from './Shell'
@@ -38,6 +39,7 @@ function AuthBadges({ m }: { m: MessageSummary }) {
 }
 
 export function Attachments({ id, list }: { id: number; list: Attachment[] }) {
+  const [open, setOpen] = useState<Attachment | null>(null)
   const files = list.filter((a) => !(a.inline && a.contentId))
   if (files.length === 0) return null
   return (
@@ -48,13 +50,14 @@ export function Attachments({ id, list }: { id: number; list: Attachment[] }) {
           withBorder
           p="xs"
           radius="md"
-          component="a"
-          href={`/api/v1/messages/${id}/parts/${a.part}`}
-          download={a.filename || true}
+          component="button"
+          type="button"
+          onClick={() => setOpen(a)}
+          title={`Preview ${a.filename || 'attachment'}`}
           className="t-plain"
-          style={{ display: 'flex', alignItems: 'center', gap: 10, maxWidth: 280 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, maxWidth: 280, cursor: 'pointer', textAlign: 'left', background: 'var(--t-surface)', font: 'inherit', color: 'inherit' }}
         >
-          <Center w={36} h={36} bg="red.0" c="red.8" style={{ borderRadius: 6, fontSize: 11, fontWeight: 700, flex: '0 0 auto' }}>
+          <Center w={36} h={36} bg={a.risky ? 'orange.0' : 'red.0'} c={a.risky ? 'orange.8' : 'red.8'} style={{ borderRadius: 6, fontSize: 11, fontWeight: 700, flex: '0 0 auto' }}>
             {ext(a)}
           </Center>
           <Box style={{ minWidth: 0 }}>
@@ -62,11 +65,12 @@ export function Attachments({ id, list }: { id: number; list: Attachment[] }) {
               {a.filename || 'attachment'}
             </Text>
             <Text size="xs" c="dimmed">
-              {bytes(a.size)}
+              {bytes(a.size)} · Preview
             </Text>
           </Box>
         </Paper>
       ))}
+      {open && <AttachmentPreview id={id} a={open} onClose={() => setOpen(null)} />}
     </Group>
   )
 }

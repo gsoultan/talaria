@@ -4,6 +4,7 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/mail"
+	"github.com/gsoultan/talaria/internal/preview"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/uploads"
 	"github.com/gsoultan/talaria/usecase"
@@ -29,6 +31,7 @@ import (
 //	POST /api/v1/uploads                     body is the file; X-Filename names it
 //	GET  /api/v1/messages/{id}/raw           the message as .eml
 //	GET  /api/v1/messages/{id}/parts/{part}  one attachment; ?inline=1 for safe types
+//	GET  /api/v1/messages/{id}/parts/{part}/image  an image attachment, redrawn as PNG
 type files struct {
 	store   *store.Store
 	blobs   *blob.Store
@@ -39,6 +42,30 @@ func (f *files) register(r *httpx.Router) {
 	r.HandleFunc("POST /api/v1/uploads", f.upload)
 	r.HandleFunc("GET /api/v1/messages/{id}/raw", f.raw)
 	r.HandleFunc("GET /api/v1/messages/{id}/parts/{part}", f.part)
+	r.HandleFunc("GET /api/v1/messages/{id}/parts/{part}/image", f.image)
+}
+
+// image is an attachment's image decoded and drawn again as PNG, for the
+// safe preview: whatever else was in the file is left behind.
+func (f *files) image(w http.ResponseWriter, r *http.Request) {
+	rc, _, ok := f.open(w, r)
+	if !ok {
+		return
+	}
+	defer rc.Close()
+	_, body, err := mail.OpenPart(rc, r.PathValue("part"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	var out bytes.Buffer
+	if err := preview.Image(body, &out); err != nil {
+		http.Error(w, "not an image that can be previewed", http.StatusUnprocessableEntity)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Write(out.Bytes())
 }
 
 func signedIn(w http.ResponseWriter, r *http.Request) (store.User, bool) {

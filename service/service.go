@@ -62,6 +62,8 @@ type MailService interface {
 	Search(ctx context.Context, in domain.Search) (domain.Messages, error)
 	//kakarot:http GET /api/v1/messages/{id}
 	GetMessage(ctx context.Context, in domain.GetMessage) (domain.Message, error)
+	//kakarot:http GET /api/v1/messages/{id}/parts/{part}/preview
+	GetAttachmentPreview(ctx context.Context, in domain.GetAttachmentPreview) (domain.AttachmentPreview, error)
 	//kakarot:http GET /api/v1/threads/{threadId}
 	GetThread(ctx context.Context, in domain.GetThread) (domain.Messages, error)
 	//kakarot:http POST /api/v1/messages/flags

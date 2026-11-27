@@ -134,6 +134,49 @@ type Attachment struct {
 	Size        int64  `json:"size"`
 	ContentID   string `json:"contentId"`
 	Inline      bool   `json:"inline"`
+	// Risky types (Office files, PDFs, archives, HTML, programs) can carry
+	// macros or exploits; the webmail offers a safe preview first.
+	Risky bool `json:"risky"`
+}
+
+// GetAttachmentPreview asks for a safe preview of an attachment.
+type GetAttachmentPreview struct {
+	ID   int64  `json:"-" path:"id"`
+	Part string `json:"-" path:"part"`
+}
+
+// PreviewKind is what a preview shows.
+type PreviewKind string
+
+// Preview kinds.
+const (
+	PreviewText  PreviewKind = "text"  // Text
+	PreviewImage PreviewKind = "image" // the redrawn image at .../image
+	PreviewList  PreviewKind = "list"  // Items, an archive's files
+	PreviewNone  PreviewKind = "none"  // nothing to show; Note says why
+)
+
+// AttachmentPreview is what is in an attachment, read without running
+// anything in it.
+type AttachmentPreview struct {
+	Filename    string        `json:"filename"`
+	ContentType string        `json:"contentType"`
+	Kind        PreviewKind   `json:"kind"`
+	Text        string        `json:"text"`
+	Items       []ArchiveItem `json:"items"`
+	Note        string        `json:"note"`
+	Truncated   bool          `json:"truncated"`
+	Size        int64         `json:"size"`
+	SHA256      string        `json:"sha256"`
+	// Findings are what the malware scanner reports for this file.
+	Findings []string `json:"findings"`
+}
+
+// ArchiveItem is a file inside an archive.
+type ArchiveItem struct {
+	Name      string `json:"name"`
+	Size      int64  `json:"size"`
+	Encrypted bool   `json:"encrypted"`
 }
 
 // Header is one message header.

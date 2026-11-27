@@ -241,6 +241,14 @@ func TestUploadDraftDownload(t *testing.T) {
 	if string(body) != "quarterly numbers" || res.Header.Get("Content-Security-Policy") == "" {
 		t.Fatalf("download: %q %v", body, res.Header)
 	}
+	var pv domain.AttachmentPreview
+	if st, code := e.call("GET", fmt.Sprintf("/api/v1/messages/%d/parts/%s/preview", saved.DraftID, m.Message.Attachments[0].Part), nil, &pv); st != 200 ||
+		pv.Kind != domain.PreviewText || pv.Text != "quarterly numbers" || pv.Filename != "Q3 report.txt" || len(pv.SHA256) != 64 {
+		t.Fatalf("preview: %d %s %+v", st, code, pv)
+	}
+	if res, _ := e.client.Get(fmt.Sprintf("%s/api/v1/messages/%d/parts/%s/image", e.srv.URL, saved.DraftID, m.Message.Attachments[0].Part)); res.StatusCode != 422 {
+		t.Fatalf("text as image: %d", res.StatusCode)
+	}
 
 	// Another user's upload id is not found, and stale ids are refused.
 	if st, code := e.call("POST", "/api/v1/drafts", domain.SaveDraft{Message: domain.Compose{
@@ -279,8 +287,8 @@ func TestOpenAPI(t *testing.T) {
 	for _, ops := range doc.Paths {
 		n += len(ops)
 	}
-	if n != 52 { // the generated routes; uploads and downloads are raw HTTP
-		t.Fatalf("%d operations, want 52", n)
+	if n != 53 { // the generated routes; uploads and downloads are raw HTTP
+		t.Fatalf("%d operations, want 53", n)
 	}
 }
 

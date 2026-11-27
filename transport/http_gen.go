@@ -66,6 +66,7 @@ func RegisterMailHTTP(r *httpx.Router, eps endpoint.MailEndpoints, mws ...kakaro
 	g.Handle("GET /api/v1/mailboxes/{mailboxId}/messages", eps.ListMessages, httpx.Name("ListMessages"))
 	g.Handle("GET /api/v1/search", eps.Search, httpx.Name("Search"))
 	g.Handle("GET /api/v1/messages/{id}", eps.GetMessage, httpx.Name("GetMessage"))
+	g.Handle("GET /api/v1/messages/{id}/parts/{part}/preview", eps.GetAttachmentPreview, httpx.Name("GetAttachmentPreview"))
 	g.Handle("GET /api/v1/threads/{threadId}", eps.GetThread, httpx.Name("GetThread"))
 	g.Handle("POST /api/v1/messages/flags", eps.UpdateFlags, httpx.Name("UpdateFlags"))
 	g.Handle("POST /api/v1/messages/move", eps.MoveMessages, httpx.Name("MoveMessages"))

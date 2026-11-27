@@ -147,6 +147,24 @@ Only signed-in users are redirected, so the link check cannot be used as
 an open redirect. The stored message is not changed: mail apps over IMAP
 and POP3 see the original links.
 
+## Safe attachments
+
+Clicking an attachment in the webmail opens a preview, not the file.
+The server reads the file and sends back only what is in it, so nothing
+in it runs in the browser or on the computer:
+
+- **Text** of Word, Excel, PowerPoint and OpenDocument files, PDFs, RTF,
+  HTML (as plain text), saved messages and text files.
+- **The file list** of zip archives.
+- **Images** decoded and drawn again as PNG, which leaves behind metadata
+  and anything hidden in or appended to the file.
+
+Types that can carry macros or exploits (Office, PDF, archives, HTML,
+programs) are marked, and the preview says what the malware scanner
+finds in the file. Download is a separate button, and is not offered at
+all for a file the scanner flags. PDFs drawn from scanned pages or fonts
+with their own encodings have no readable text; the preview says so.
+
 ## Outbound mail
 
 Most VPS providers block outbound port 25, so `outbound.mode = "relay"` is the
