@@ -10,6 +10,8 @@ export type MimeResponse =
   | { id: number; ok: true; text: string; hasRemote?: boolean }
   | { id: number; ok: false; error: string }
 
+import { rewriteLinks } from '../lib/links'
+
 declare const self: DedicatedWorkerGlobalScope
 
 const remoteRef = /(?:\bsrc|\bbackground|\bposter|srcset)\s*=\s*["']?\s*(?:https?:)?\/\/|url\(\s*["']?\s*(?:https?:)?\/\//i
@@ -20,6 +22,8 @@ function prepare(r: PrepareHtml): { text: string; hasRemote: boolean } {
   html = html.replace(/cid:([^"'\s)>]+)/gi, (m, cid: string) => r.cids[cid.replace(/^<|>$/g, '')] ?? m)
   // Nothing in a message may move the frame elsewhere on its own.
   html = html.replace(/<meta[^>]+http-equiv[^>]*>/gi, '').replace(/<base[^>]*>/gi, '')
+  // Links open through the safe-links check.
+  html = rewriteLinks(html, r.origin)
   const hasRemote = remoteRef.test(html)
   const img = r.allowRemote ? `data: ${r.origin} https: http:` : `data: ${r.origin}`
   // No scripts, frames, forms or plugins; styles inline; images as allowed.

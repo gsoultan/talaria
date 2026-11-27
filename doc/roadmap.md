@@ -22,8 +22,8 @@ optional and talk to Talaria over a socket.
    about 1 GB of memory on its own.
 4. **Quarantine** (done). Per tenant, with a digest that lets people release or
    delete their own held mail, and an admin review screen.
-5. **Safe links.** Links in incoming mail are rewritten to a redirect that
-   checks the target against phishing lists and URLhaus when clicked.
+5. **Safe links** (done). Links in incoming mail are rewritten in the
+   webmail to a redirect that checks the target against phishing lists and URLhaus when clicked.
 6. **Safe attachments.** Risky files open in a sandboxed preview instead of
    downloading.
 7. **Data loss prevention.** Per-tenant policies for outgoing mail that

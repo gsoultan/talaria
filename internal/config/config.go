@@ -39,6 +39,25 @@ type Config struct {
 	Spam        Spam       `toml:"spam"`
 	Malware     Malware    `toml:"malware"`
 	Quarantine  Quarantine `toml:"quarantine"`
+	SafeLinks   SafeLinks  `toml:"safe_links"`
+}
+
+// SafeLinks configures the link check behind links opened from the webmail.
+type SafeLinks struct {
+	Enabled bool `toml:"enabled"`
+	// Feeds replace the built-in URLhaus and OpenPhish feeds.
+	Feeds []LinkFeed `toml:"feed"`
+	// Refresh is how often feeds are downloaded again.
+	Refresh Duration `toml:"refresh"`
+	// Block lists domains never to open, with their subdomains.
+	Block []string `toml:"block"`
+}
+
+// LinkFeed is a threat feed: one URL (or, with hosts, one host) per line.
+type LinkFeed struct {
+	Name  string `toml:"name"`
+	URL   string `toml:"url"`
+	Hosts bool   `toml:"hosts"`
 }
 
 // Quarantine configures held mail.
@@ -241,6 +260,7 @@ func Default() Config {
 		Spam:       Spam{Enabled: true, JunkScore: 6, QuarantineScore: 10, RejectScore: 15},
 		Malware:    Malware{Enabled: true, BlockMacros: true, Action: "quarantine"},
 		Quarantine: Quarantine{KeepDays: 30, Digest: true, DigestHour: 8},
+		SafeLinks:  SafeLinks{Enabled: true, Refresh: Duration(30 * time.Minute)},
 		Log:        Log{Level: "info", Format: "text"},
 		HTTP:       HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
 		TLS:        TLS{Mode: "off"},
@@ -352,6 +372,14 @@ func (c Config) Validate() error {
 	}
 	if h := c.Quarantine.DigestHour; h < 0 || h > 23 {
 		errs = append(errs, errors.New("quarantine.digest_hour must be 0 to 23"))
+	}
+	for _, f := range c.SafeLinks.Feeds {
+		if f.Name == "" || !strings.HasPrefix(f.URL, "https://") && !strings.HasPrefix(f.URL, "http://") {
+			errs = append(errs, fmt.Errorf("safe_links.feed %q: needs a name and an http(s) url", f.Name))
+		}
+	}
+	if c.SafeLinks.Enabled && c.SafeLinks.Refresh.D() < time.Minute {
+		errs = append(errs, errors.New("safe_links.refresh must be at least 1m"))
 	}
 	if a := c.Malware.ClamAV; a != "" && !strings.HasPrefix(a, "unix:") && !strings.HasPrefix(a, "tcp:") {
 		errs = append(errs, errors.New("malware.clamav must be unix:/path/to/clamd.ctl or tcp:host:port"))

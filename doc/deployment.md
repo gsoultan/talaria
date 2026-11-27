@@ -128,6 +128,25 @@ released or deleted.
   its HTML), then release it to the recipient or delete it.
 - Held mail is deleted after `quarantine.keep_days` (30).
 
+## Safe links
+
+Every link in a message opened in the webmail goes through
+`/api/v1/link`, which checks it when it is clicked, so a link that turned
+bad after the mail arrived is still caught (`[safe_links]`):
+
+- **Threat feeds.** URLhaus (malware) and OpenPhish (phishing) are
+  downloaded every 30 minutes and kept in `data_dir/safelinks`, so a
+  restart works without them. Replace them with `[[safe_links.feed]]`
+  entries: one URL per line, or one host per line with `hosts = true`.
+- **Blocked domains** (`safe_links.block`), with their subdomains.
+- **Tells of phishing** get a warning with a way through: a bare IP
+  address, look-alike international characters, a user name in front of
+  the real host (`https://paypal.com@evil.example`), an unusual port.
+
+Only signed-in users are redirected, so the link check cannot be used as
+an open redirect. The stored message is not changed: mail apps over IMAP
+and POP3 see the original links.
+
 ## Outbound mail
 
 Most VPS providers block outbound port 25, so `outbound.mode = "relay"` is the

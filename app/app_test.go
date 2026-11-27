@@ -23,6 +23,7 @@ import (
 	"github.com/gsoultan/talaria/internal/blob"
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/mail"
+	"github.com/gsoultan/talaria/internal/safelinks"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/store/pgtest"
 	"github.com/gsoultan/talaria/internal/uploads"
@@ -56,7 +57,8 @@ func setup(t *testing.T) *env {
 	u, _ := st.CreateUser(ctx, tn.ID, "ana@northwind.example", "Ana", hash, store.RoleUser, 0)
 	ups, _ := uploads.New(dir+"/uploads", 1<<20)
 	d := &mail.Deliverer{Store: st, Blobs: bl, Hub: h, Hostname: "mx.test", TmpDir: dir}
-	r := Build(Deps{Store: st, Blobs: bl, Hub: h, Deliver: d, Uploads: ups, Hostname: "mx.test", MaxSize: 1 << 20})
+	links := &safelinks.Checker{Block: []string{"blocked.example"}}
+	r := Build(Deps{Store: st, Blobs: bl, Hub: h, Deliver: d, Uploads: ups, Hostname: "mx.test", MaxSize: 1 << 20, SafeLinks: links})
 	srv := httptest.NewTLSServer(r) // Secure cookies need https
 	t.Cleanup(srv.Close)
 	c := srv.Client()
@@ -279,5 +281,40 @@ func TestOpenAPI(t *testing.T) {
 	}
 	if n != 52 { // the generated routes; uploads and downloads are raw HTTP
 		t.Fatalf("%d operations, want 52", n)
+	}
+}
+
+func TestSafeLinks(t *testing.T) {
+	e := setup(t)
+	e.client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	get := func(target string) (int, string, string) {
+		t.Helper()
+		res, err := e.client.Get(e.srv.URL + "/api/v1/link?u=" + url.QueryEscape(target))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		b, _ := io.ReadAll(res.Body)
+		return res.StatusCode, res.Header.Get("Location"), string(b)
+	}
+	// Not an open redirect: strangers are not sent anywhere.
+	if st, loc, _ := get("https://example.org/"); st != 401 || loc != "" {
+		t.Fatalf("signed out: %d %q", st, loc)
+	}
+	e.login()
+	if st, loc, _ := get("https://example.org/a?b=1"); st != 303 || loc != "https://example.org/a?b=1" {
+		t.Fatalf("safe: %d %q", st, loc)
+	}
+	if st, loc, body := get("https://x.blocked.example/login"); st != 200 || loc != "" || !strings.Contains(body, "This link was blocked") || strings.Contains(body, "Open it anyway") {
+		t.Fatalf("blocked: %d %q %s", st, loc, body)
+	}
+	if st, _, body := get("http://198.51.100.7/login"); st != 200 || !strings.Contains(body, "bare IP address") || !strings.Contains(body, `href="http://198.51.100.7/login"`) {
+		t.Fatalf("suspicious: %d %s", st, body)
+	}
+	if st, loc, body := get("javascript:alert(1)"); st != 200 || loc != "" || strings.Contains(body, "href=\"javascript") {
+		t.Fatalf("javascript: %d %q", st, loc)
+	}
+	if _, _, body := get(`https://evil.example/"><script>alert(1)</script>`); strings.Contains(body, "<script>alert") {
+		t.Fatal("not escaped")
 	}
 }

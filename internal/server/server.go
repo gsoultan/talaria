@@ -38,6 +38,7 @@ import (
 	"github.com/gsoultan/talaria/internal/malware"
 	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/pop3"
+	"github.com/gsoultan/talaria/internal/safelinks"
 	"github.com/gsoultan/talaria/internal/smtpd"
 	"github.com/gsoultan/talaria/internal/spam"
 	"github.com/gsoultan/talaria/internal/store"
@@ -55,6 +56,7 @@ type Server struct {
 	Hub     *hub.Hub
 	Filter  *filter.Filter // inbound connection checks
 	learner *spam.Learner
+	links   *safelinks.Checker
 	Deliver *mail.Deliverer
 	Keys    *outbound.Keys
 	Queue   *outbound.Queue
@@ -192,6 +194,18 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 		UserReleaseMalware: cfg.Malware.UserRelease, QuarantineDays: cfg.Quarantine.KeepDays}
 	if cfg.Outbound.Mode == "relay" {
 		deps.RelayHost = cfg.Outbound.Relay.Host
+	}
+
+	if sl := cfg.SafeLinks; sl.Enabled {
+		feeds := safelinks.DefaultFeeds
+		if len(sl.Feeds) > 0 {
+			feeds = nil
+			for _, f := range sl.Feeds {
+				feeds = append(feeds, safelinks.Feed{Name: f.Name, URL: f.URL, Hosts: f.Hosts})
+			}
+		}
+		s.links = &safelinks.Checker{Feeds: feeds, Block: sl.Block, Dir: filepath.Join(cfg.DataDir, "safelinks"), Log: log}
+		deps.SafeLinks = s.links
 	}
 
 	mux := http.NewServeMux()
@@ -380,6 +394,10 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 
 	jctx, stopJanitor := context.WithCancel(ctx)
+	if s.links != nil {
+		wg.Add(1)
+		go func() { defer wg.Done(); s.links.Run(jctx, s.cfg.SafeLinks.Refresh.D()) }()
+	}
 	wg.Add(4)
 	go func() { defer wg.Done(); s.digests(jctx) }()
 	go func() { defer wg.Done(); s.janitor(jctx) }()

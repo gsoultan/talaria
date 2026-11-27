@@ -142,3 +142,16 @@ digest = true
 digest_hour = 8
 # The webmail address the digest links to. Default https://<hostname>.
 # web_url = "https://mail.example.com"
+
+[safe_links]
+# Links opened from the webmail are checked when clicked, against threat
+# feeds and a few tells of phishing, and blocked or warned about.
+enabled = true
+refresh = "30m"
+# Domains never to open, with their subdomains.
+# block = ["bad.example"]
+# Replace the built-in feeds (URLhaus and OpenPhish). A feed is one URL
+# per line, or one host per line with hosts = true.
+# [[safe_links.feed]]
+# name = "URLhaus"
+# url = "https://urlhaus.abuse.ch/downloads/text_online/"

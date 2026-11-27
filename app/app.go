@@ -26,6 +26,7 @@ import (
 	"github.com/gsoultan/talaria/internal/hub"
 	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/outbound"
+	"github.com/gsoultan/talaria/internal/safelinks"
 	"github.com/gsoultan/talaria/internal/store"
 	"github.com/gsoultan/talaria/internal/uploads"
 	"github.com/gsoultan/talaria/transport"
@@ -54,6 +55,8 @@ type Deps struct {
 	Route     string // where outbound mail goes, for the queue view
 	RelayHost string
 	Wake      func() // nudges the outbound queue
+	// SafeLinks checks links when they are clicked; nil opens them as is.
+	SafeLinks *safelinks.Checker
 	// Who may release held mail, and how long it is kept.
 	UserReleaseMalware bool
 	QuarantineDays     int
@@ -89,6 +92,7 @@ func Build(d Deps) *httpx.Router {
 	transport.RegisterMailHTTP(r, endpoint.MakeMailEndpoints(mailUC), mailMW)
 	transport.RegisterAdminHTTP(r, endpoint.MakeAdminEndpoints(adminUC), public, signedIn)
 	(&files{store: d.Store, blobs: d.Blobs, uploads: d.Uploads}).register(r)
+	(&links{check: d.SafeLinks, log: log}).register(r)
 	r.ServeOpenAPI("GET /api/v1/openapi.json", APIInfo)
 	return r
 }

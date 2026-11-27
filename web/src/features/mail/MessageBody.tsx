@@ -3,6 +3,7 @@
 
 import { Alert, Button, Group, Text } from '@mantine/core'
 import { useEffect, useRef, useState } from 'react'
+import { safeHref } from '../../lib/links'
 import { prepareHtml } from '../../lib/mimeWorker'
 import { type MessageDetail } from '../../lib/api'
 
@@ -37,7 +38,7 @@ function PlainText({ text }: { text: string }) {
     <Text component="div" size="sm" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', lineHeight: 1.6 }}>
       {parts.map((p, i) =>
         i % 2 === 1 ? (
-          <a key={i} href={p} target="_blank" rel="noopener noreferrer nofollow">
+          <a key={i} href={safeHref(p)} title={p} target="_blank" rel="noopener noreferrer nofollow">
             {p}
           </a>
         ) : (
