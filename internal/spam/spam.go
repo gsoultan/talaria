@@ -31,6 +31,9 @@ import (
 type Config struct {
 	// JunkScore files a message in Junk at or above it. Default 6.
 	JunkScore float64
+	// QuarantineScore holds a message in quarantine at or above it,
+	// instead of filing it in Junk. 0 or less never quarantines.
+	QuarantineScore float64
 	// RejectScore refuses a message during SMTP at or above it, before the
 	// per-user filter runs. Default 15; 0 or less never refuses.
 	RejectScore float64
@@ -55,6 +58,11 @@ func New(cfg Config, st *store.Store, log *slog.Logger) *Scorer {
 
 // JunkScore is the Junk threshold.
 func (s *Scorer) JunkScore() float64 { return s.cfg.JunkScore }
+
+// Quarantines reports whether a score is high enough to hold the message.
+func (s *Scorer) Quarantines(score float64) bool {
+	return s.cfg.QuarantineScore > 0 && score >= s.cfg.QuarantineScore
+}
 
 // Rejects reports whether a score is high enough to refuse the message.
 func (s *Scorer) Rejects(score float64) bool {

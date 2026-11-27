@@ -214,6 +214,10 @@ export function Folders({ onPick }: { onPick?: () => void }) {
             <Icon d={icons.star} size={16} />
             <span style={{ flex: 1 }}>Starred</span>
           </Link>
+          <Link to="/quarantine" className="t-folder" data-active={path === '/quarantine'} onClick={onPick}>
+            <Icon d={icons.shield} size={16} />
+            <span style={{ flex: 1 }}>Quarantine</span>
+          </Link>
         </Stack>
       </nav>
       <Identities />

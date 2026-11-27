@@ -22,6 +22,8 @@ const DomainsPage = lazy(() => import('../features/admin/DomainsPage').then((m) 
 const UsersPage = lazy(() => import('../features/admin/UsersPage').then((m) => ({ default: m.UsersPage })))
 const QueuePage = lazy(() => import('../features/admin/QueuePage').then((m) => ({ default: m.QueuePage })))
 const FilteringPage = lazy(() => import('../features/admin/FilteringPage').then((m) => ({ default: m.FilteringPage })))
+const QuarantineAdminPage = lazy(() => import('../features/admin/QuarantineAdminPage').then((m) => ({ default: m.QuarantineAdminPage })))
+const QuarantinePage = lazy(() => import('../features/quarantine/QuarantinePage').then((m) => ({ default: m.QuarantinePage })))
 const TenantsPage = lazy(() => import('../features/admin/TenantsPage').then((m) => ({ default: m.TenantsPage })))
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 
@@ -64,6 +66,7 @@ function Routes() {
     else if (path === '/admin/users') page = <UsersPage />
     else if (path === '/admin/queue') page = <QueuePage />
     else if (path === '/admin/filtering') page = <FilteringPage />
+    else if (path === '/admin/quarantine') page = <QuarantineAdminPage />
     else if (path === '/admin/tenants' && isPlatformAdmin(me)) page = <TenantsPage />
     else page = <Redirect to="/admin/domains" />
     return (
@@ -80,6 +83,12 @@ function Routes() {
   else if ((p = match('/starred/:msg?', path))) page = <StarredPage messageId={p.msg} />
   else if (path === '/search') page = <SearchPage q={query.get('q') ?? ''} messageId={query.get('m') ?? undefined} />
   else if ((p = match('/thread/:id', path)) && /^\d+$/.test(p.id!)) page = <ThreadPage id={p.id!} />
+  else if (path === '/quarantine')
+    page = (
+      <Suspense fallback={spinner}>
+        <QuarantinePage />
+      </Suspense>
+    )
   else if ((p = match('/settings/:section?', path)))
     page = (
       <Suspense fallback={spinner}>

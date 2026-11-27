@@ -20,7 +20,7 @@ optional and talk to Talaria over a socket.
 3. **Anti-malware** (done). Block dangerous attachment types and Office files with
    macros, with built-in YARA rules. ClamAV is optional, because it needs
    about 1 GB of memory on its own.
-4. **Quarantine.** Per tenant, with a digest that lets people release or
+4. **Quarantine** (done). Per tenant, with a digest that lets people release or
    delete their own held mail, and an admin review screen.
 5. **Safe links.** Links in incoming mail are rewritten to a redirect that
    checks the target against phishing lists and URLhaus when clicked.

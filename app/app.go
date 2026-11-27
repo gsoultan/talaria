@@ -54,7 +54,10 @@ type Deps struct {
 	Route     string // where outbound mail goes, for the queue view
 	RelayHost string
 	Wake      func() // nudges the outbound queue
-	Logger    *slog.Logger
+	// Who may release held mail, and how long it is kept.
+	UserReleaseMalware bool
+	QuarantineDays     int
+	Logger             *slog.Logger
 }
 
 func ipOf(ctx context.Context) string { return clientip.From(ctx).String() }
@@ -66,10 +69,11 @@ func Build(d Deps) *httpx.Router {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
+	qp := usecase.QuarantinePolicy{UserReleaseMalware: d.UserReleaseMalware, KeepDays: d.QuarantineDays}
 	authUC := usecase.NewAuth(d.Store, cookies{}, ipOf)
 	mailUC := &usecase.Mail{Store: d.Store, Blobs: d.Blobs, Hub: d.Hub, Submit: d.Submit, Deliver: d.Deliver, Uploads: d.Uploads,
-		IP: ipOf, Hostname: d.Hostname, MaxSize: d.MaxSize, Endpoints: d.Endpoints}
-	adminUC := &usecase.Admin{Store: d.Store, Keys: d.Keys, Hostname: d.Hostname, Route: d.Route, RelayHost: d.RelayHost, Wake: d.Wake}
+		IP: ipOf, Hostname: d.Hostname, MaxSize: d.MaxSize, Endpoints: d.Endpoints, Quarantine: qp}
+	adminUC := &usecase.Admin{Store: d.Store, Blobs: d.Blobs, Deliver: d.Deliver, Quarantine: qp, Keys: d.Keys, Hostname: d.Hostname, Route: d.Route, RelayHost: d.RelayHost, Wake: d.Wake}
 
 	// Shared endpoint middleware. Mail has no timeout because Watch is a
 	// long-lived stream; its calls are bounded by the HTTP server instead.

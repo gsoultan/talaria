@@ -10,6 +10,8 @@ import (
 
 	"github.com/gsoultan/talaria/domain"
 	"github.com/gsoultan/talaria/internal/auth"
+	"github.com/gsoultan/talaria/internal/blob"
+	"github.com/gsoultan/talaria/internal/mail"
 	"github.com/gsoultan/talaria/internal/outbound"
 	"github.com/gsoultan/talaria/internal/store"
 )
@@ -18,9 +20,13 @@ import (
 // Every call is scoped: tenant admins see and change only their own tenant,
 // and only platform admins manage tenants or grant the platform admin role.
 type Admin struct {
-	Store    *store.Store
-	Keys     *outbound.Keys
-	Hostname string
+	Store   *store.Store
+	Blobs   *blob.Store
+	Deliver *mail.Deliverer
+	// Quarantine is the held-mail policy.
+	Quarantine QuarantinePolicy
+	Keys       *outbound.Keys
+	Hostname   string
 	// Route describes where outbound mail goes, for the queue view.
 	Route     string
 	RelayHost string

@@ -105,6 +105,9 @@ max_per_ip_hour = 500
 enabled = true
 # File in Junk at or above this score.
 junk_score = 6
+# Hold in quarantine at or above this score; people release or delete it
+# from the webmail. 0 never quarantines.
+quarantine_score = 10
 # Refuse during SMTP at or above this score. 0 never refuses.
 reject_score = 15
 # Optional: add the score of a local Rspamd worker.
@@ -117,6 +120,11 @@ reject_score = 15
 # with macros, and files that match the built-in YARA rules.
 enabled = true
 block_macros = true
+# "quarantine" holds it for an admin to review; "reject" refuses it so
+# the sender gets a bounce.
+action = "quarantine"
+# Let people release held malware themselves (otherwise only admins).
+user_release = false
 # Password-protected archives cannot be looked inside.
 block_encrypted_archives = false
 # Replace the built-in list of refused file types.
@@ -125,3 +133,12 @@ block_encrypted_archives = false
 # rules_dir = "/etc/talaria/yara"
 # ClamAV adds signature scanning. It needs about 1 GB of memory.
 # clamav = "unix:/run/clamav/clamd.ctl"
+
+[quarantine]
+# Held mail is deleted after this many days.
+keep_days = 30
+# Mail each person a daily list of what was held for them.
+digest = true
+digest_hour = 8
+# The webmail address the digest links to. Default https://<hostname>.
+# web_url = "https://mail.example.com"

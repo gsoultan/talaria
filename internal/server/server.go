@@ -126,7 +126,7 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 		TmpDir:  filepath.Join(cfg.DataDir, "tmp"), MaxSize: int64(cfg.SMTP.MaxMessageSize),
 	}
 	if cfg.Spam.Enabled {
-		sc := spam.Config{JunkScore: cfg.Spam.JunkScore, RejectScore: cfg.Spam.RejectScore}
+		sc := spam.Config{JunkScore: cfg.Spam.JunkScore, QuarantineScore: cfg.Spam.QuarantineScore, RejectScore: cfg.Spam.RejectScore}
 		if cfg.Spam.RspamdURL != "" {
 			sc.Rspamd = &spam.Rspamd{URL: cfg.Spam.RspamdURL}
 			if f := cfg.Spam.RspamdPasswordFile; f != "" {
@@ -157,6 +157,7 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 			mc.ClamAV = &malware.ClamAV{Address: m.ClamAV}
 		}
 		s.Deliver.Malware = malware.New(mc, log)
+		s.Deliver.MalwareAction = m.Action
 	}
 	// Training runs even with scoring off, so the filters are ready when
 	// it is turned on.
@@ -187,7 +188,8 @@ func New(cfg config.Config, log *slog.Logger) (*Server, error) {
 	}
 	deps := app.Deps{Store: st, Blobs: bl, Hub: s.Hub, Submit: s.Submit, Deliver: s.Deliver, Keys: s.Keys, Uploads: ups,
 		Hostname: cfg.Hostname, MaxSize: int64(cfg.SMTP.MaxMessageSize), Endpoints: mailEndpoints(cfg),
-		Route: route, Wake: s.Queue.Wake, Logger: log}
+		Route: route, Wake: s.Queue.Wake, Logger: log,
+		UserReleaseMalware: cfg.Malware.UserRelease, QuarantineDays: cfg.Quarantine.KeepDays}
 	if cfg.Outbound.Mode == "relay" {
 		deps.RelayHost = cfg.Outbound.Relay.Host
 	}
@@ -378,7 +380,8 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 
 	jctx, stopJanitor := context.WithCancel(ctx)
-	wg.Add(3)
+	wg.Add(4)
+	go func() { defer wg.Done(); s.digests(jctx) }()
 	go func() { defer wg.Done(); s.janitor(jctx) }()
 	go func() { defer wg.Done(); s.learner.Run(jctx, 30*time.Second) }()
 	go func() { defer wg.Done(); s.Queue.Run(jctx) }()
@@ -482,6 +485,38 @@ func (s *Server) mailListener(name, addr string, implicit bool, pp config.ProxyP
 	return l, nil
 }
 
+// digests mails the daily quarantine digest at the configured hour.
+func (s *Server) digests(ctx context.Context) {
+	q := s.cfg.Quarantine
+	if !q.Digest {
+		return
+	}
+	url := q.WebURL
+	if url == "" {
+		url = "https://" + s.cfg.Hostname
+	}
+	t := time.NewTicker(time.Minute)
+	defer t.Stop()
+	last := ""
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case now := <-t.C:
+			day := now.Format("2006-01-02")
+			if now.Hour() != q.DigestHour || day == last {
+				continue
+			}
+			last = day
+			if n, err := s.Deliver.SendDigests(ctx, url); err != nil {
+				s.log.Warn("quarantine digest", "err", err)
+			} else if n > 0 {
+				s.log.Info("quarantine digests sent", "n", n)
+			}
+		}
+	}
+}
+
 // janitor does periodic housekeeping: expired sessions, unreferenced blobs
 // and old expunge records.
 func (s *Server) janitor(ctx context.Context) {
@@ -521,6 +556,11 @@ func (s *Server) sweep(ctx context.Context) {
 		if err := s.Filter.Prune(ctx); err != nil {
 			s.log.Warn("prune greylist", "err", err)
 		}
+	}
+	if n, err := s.Store.PurgeHeld(ctx, time.Now().Add(-time.Duration(s.cfg.Quarantine.KeepDays)*24*time.Hour).Unix()); err != nil {
+		s.log.Warn("purge quarantine", "err", err)
+	} else if n > 0 {
+		s.log.Info("purged quarantine", "n", n)
 	}
 	if err := s.Store.PruneQueue(ctx, 30*86400); err != nil {
 		s.log.Warn("prune queue", "err", err)

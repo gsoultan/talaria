@@ -92,6 +92,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     { to: '/admin/users', label: 'Users' },
     { to: '/admin/queue', label: 'Outbound queue' },
     { to: '/admin/filtering', label: 'Sender filtering' },
+    { to: '/admin/quarantine', label: 'Quarantine' },
     ...(isPlatformAdmin(me) ? [{ to: '/admin/tenants', label: 'Tenants' }] : []),
   ]
   return (

@@ -23,16 +23,18 @@ import (
 
 // Deliverer files inbound messages into local mailboxes.
 type Deliverer struct {
-	Store    *store.Store
-	Blobs    *blob.Store
-	Hub      *hub.Hub
-	Checker  *Checker
-	Spam     *spam.Scorer // nil turns spam scoring off
-	Malware  *malware.Scanner
-	Hostname string
-	TmpDir   string
-	MaxSize  int64
-	Log      *slog.Logger
+	Store   *store.Store
+	Blobs   *blob.Store
+	Hub     *hub.Hub
+	Checker *Checker
+	Spam    *spam.Scorer // nil turns spam scoring off
+	Malware *malware.Scanner
+	// MalwareAction is "reject" (the default) or "quarantine".
+	MalwareAction string
+	Hostname      string
+	TmpDir        string
+	MaxSize       int64
+	Log           *slog.Logger
 }
 
 // Inbound is one message for one or more local users.
@@ -100,12 +102,17 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 		}
 	}
 
-	// Malware is refused outright, so the sender learns it did not arrive.
+	// Malware is refused outright, so the sender learns it did not arrive,
+	// or held for an admin to review.
+	held := ""
 	if !in.Trusted && d.Malware != nil {
 		res := d.Malware.Scan(ctx, rewind)
-		if res.Infected() {
+		if res.Infected() && d.MalwareAction != "quarantine" {
 			d.log().Warn("refused malware", "from", in.Env.MailFrom, "ip", in.Env.RemoteIP, "found", res.Summary())
 			return nil, &RejectError{Reason: "Message refused: dangerous content (" + clean(res.Summary(), 200) + ")"}
+		}
+		if res.Infected() {
+			held = clean(res.Summary(), 1000)
 		}
 		if res.Err != nil {
 			// A scanner is down: have the sender retry rather than let
@@ -118,7 +125,7 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 	// refused before it is stored; each recipient's own filter adds to it.
 	var score spam.Result
 	var toks []int64
-	scored := !in.Trusted && d.Spam != nil && in.MailboxUse == ""
+	scored := !in.Trusted && d.Spam != nil && in.MailboxUse == "" && held == ""
 	if scored {
 		rcpts := make([]string, len(in.Rcpts))
 		for i, u := range in.Rcpts {
@@ -167,7 +174,7 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 	stored := map[int64]blob.Result{}
 	errs := make([]error, len(in.Rcpts))
 	seen := map[int64]bool{}
-	delivered, junked := 0, 0
+	delivered, junked, quarantined := 0, 0, 0
 	for i, u := range in.Rcpts {
 		if seen[u.ID] {
 			continue
@@ -186,16 +193,36 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 			stored[u.TenantID] = res
 		}
 		folder, total := use, score.Score
+		reason, detail := "", ""
+		if held != "" {
+			reason, detail = store.HeldMalware, held
+		}
 		if scored {
-			if b, _ := d.Spam.Bayes(ctx, u.ID, toks); b != 0 {
+			if b, sym := d.Spam.Bayes(ctx, u.ID, toks); b != 0 {
 				total += b
+				detail = sym
 			}
 			switch {
 			case d.allowedFor(ctx, u.TenantID, in, sum.FromAddr):
 				folder = store.UseInbox
+			case d.Spam.Quarantines(total):
+				reason, detail = store.HeldSpam, clean(score.Header()+" "+detail, 1000)
 			case total >= d.Spam.JunkScore():
 				folder = store.UseJunk
 			}
+		}
+		if reason != "" {
+			_, err := d.Store.Hold(ctx, store.Held{TenantID: u.TenantID, UserID: u.ID, Reason: reason, Detail: detail,
+				SpamScore: total, Auth: verdict.Bits, EnvFrom: clean(in.Env.MailFrom, 300), FromName: sum.FromName, FromAddr: sum.FromAddr,
+				Subject: sum.Subject, Size: res.Size, StoredSize: res.StoredSize, BlobHash: res.Hash})
+			if err != nil {
+				errs[i] = err
+				d.log().Warn("quarantine failed", "user", u.ID, "err", err)
+				continue
+			}
+			delivered++
+			quarantined++
+			continue
 		}
 		m, err := d.Store.InsertMessage(ctx, store.NewMessage{
 			TenantID: u.TenantID, UserID: u.ID, MailboxUse: folder, SpamScore: total,
@@ -229,8 +256,36 @@ func (d *Deliverer) Deliver(ctx context.Context, in Inbound, r io.Reader) ([]err
 		}
 		return errs, errors.New("no recipients")
 	}
-	d.log().Info("delivered", "from", in.Env.MailFrom, "rcpts", delivered, "size", n, "junk", junked, "spam", score.Score)
+	d.log().Info("delivered", "from", in.Env.MailFrom, "rcpts", delivered, "size", n, "junk", junked, "quarantined", quarantined, "spam", score.Score)
 	return errs, nil
+}
+
+// Release delivers a quarantined message to its user's Inbox and takes it
+// out of quarantine.
+func (d *Deliverer) Release(ctx context.Context, h store.Held) (store.Message, error) {
+	rc, err := d.Blobs.Open(h.TenantID, h.BlobHash)
+	if err != nil {
+		return store.Message{}, err
+	}
+	sum := Summarize(rc)
+	rc.Close()
+	m, err := d.Store.InsertMessage(ctx, store.NewMessage{
+		TenantID: h.TenantID, UserID: h.UserID, MailboxUse: store.UseInbox,
+		BlobHash: h.BlobHash, Size: h.Size, StoredSize: h.StoredSize, InternalDate: h.CreatedAt, Auth: h.Auth, SpamScore: h.SpamScore,
+		SentDate: sum.SentDate, Subject: sum.Subject, FromName: sum.FromName, FromAddr: sum.FromAddr,
+		To: sum.To, Cc: sum.Cc, MessageID: sum.MessageID, InReplyTo: sum.InReplyTo, References: sum.References,
+		Preview: sum.Preview, HasAttachments: sum.HasAttachments, SearchText: sum.Text,
+	})
+	if err != nil {
+		return m, err
+	}
+	if err := d.Store.DeleteHeld(ctx, h.ID); err != nil && !errors.Is(err, store.ErrNotFound) {
+		return m, err
+	}
+	if d.Hub != nil {
+		d.Hub.Publish(h.UserID, m.MailboxID)
+	}
+	return m, nil
 }
 
 // allowed reports whether any recipient's tenant allows the sender.

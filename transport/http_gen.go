@@ -49,6 +49,10 @@ func RegisterAdminHTTP(r *httpx.Router, eps endpoint.AdminEndpoints, mws ...kaka
 	g.Handle("GET /api/v1/admin/sender-rules", eps.ListSenderRules, httpx.Name("ListSenderRules"))
 	g.Handle("POST /api/v1/admin/sender-rules", eps.CreateSenderRule, httpx.Name("CreateSenderRule"))
 	g.Handle("DELETE /api/v1/admin/sender-rules/{id}", eps.DeleteSenderRule, httpx.Name("DeleteSenderRule"))
+	g.Handle("GET /api/v1/admin/quarantine", eps.ListHeldMail, httpx.Name("ListHeldMail"))
+	g.Handle("GET /api/v1/admin/quarantine/{id}", eps.GetHeldMail, httpx.Name("GetHeldMail"))
+	g.Handle("POST /api/v1/admin/quarantine/{id}/release", eps.ReleaseHeldMail, httpx.Name("ReleaseHeldMail"))
+	g.Handle("DELETE /api/v1/admin/quarantine/{id}", eps.DeleteHeldMail, httpx.Name("DeleteHeldMail"))
 }
 
 // RegisterMailHTTP mounts every //kakarot:http method of MailService.
@@ -69,6 +73,9 @@ func RegisterMailHTTP(r *httpx.Router, eps endpoint.MailEndpoints, mws ...kakaro
 	g.Handle("GET /api/v1/identities", eps.ListIdentities, httpx.Name("ListIdentities"))
 	g.Handle("POST /api/v1/messages/send", eps.SendMessage, httpx.Name("SendMessage"))
 	g.Handle("POST /api/v1/drafts", eps.SaveDraft, httpx.Name("SaveDraft"))
+	g.Handle("GET /api/v1/quarantine", eps.ListQuarantine, httpx.Name("ListQuarantine"))
+	g.Handle("POST /api/v1/quarantine/{id}/release", eps.ReleaseQuarantined, httpx.Name("ReleaseQuarantined"))
+	g.Handle("DELETE /api/v1/quarantine/{id}", eps.DeleteQuarantined, httpx.Name("DeleteQuarantined"))
 	g.Handle("GET /api/v1/mail-settings", eps.GetMailSettings, httpx.Name("GetMailSettings"))
 	g.Stream("GET /api/v1/watch", eps.Watch, httpx.Name("Watch"))
 }

@@ -63,7 +63,7 @@ Mail from loopback and private addresses skips the network checks.
 
 Accepted mail gets a spam score (`[spam]`), shown in the `X-Spam-Status`
 header. Around 0 is normal mail. At `junk_score` (6) it goes to Junk; at
-`reject_score` (15) it is refused during SMTP, so the sender learns it was
+`quarantine_score` (10) it is held in quarantine; at `reject_score` (15) it is refused during SMTP, so the sender learns it was
 not delivered. The score comes from:
 
 - **Sender checks.** DMARC, DKIM or SPF passes lower it; a stranger with
@@ -82,8 +82,8 @@ not delivered. The score comes from:
   about 200 MB of memory with Redis, so leave it off on a 2 GB machine
   that also runs PostgreSQL unless spam gets through.
 
-Senders on a tenant's allow list are never junked or refused for their
-score.
+Senders on a tenant's allow list are never junked, held or refused for
+their score.
 
 ## Malware
 
@@ -107,7 +107,26 @@ deep:
   so only add it on a larger machine. When it is down, mail is deferred
   with a temporary error rather than let in unscanned.
 
-To test it, send a message with the EICAR test file attached.
+With `malware.action = "quarantine"` (the default) such mail is held for
+an admin instead of refused. To test it, send a message with the EICAR
+test file attached.
+
+## Quarantine
+
+Held mail stays out of every folder, IMAP and POP3 included, until it is
+released or deleted.
+
+- **People** see their own held mail under Quarantine in the webmail and
+  can release spam to their Inbox or delete it. Mail held for a dangerous
+  attachment needs an admin, unless `malware.user_release` is on.
+- **A daily digest** (`quarantine.digest`, at `digest_hour`) lists what
+  was held for each person since the last one, with a link to the
+  webmail. Set `quarantine.web_url` if the webmail is not at
+  `https://<hostname>`.
+- **Admins** review a tenant's held mail under Admin > Quarantine: the
+  findings, attachment names, headers and the text of the message (never
+  its HTML), then release it to the recipient or delete it.
+- Held mail is deleted after `quarantine.keep_days` (30).
 
 ## Outbound mail
 

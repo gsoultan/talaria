@@ -26,18 +26,32 @@ type Config struct {
 	// Database is the PostgreSQL database for metadata and search.
 	Database Database `toml:"database"`
 	// MemoryLimit is the Go runtime soft memory limit, e.g. "512MiB".
-	MemoryLimit ByteSize `toml:"memory_limit"`
-	Log         Log      `toml:"log"`
-	HTTP        HTTP     `toml:"http"`
-	SMTP        SMTP     `toml:"smtp"`
-	IMAP        IMAP     `toml:"imap"`
-	POP3        POP3     `toml:"pop3"`
-	Outbound    Outbound `toml:"outbound"`
-	TLS         TLS      `toml:"tls"`
-	Ingest      Ingest   `toml:"ingest"`
-	Filter      Filter   `toml:"filter"`
-	Spam        Spam     `toml:"spam"`
-	Malware     Malware  `toml:"malware"`
+	MemoryLimit ByteSize   `toml:"memory_limit"`
+	Log         Log        `toml:"log"`
+	HTTP        HTTP       `toml:"http"`
+	SMTP        SMTP       `toml:"smtp"`
+	IMAP        IMAP       `toml:"imap"`
+	POP3        POP3       `toml:"pop3"`
+	Outbound    Outbound   `toml:"outbound"`
+	TLS         TLS        `toml:"tls"`
+	Ingest      Ingest     `toml:"ingest"`
+	Filter      Filter     `toml:"filter"`
+	Spam        Spam       `toml:"spam"`
+	Malware     Malware    `toml:"malware"`
+	Quarantine  Quarantine `toml:"quarantine"`
+}
+
+// Quarantine configures held mail.
+type Quarantine struct {
+	// KeepDays deletes held mail after this many days.
+	KeepDays int `toml:"keep_days"`
+	// Digest mails each user a list of what was held for them, once a day
+	// at DigestHour (0-23, server time).
+	Digest     bool `toml:"digest"`
+	DigestHour int  `toml:"digest_hour"`
+	// WebURL is the webmail address the digest links to. Default
+	// https://hostname.
+	WebURL string `toml:"web_url"`
 }
 
 // Malware configures attachment scanning of inbound mail.
@@ -51,6 +65,12 @@ type Malware struct {
 	BlockEncryptedArchives bool `toml:"block_encrypted_archives"`
 	// RulesDir holds extra YARA rules (.yar, .yara).
 	RulesDir string `toml:"rules_dir"`
+	// Action is "quarantine" (hold for an admin to review) or "reject"
+	// (refuse during SMTP).
+	Action string `toml:"action"`
+	// UserRelease lets people release held malware themselves. Off: only
+	// admins can.
+	UserRelease bool `toml:"user_release"`
 	// ClamAV is the clamd address: unix:/run/clamav/clamd.ctl or
 	// tcp:127.0.0.1:3310. Empty means no ClamAV.
 	ClamAV string `toml:"clamav"`
@@ -61,6 +81,9 @@ type Spam struct {
 	Enabled bool `toml:"enabled"`
 	// JunkScore files a message in Junk at or above it.
 	JunkScore float64 `toml:"junk_score"`
+	// QuarantineScore holds a message in quarantine at or above it, for
+	// the user to release or delete; 0 never quarantines.
+	QuarantineScore float64 `toml:"quarantine_score"`
 	// RejectScore refuses a message during SMTP at or above it; 0 never
 	// refuses. It applies before each user's own filter is consulted.
 	RejectScore float64 `toml:"reject_score"`
@@ -215,11 +238,12 @@ func Default() Config {
 			GreylistDelay: Duration(5 * time.Minute),
 			MaxPerIPHour:  500,
 		},
-		Spam:    Spam{Enabled: true, JunkScore: 6, RejectScore: 15},
-		Malware: Malware{Enabled: true, BlockMacros: true},
-		Log:     Log{Level: "info", Format: "text"},
-		HTTP:    HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
-		TLS:     TLS{Mode: "off"},
+		Spam:       Spam{Enabled: true, JunkScore: 6, QuarantineScore: 10, RejectScore: 15},
+		Malware:    Malware{Enabled: true, BlockMacros: true, Action: "quarantine"},
+		Quarantine: Quarantine{KeepDays: 30, Digest: true, DigestHour: 8},
+		Log:        Log{Level: "info", Format: "text"},
+		HTTP:       HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
+		TLS:        TLS{Mode: "off"},
 		SMTP: SMTP{
 			Listen:         ":25",
 			Submission:     ":587",
@@ -316,6 +340,18 @@ func (c Config) Validate() error {
 	}
 	if u := c.Spam.RspamdURL; u != "" && !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
 		errs = append(errs, errors.New("spam.rspamd_url must be an http:// or https:// URL"))
+	}
+	if q := c.Spam.QuarantineScore; q < 0 || (q > 0 && (q <= c.Spam.JunkScore || (c.Spam.RejectScore > 0 && q >= c.Spam.RejectScore))) {
+		errs = append(errs, errors.New("spam.quarantine_score must be 0 (never) or between junk_score and reject_score"))
+	}
+	if a := c.Malware.Action; a != "quarantine" && a != "reject" {
+		errs = append(errs, fmt.Errorf("malware.action %q: must be quarantine or reject", a))
+	}
+	if c.Quarantine.KeepDays < 1 {
+		errs = append(errs, errors.New("quarantine.keep_days must be at least 1"))
+	}
+	if h := c.Quarantine.DigestHour; h < 0 || h > 23 {
+		errs = append(errs, errors.New("quarantine.digest_hour must be 0 to 23"))
 	}
 	if a := c.Malware.ClamAV; a != "" && !strings.HasPrefix(a, "unix:") && !strings.HasPrefix(a, "tcp:") {
 		errs = append(errs, errors.New("malware.clamav must be unix:/path/to/clamd.ctl or tcp:host:port"))

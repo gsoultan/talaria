@@ -283,3 +283,66 @@ func TestDeliverMalware(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestQuarantine(t *testing.T) {
+	d, u := setup(t, fakeDNS{})
+	d.Malware = malware.New(malware.Config{BlockMacros: true, Rules: malware.Builtin()}, nil)
+	d.MalwareAction = "quarantine"
+	d.Spam = spam.New(spam.Config{JunkScore: 6, QuarantineScore: 10, RejectScore: 30}, d.Store, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	ctx := context.Background()
+	env := Envelope{RemoteIP: net.ParseIP("203.0.113.9"), Helo: "mx.example", MailFrom: "x@evil.example", BadHelo: true}
+	bad := "From: x@evil.example\r\nSubject: invoice\r\nMessage-ID: <1@evil.example>\r\nDate: Tue, 24 Nov 2026 09:00:00 +0000\r\nContent-Type: multipart/mixed; boundary=B\r\n\r\n" +
+		"--B\r\nContent-Type: text/plain\r\n\r\nsee attached\r\n" +
+		"--B\r\nContent-Type: application/octet-stream\r\nContent-Disposition: attachment; filename=\"invoice.iso\"\r\n\r\nxxxx\r\n--B--\r\n"
+	if _, err := d.Deliver(ctx, Inbound{Env: env, Rcpts: []store.User{u}, Proto: "ESMTP"}, strings.NewReader(bad)); err != nil {
+		t.Fatal(err)
+	}
+	phish := "From: \"service@paypal.com\" <x@evil.example>\r\nSubject: ACCOUNT SUSPENDED NOTICE\r\n\r\n" +
+		"Unusual sign-in activity. Verify your account at http://198.51.100.7/login\r\n"
+	if _, err := d.Deliver(ctx, Inbound{Env: env, Rcpts: []store.User{u}, Proto: "ESMTP"}, strings.NewReader(phish)); err != nil {
+		t.Fatal(err)
+	}
+	held, err := d.Store.ListHeld(ctx, store.HeldFilter{UserID: u.ID})
+	if err != nil || len(held) != 2 {
+		t.Fatalf("held: %v %+v", err, held)
+	}
+	if held[1].Reason != store.HeldMalware || !strings.Contains(held[1].Detail, "invoice.iso") || held[0].Reason != store.HeldSpam || held[0].SpamScore < 10 {
+		t.Fatalf("%+v", held)
+	}
+	for _, use := range []string{store.UseInbox, store.UseJunk} {
+		mb, _ := d.Store.MailboxByUse(ctx, u.ID, use)
+		if ms, _ := d.Store.ListMessages(ctx, u.ID, mb.ID, store.ListOptions{}); len(ms) != 0 {
+			t.Fatalf("held mail also filed in %s", use)
+		}
+	}
+
+	// The digest lists both, once.
+	if n, err := d.SendDigests(ctx, "https://mail.example"); err != nil || n != 1 {
+		t.Fatalf("digest: %d %v", n, err)
+	}
+	if n, _ := d.SendDigests(ctx, "https://mail.example"); n != 0 {
+		t.Fatal("digest sent twice")
+	}
+	inbox, _ := d.Store.MailboxByUse(ctx, u.ID, store.UseInbox)
+	ms, _ := d.Store.ListMessages(ctx, u.ID, inbox.ID, store.ListOptions{})
+	if len(ms) != 1 || ms[0].Subject != "2 held messages" || !strings.Contains(ms[0].Preview, "2 messages were held") {
+		t.Fatalf("digest: %+v", ms)
+	}
+
+	// Releasing files it in the Inbox and gives back nothing twice.
+	m, err := d.Release(ctx, held[1])
+	if err != nil || m.Subject != "invoice" || !m.HasAttachments {
+		t.Fatalf("release: %v %+v", err, m)
+	}
+	if _, err := d.Store.HeldMessage(ctx, held[1].ID); !errors.Is(err, store.ErrNotFound) {
+		t.Fatal("still held")
+	}
+	// Deleting and expiring give the blob reference back.
+	if err := d.Store.DeleteHeld(ctx, held[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	dead, _ := d.Store.DeadBlobs(ctx, 10)
+	if len(dead) != 1 || string(dead[0].Hash) != string(held[0].BlobHash) {
+		t.Fatalf("dead blobs: %+v", dead)
+	}
+}

@@ -142,6 +142,34 @@ export type Header = {
   value: string
 }
 
+export type HeldMailDetail = {
+  attachments: Attachment[]
+  headers: Header[]
+  message: HeldMessage
+  textBody: string
+}
+
+export type HeldMessage = {
+  canRelease: boolean
+  createdAt: number
+  detail: string
+  envFrom: string
+  fromAddr: string
+  fromName: string
+  id: number
+  reason: string
+  recipient: string
+  size: number
+  spamScore: number
+  subject: string
+  tenantId: number
+}
+
+export type HeldMessages = {
+  keepDays: number
+  messages: HeldMessage[]
+}
+
 export type Identities = {
   identities: Identity[]
 }
@@ -426,17 +454,21 @@ export interface Ops {
   "admin.CreateUser": { input: CreateUser; output: UserCreated }
   "admin.DeleteAlias": { input: { tenantId?: number; id: number }; output: Done }
   "admin.DeleteDomain": { input: { tenantId?: number; id: number }; output: Done }
+  "admin.DeleteHeldMail": { input: { id: number }; output: Done }
   "admin.DeleteSenderRule": { input: { tenantId?: number; id: number }; output: Done }
   "admin.DeleteTenant": { input: { id: number }; output: Done }
   "admin.DeleteUser": { input: { id: number }; output: Done }
   "admin.GetDomainSetup": { input: { tenantId?: number; domainId: number; check?: boolean }; output: DomainSetup }
+  "admin.GetHeldMail": { input: { id: number }; output: HeldMailDetail }
   "admin.GetStats": { input: { tenantId?: number; server?: boolean }; output: Stats }
   "admin.ListAliases": { input: { tenantId?: number; userId?: number }; output: Aliases }
   "admin.ListDomains": { input: { tenantId?: number }; output: Domains }
+  "admin.ListHeldMail": { input: { tenantId?: number; q?: string; reason?: string; before?: number }; output: HeldMessages }
   "admin.ListQueue": { input: { tenantId?: number; status?: string; limit?: number }; output: Queue }
   "admin.ListSenderRules": { input: { tenantId?: number }; output: SenderRules }
   "admin.ListTenants": { input: Record<string, never>; output: Tenants }
   "admin.ListUsers": { input: { tenantId?: number }; output: Users }
+  "admin.ReleaseHeldMail": { input: { id: number }; output: Done }
   "admin.RetryQueue": { input: RetryQueue; output: Done }
   "admin.RotateDKIM": { input: { domainId: number } & RotateDKIM; output: DKIMRotated }
   "admin.SetUserPassword": { input: { id: number } & SetUserPassword; output: Done }
@@ -445,13 +477,16 @@ export interface Ops {
   "mail.CreateMailbox": { input: CreateMailbox; output: MailboxCreated }
   "mail.DeleteMailbox": { input: { id: number }; output: Done }
   "mail.DeleteMessages": { input: DeleteMessages; output: Done }
+  "mail.DeleteQuarantined": { input: { id: number }; output: Done }
   "mail.GetMailSettings": { input: Record<string, never>; output: MailSettings }
   "mail.GetMessage": { input: { id: number }; output: Message }
   "mail.GetThread": { input: { threadId: number }; output: Messages }
   "mail.ListIdentities": { input: Record<string, never>; output: Identities }
   "mail.ListMailboxes": { input: Record<string, never>; output: Mailboxes }
   "mail.ListMessages": { input: { mailboxId: number; limit?: number; cursor?: string; unreadOnly?: boolean; flaggedOnly?: boolean }; output: MessagePage }
+  "mail.ListQuarantine": { input: { q?: string; before?: number }; output: HeldMessages }
   "mail.MoveMessages": { input: MoveMessages; output: Done }
+  "mail.ReleaseQuarantined": { input: { id: number }; output: Done }
   "mail.RenameMailbox": { input: { id: number } & RenameMailbox; output: Done }
   "mail.SaveDraft": { input: SaveDraft; output: DraftSaved }
   "mail.Search": { input: { query?: string; mailboxId?: number; from?: string; unread?: boolean; flagged?: boolean; hasAttachments?: boolean; after?: number; before?: number; limit?: number }; output: Messages }
@@ -475,17 +510,21 @@ export const ops = {
   "admin.CreateUser": { method: 'POST', path: '/api/v1/admin/users', pathParams: [], query: [], body: true, stream: false },
   "admin.DeleteAlias": { method: 'DELETE', path: '/api/v1/admin/aliases/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
   "admin.DeleteDomain": { method: 'DELETE', path: '/api/v1/admin/domains/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
+  "admin.DeleteHeldMail": { method: 'DELETE', path: '/api/v1/admin/quarantine/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.DeleteSenderRule": { method: 'DELETE', path: '/api/v1/admin/sender-rules/{id}', pathParams: ["id"], query: ["tenantId"], body: false, stream: false },
   "admin.DeleteTenant": { method: 'DELETE', path: '/api/v1/admin/tenants/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.DeleteUser": { method: 'DELETE', path: '/api/v1/admin/users/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.GetDomainSetup": { method: 'GET', path: '/api/v1/admin/domains/{domainId}/setup', pathParams: ["domainId"], query: ["tenantId","check"], body: false, stream: false },
+  "admin.GetHeldMail": { method: 'GET', path: '/api/v1/admin/quarantine/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.GetStats": { method: 'GET', path: '/api/v1/admin/stats', pathParams: [], query: ["tenantId","server"], body: false, stream: false },
   "admin.ListAliases": { method: 'GET', path: '/api/v1/admin/aliases', pathParams: [], query: ["tenantId","userId"], body: false, stream: false },
   "admin.ListDomains": { method: 'GET', path: '/api/v1/admin/domains', pathParams: [], query: ["tenantId"], body: false, stream: false },
+  "admin.ListHeldMail": { method: 'GET', path: '/api/v1/admin/quarantine', pathParams: [], query: ["tenantId","q","reason","before"], body: false, stream: false },
   "admin.ListQueue": { method: 'GET', path: '/api/v1/admin/queue', pathParams: [], query: ["tenantId","status","limit"], body: false, stream: false },
   "admin.ListSenderRules": { method: 'GET', path: '/api/v1/admin/sender-rules', pathParams: [], query: ["tenantId"], body: false, stream: false },
   "admin.ListTenants": { method: 'GET', path: '/api/v1/admin/tenants', pathParams: [], query: [], body: false, stream: false },
   "admin.ListUsers": { method: 'GET', path: '/api/v1/admin/users', pathParams: [], query: ["tenantId"], body: false, stream: false },
+  "admin.ReleaseHeldMail": { method: 'POST', path: '/api/v1/admin/quarantine/{id}/release', pathParams: ["id"], query: [], body: false, stream: false },
   "admin.RetryQueue": { method: 'POST', path: '/api/v1/admin/queue/retry', pathParams: [], query: [], body: true, stream: false },
   "admin.RotateDKIM": { method: 'POST', path: '/api/v1/admin/domains/{domainId}/dkim', pathParams: ["domainId"], query: [], body: true, stream: false },
   "admin.SetUserPassword": { method: 'POST', path: '/api/v1/admin/users/{id}/password', pathParams: ["id"], query: [], body: true, stream: false },
@@ -494,13 +533,16 @@ export const ops = {
   "mail.CreateMailbox": { method: 'POST', path: '/api/v1/mailboxes', pathParams: [], query: [], body: true, stream: false },
   "mail.DeleteMailbox": { method: 'DELETE', path: '/api/v1/mailboxes/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.DeleteMessages": { method: 'POST', path: '/api/v1/messages/delete', pathParams: [], query: [], body: true, stream: false },
+  "mail.DeleteQuarantined": { method: 'DELETE', path: '/api/v1/quarantine/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.GetMailSettings": { method: 'GET', path: '/api/v1/mail-settings', pathParams: [], query: [], body: false, stream: false },
   "mail.GetMessage": { method: 'GET', path: '/api/v1/messages/{id}', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.GetThread": { method: 'GET', path: '/api/v1/threads/{threadId}', pathParams: ["threadId"], query: [], body: false, stream: false },
   "mail.ListIdentities": { method: 'GET', path: '/api/v1/identities', pathParams: [], query: [], body: false, stream: false },
   "mail.ListMailboxes": { method: 'GET', path: '/api/v1/mailboxes', pathParams: [], query: [], body: false, stream: false },
   "mail.ListMessages": { method: 'GET', path: '/api/v1/mailboxes/{mailboxId}/messages', pathParams: ["mailboxId"], query: ["limit","cursor","unreadOnly","flaggedOnly"], body: false, stream: false },
+  "mail.ListQuarantine": { method: 'GET', path: '/api/v1/quarantine', pathParams: [], query: ["q","before"], body: false, stream: false },
   "mail.MoveMessages": { method: 'POST', path: '/api/v1/messages/move', pathParams: [], query: [], body: true, stream: false },
+  "mail.ReleaseQuarantined": { method: 'POST', path: '/api/v1/quarantine/{id}/release', pathParams: ["id"], query: [], body: false, stream: false },
   "mail.RenameMailbox": { method: 'PATCH', path: '/api/v1/mailboxes/{id}', pathParams: ["id"], query: [], body: true, stream: false },
   "mail.SaveDraft": { method: 'POST', path: '/api/v1/drafts', pathParams: [], query: [], body: true, stream: false },
   "mail.Search": { method: 'GET', path: '/api/v1/search', pathParams: [], query: ["query","mailboxId","from","unread","flagged","hasAttachments","after","before","limit"], body: false, stream: false },

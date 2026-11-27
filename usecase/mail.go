@@ -35,7 +35,8 @@ type Mail struct {
 	Hostname string
 	MaxSize  int64
 	// Endpoints lists the mail-app listeners, for the settings screen.
-	Endpoints []domain.MailEndpoint
+	Endpoints  []domain.MailEndpoint
+	Quarantine QuarantinePolicy
 	// Keepalive is how often Watch sends an empty change; default 25 s,
 	// under the idle timeouts of Cloudflare (100 s) and most gateways.
 	Keepalive time.Duration

@@ -76,6 +76,12 @@ type MailService interface {
 	SendMessage(ctx context.Context, in domain.SendMessage) (domain.Sent, error)
 	//kakarot:http POST /api/v1/drafts
 	SaveDraft(ctx context.Context, in domain.SaveDraft) (domain.DraftSaved, error)
+	//kakarot:http GET /api/v1/quarantine
+	ListQuarantine(ctx context.Context, in domain.ListQuarantine) (domain.HeldMessages, error)
+	//kakarot:http POST /api/v1/quarantine/{id}/release
+	ReleaseQuarantined(ctx context.Context, in domain.ReleaseQuarantined) (domain.Done, error)
+	//kakarot:http DELETE /api/v1/quarantine/{id}
+	DeleteQuarantined(ctx context.Context, in domain.DeleteQuarantined) (domain.Done, error)
 	//kakarot:http GET /api/v1/mail-settings
 	GetMailSettings(ctx context.Context, in domain.GetMailSettings) (domain.MailSettings, error)
 	// Watch is a server-sent event stream of folder changes.
@@ -136,6 +142,14 @@ type AdminService interface {
 	CreateSenderRule(ctx context.Context, in domain.CreateSenderRule) (domain.SenderRuleCreated, error)
 	//kakarot:http DELETE /api/v1/admin/sender-rules/{id}
 	DeleteSenderRule(ctx context.Context, in domain.DeleteSenderRule) (domain.Done, error)
+	//kakarot:http GET /api/v1/admin/quarantine
+	ListHeldMail(ctx context.Context, in domain.ListHeldMail) (domain.HeldMessages, error)
+	//kakarot:http GET /api/v1/admin/quarantine/{id}
+	GetHeldMail(ctx context.Context, in domain.GetHeldMail) (domain.HeldMailDetail, error)
+	//kakarot:http POST /api/v1/admin/quarantine/{id}/release
+	ReleaseHeldMail(ctx context.Context, in domain.ReleaseHeldMail) (domain.Done, error)
+	//kakarot:http DELETE /api/v1/admin/quarantine/{id}
+	DeleteHeldMail(ctx context.Context, in domain.DeleteHeldMail) (domain.Done, error)
 }
 
 // The usecases implement the contract; the compiler checks it here.
