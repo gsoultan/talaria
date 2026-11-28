@@ -1,0 +1,427 @@
+// Copyright (c) 2026 Gembit Soultan Shirazi <gembit.soultan@gmail.com>. All rights reserved.
+// SPDX-License-Identifier: MIT
+
+// Package config loads Talaria's TOML configuration file.
+package config
+
+import (
+	"errors"
+	"fmt"
+	"net/netip"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/pelletier/go-toml/v2"
+)
+
+// Config is the full server configuration. Domains, users and mailboxes live
+// in the database, not here, so many domains can be managed at runtime.
+type Config struct {
+	// Hostname is the server's public FQDN, used in SMTP banners and HELO.
+	Hostname string `toml:"hostname"`
+	// DataDir holds the message blob store, certificates and temporary
+	// files. Metadata lives in PostgreSQL (see Database).
+	DataDir string `toml:"data_dir"`
+	// Database is the PostgreSQL database for metadata and search.
+	Database Database `toml:"database"`
+	// MemoryLimit is the Go runtime soft memory limit, e.g. "512MiB".
+	MemoryLimit ByteSize   `toml:"memory_limit"`
+	Log         Log        `toml:"log"`
+	HTTP        HTTP       `toml:"http"`
+	SMTP        SMTP       `toml:"smtp"`
+	IMAP        IMAP       `toml:"imap"`
+	POP3        POP3       `toml:"pop3"`
+	Outbound    Outbound   `toml:"outbound"`
+	TLS         TLS        `toml:"tls"`
+	Ingest      Ingest     `toml:"ingest"`
+	Filter      Filter     `toml:"filter"`
+	Spam        Spam       `toml:"spam"`
+	Malware     Malware    `toml:"malware"`
+	Quarantine  Quarantine `toml:"quarantine"`
+	Audit       Audit      `toml:"audit"`
+	SMIME       SMIME      `toml:"smime"`
+	SafeLinks   SafeLinks  `toml:"safe_links"`
+}
+
+// SafeLinks configures the link check behind links opened from the webmail.
+type SafeLinks struct {
+	Enabled bool `toml:"enabled"`
+	// Feeds replace the built-in URLhaus and OpenPhish feeds.
+	Feeds []LinkFeed `toml:"feed"`
+	// Refresh is how often feeds are downloaded again.
+	Refresh Duration `toml:"refresh"`
+	// Block lists domains never to open, with their subdomains.
+	Block []string `toml:"block"`
+}
+
+// LinkFeed is a threat feed: one URL (or, with hosts, one host) per line.
+type LinkFeed struct {
+	Name  string `toml:"name"`
+	URL   string `toml:"url"`
+	Hosts bool   `toml:"hosts"`
+}
+
+// SMIME configures checking S/MIME signatures.
+type SMIME struct {
+	// CAFile adds trusted roots (PEM) to the system's, such as an
+	// organisation's own certificate authority.
+	CAFile string `toml:"ca_file"`
+}
+
+// Audit configures the audit log.
+type Audit struct {
+	// KeepDays removes entries after this many days; 0 keeps them forever.
+	KeepDays int `toml:"keep_days"`
+}
+
+// Quarantine configures held mail.
+type Quarantine struct {
+	// KeepDays deletes held mail after this many days.
+	KeepDays int `toml:"keep_days"`
+	// Digest mails each user a list of what was held for them, once a day
+	// at DigestHour (0-23, server time).
+	Digest     bool `toml:"digest"`
+	DigestHour int  `toml:"digest_hour"`
+	// WebURL is the webmail address the digest links to. Default
+	// https://hostname.
+	WebURL string `toml:"web_url"`
+}
+
+// Malware configures attachment scanning of inbound mail.
+type Malware struct {
+	Enabled bool `toml:"enabled"`
+	// BlockedExtensions replaces the built-in list of refused file types.
+	BlockedExtensions []string `toml:"blocked_extensions"`
+	// BlockMacros refuses Office files with VBA macros.
+	BlockMacros bool `toml:"block_macros"`
+	// BlockEncryptedArchives refuses password-protected archives.
+	BlockEncryptedArchives bool `toml:"block_encrypted_archives"`
+	// RulesDir holds extra YARA rules (.yar, .yara).
+	RulesDir string `toml:"rules_dir"`
+	// Action is "quarantine" (hold for an admin to review) or "reject"
+	// (refuse during SMTP).
+	Action string `toml:"action"`
+	// UserRelease lets people release held malware themselves. Off: only
+	// admins can.
+	UserRelease bool `toml:"user_release"`
+	// ClamAV is the clamd address: unix:/run/clamav/clamd.ctl or
+	// tcp:127.0.0.1:3310. Empty means no ClamAV.
+	ClamAV string `toml:"clamav"`
+}
+
+// Spam configures spam scoring of inbound mail.
+type Spam struct {
+	Enabled bool `toml:"enabled"`
+	// JunkScore files a message in Junk at or above it.
+	JunkScore float64 `toml:"junk_score"`
+	// QuarantineScore holds a message in quarantine at or above it, for
+	// the user to release or delete; 0 never quarantines.
+	QuarantineScore float64 `toml:"quarantine_score"`
+	// RejectScore refuses a message during SMTP at or above it; 0 never
+	// refuses. It applies before each user's own filter is consulted.
+	RejectScore float64 `toml:"reject_score"`
+	// RspamdURL, when set, adds the score of an Rspamd worker, e.g.
+	// http://127.0.0.1:11333. RspamdPasswordFile holds its password, if any.
+	RspamdURL          string `toml:"rspamd_url"`
+	RspamdPasswordFile string `toml:"rspamd_password_file"`
+}
+
+// Filter configures the checks on inbound SMTP connections. Tenants add
+// their own allow and block lists in the admin.
+type Filter struct {
+	// DNSBL lists DNS blocklist zones. Spamhaus refuses queries that come
+	// through public resolvers (8.8.8.8, 1.1.1.1); run a local resolver
+	// such as unbound, or use its data query service key in the zone.
+	DNSBL []string `toml:"dnsbl"`
+	// Greylist defers the first message from an unknown sender for
+	// greylist_delay; real mail servers retry and get through.
+	Greylist      bool     `toml:"greylist"`
+	GreylistDelay Duration `toml:"greylist_delay"`
+	// RequireRDNS refuses servers without forward-confirmed reverse DNS.
+	RequireRDNS bool `toml:"require_rdns"`
+	// MaxPerIPHour caps messages per hour from one IP (IPv6: one /64).
+	MaxPerIPHour int `toml:"max_per_ip_hour"`
+}
+
+// Database configures the PostgreSQL connection.
+type Database struct {
+	// URL is a PostgreSQL connection URL, e.g.
+	// postgres://talaria:secret@localhost:5432/talaria?sslmode=disable.
+	// TALARIA_DATABASE_URL in the environment overrides it, which keeps the
+	// password out of the config file.
+	URL string `toml:"url"`
+	// MaxConns caps open connections. Each one is a PostgreSQL process of
+	// several MB, so keep it small on a small machine. Default 10.
+	MaxConns int `toml:"max_conns"`
+}
+
+// DatabaseURLEnv overrides database.url.
+const DatabaseURLEnv = "TALARIA_DATABASE_URL"
+
+// TLS controls where TLS is terminated. Behind Cloudflare Tunnel or a web
+// gateway the HTTP side is usually terminated upstream ("off"), while SMTP and
+// IMAP listeners that face the internet still need certificates.
+type TLS struct {
+	// Mode is "acme" (automatic Let's Encrypt), "files" (cert_file/key_file),
+	// or "off" (plaintext; TLS is terminated by a proxy or tunnel).
+	Mode     string   `toml:"mode"`
+	CertFile string   `toml:"cert_file"`
+	KeyFile  string   `toml:"key_file"`
+	Email    string   `toml:"email"` // ACME account contact
+	Hosts    []string `toml:"hosts"` // names to request certificates for
+}
+
+// Ingest is an HTTP endpoint that accepts raw RFC 5322 messages. It lets
+// mail arrive without a public port 25, for example from a Cloudflare Email
+// Worker or an external MX relay, through a tunnel or web gateway.
+type Ingest struct {
+	Enabled bool `toml:"enabled"`
+	// TokenFile holds the shared bearer token callers must present.
+	TokenFile string `toml:"token_file"`
+}
+
+type Log struct {
+	Level  string `toml:"level"`  // debug, info, warn, error
+	Format string `toml:"format"` // text or json
+}
+
+type HTTP struct {
+	Listen string `toml:"listen"`
+	// ListenTLS serves HTTPS (usually ":443") with the certificates from
+	// [tls]. Leave empty behind Cloudflare Tunnel or a gateway that
+	// terminates HTTPS. tls.mode "acme" needs it: certificates are proven over
+	// this port (TLS-ALPN-01), or over Listen on port 80 (HTTP-01).
+	ListenTLS string `toml:"listen_tls"`
+	// TrustedProxies lists CIDRs (e.g. the cloudflared host, a gateway) whose
+	// forwarded client-IP headers are believed. Empty means trust nobody.
+	TrustedProxies []string `toml:"trusted_proxies"`
+	// ClientIPHeader is read from trusted proxies: "X-Forwarded-For",
+	// "X-Real-IP" or "CF-Connecting-IP".
+	ClientIPHeader string `toml:"client_ip_header"`
+}
+
+// ProxyProtocol holds gateway options shared by the SMTP and IMAP listeners.
+type ProxyProtocol struct {
+	// TrustedProxies lists gateway CIDRs (Gateon, HAProxy, nginx stream).
+	// Connections from them must begin with a PROXY protocol v1 or v2 header
+	// carrying the real client address, which SPF, rate limits and logs use.
+	// Connections from other addresses are served directly as usual.
+	TrustedProxies []string `toml:"trusted_proxies"`
+	// UpstreamTLS marks the implicit-TLS listener (465 or 993) as fed by a
+	// gateway that already terminated TLS and forwards plaintext. Talaria then
+	// treats those sessions as encrypted without doing its own handshake.
+	// Only takes effect for connections from TrustedProxies.
+	UpstreamTLS bool `toml:"upstream_tls"`
+}
+
+type SMTP struct {
+	// Listen is the inbound MX listener (port 25).
+	Listen string `toml:"listen"`
+	// Submission is the authenticated STARTTLS listener (port 587).
+	Submission string `toml:"submission"`
+	// SubmissionTLS is the authenticated implicit-TLS listener (port 465).
+	SubmissionTLS  string   `toml:"submission_tls"`
+	MaxMessageSize ByteSize `toml:"max_message_size"`
+	MaxConnections int      `toml:"max_connections"`
+	ProxyProtocol
+}
+
+type IMAP struct {
+	Listen    string `toml:"listen"`     // STARTTLS, port 143
+	ListenTLS string `toml:"listen_tls"` // implicit TLS, port 993
+	ProxyProtocol
+}
+
+// POP3 serves the Inbox to apps that download and delete. Off by default;
+// IMAP is the better choice for most people.
+type POP3 struct {
+	Listen    string `toml:"listen"`     // STARTTLS (STLS), port 110
+	ListenTLS string `toml:"listen_tls"` // implicit TLS, port 995
+	ProxyProtocol
+}
+
+// Outbound controls how mail leaves the server. Most VPS providers block
+// outbound port 25, so relaying through a smarthost is the default.
+type Outbound struct {
+	// Mode is "relay" (send everything through a smarthost) or "direct"
+	// (deliver to recipient MX hosts on port 25).
+	Mode  string `toml:"mode"`
+	Relay Relay  `toml:"relay"`
+}
+
+type Relay struct {
+	Host     string `toml:"host"`
+	Port     int    `toml:"port"` // 587 (STARTTLS) or 465 (implicit TLS)
+	Username string `toml:"username"`
+	// PasswordFile points to a file holding the relay password, so the
+	// secret stays out of the config file.
+	PasswordFile string   `toml:"password_file"`
+	Timeout      Duration `toml:"timeout"`
+}
+
+// Default returns a configuration tuned for a 2 vCPU / 2 GB machine.
+func Default() Config {
+	return Config{
+		Hostname:    "localhost",
+		DataDir:     "./data",
+		MemoryLimit: 512 * MiB,
+		Database:    Database{MaxConns: 10},
+		Filter: Filter{
+			DNSBL:         []string{"zen.spamhaus.org", "bl.spamcop.net"},
+			GreylistDelay: Duration(5 * time.Minute),
+			MaxPerIPHour:  500,
+		},
+		Spam:       Spam{Enabled: true, JunkScore: 6, QuarantineScore: 10, RejectScore: 15},
+		Malware:    Malware{Enabled: true, BlockMacros: true, Action: "quarantine"},
+		Quarantine: Quarantine{KeepDays: 30, Digest: true, DigestHour: 8},
+		Audit:      Audit{KeepDays: 365},
+		SafeLinks:  SafeLinks{Enabled: true, Refresh: Duration(30 * time.Minute)},
+		Log:        Log{Level: "info", Format: "text"},
+		HTTP:       HTTP{Listen: ":8080", ClientIPHeader: "X-Forwarded-For"},
+		TLS:        TLS{Mode: "off"},
+		SMTP: SMTP{
+			Listen:         ":25",
+			Submission:     ":587",
+			SubmissionTLS:  ":465",
+			MaxMessageSize: 25 * MiB,
+			MaxConnections: 200,
+		},
+		IMAP:     IMAP{Listen: ":143", ListenTLS: ":993"},
+		Outbound: Outbound{Mode: "relay", Relay: Relay{Port: 587, Timeout: Duration(30 * time.Second)}},
+	}
+}
+
+// Load reads path on top of the defaults. An empty path returns the defaults.
+func Load(path string) (Config, error) {
+	cfg := Default()
+	if path != "" {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return cfg, fmt.Errorf("read config: %w", err)
+		}
+		dec := toml.NewDecoder(strings.NewReader(string(b))).DisallowUnknownFields()
+		if err := dec.Decode(&cfg); err != nil {
+			return cfg, fmt.Errorf("parse config %s: %w", path, err)
+		}
+	}
+	if u := os.Getenv(DatabaseURLEnv); u != "" {
+		cfg.Database.URL = u
+	}
+	return cfg, cfg.Validate()
+}
+
+// Validate reports configuration errors that would stop the server starting.
+func (c Config) Validate() error {
+	var errs []error
+	if c.Hostname == "" {
+		errs = append(errs, errors.New("hostname is required"))
+	}
+	if c.DataDir == "" {
+		errs = append(errs, errors.New("data_dir is required"))
+	}
+	if c.Database.URL == "" {
+		errs = append(errs, errors.New("database.url is required (or set "+DatabaseURLEnv+")"))
+	} else if !strings.HasPrefix(c.Database.URL, "postgres://") && !strings.HasPrefix(c.Database.URL, "postgresql://") {
+		errs = append(errs, errors.New("database.url must be a postgres:// URL"))
+	}
+	if c.Database.MaxConns < 0 {
+		errs = append(errs, errors.New("database.max_conns must not be negative"))
+	}
+	switch c.Outbound.Mode {
+	case "direct":
+	case "relay":
+		if c.Outbound.Relay.Port != 587 && c.Outbound.Relay.Port != 465 && c.Outbound.Relay.Port != 25 && c.Outbound.Relay.Port != 2525 {
+			errs = append(errs, fmt.Errorf("outbound.relay.port %d: use 587, 465, 2525 or 25", c.Outbound.Relay.Port))
+		}
+	default:
+		errs = append(errs, fmt.Errorf("outbound.mode %q: must be relay or direct", c.Outbound.Mode))
+	}
+	switch c.TLS.Mode {
+	case "off":
+		if c.HTTP.ListenTLS != "" {
+			errs = append(errs, errors.New("http.listen_tls needs certificates: set tls.mode to acme or files"))
+		}
+	case "acme":
+		if c.HTTP.ListenTLS == "" {
+			errs = append(errs, errors.New(`tls.mode "acme" needs http.listen_tls (port 443 reachable from the internet)`))
+		}
+	case "files":
+		if c.TLS.CertFile == "" || c.TLS.KeyFile == "" {
+			errs = append(errs, errors.New("tls.mode files needs cert_file and key_file"))
+		}
+	default:
+		errs = append(errs, fmt.Errorf("tls.mode %q: must be acme, files or off", c.TLS.Mode))
+	}
+	switch c.HTTP.ClientIPHeader {
+	case "X-Forwarded-For", "X-Real-IP", "CF-Connecting-IP":
+	default:
+		errs = append(errs, fmt.Errorf("http.client_ip_header %q: use X-Forwarded-For, X-Real-IP or CF-Connecting-IP", c.HTTP.ClientIPHeader))
+	}
+	for _, list := range [][]string{c.HTTP.TrustedProxies, c.SMTP.TrustedProxies, c.IMAP.TrustedProxies, c.POP3.TrustedProxies} {
+		if _, err := ParsePrefixes(list); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	for name, pp := range map[string]ProxyProtocol{"smtp": c.SMTP.ProxyProtocol, "imap": c.IMAP.ProxyProtocol, "pop3": c.POP3.ProxyProtocol} {
+		if pp.UpstreamTLS && len(pp.TrustedProxies) == 0 {
+			errs = append(errs, fmt.Errorf("%s.upstream_tls needs %s.trusted_proxies: only the gateway's connections count as encrypted", name, name))
+		}
+	}
+	if c.Spam.Enabled && c.Spam.JunkScore <= 0 {
+		errs = append(errs, errors.New("spam.junk_score must be above 0"))
+	}
+	if c.Spam.RejectScore < 0 || (c.Spam.RejectScore > 0 && c.Spam.RejectScore <= c.Spam.JunkScore) {
+		errs = append(errs, errors.New("spam.reject_score must be 0 (never refuse) or above spam.junk_score"))
+	}
+	if u := c.Spam.RspamdURL; u != "" && !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
+		errs = append(errs, errors.New("spam.rspamd_url must be an http:// or https:// URL"))
+	}
+	if q := c.Spam.QuarantineScore; q < 0 || (q > 0 && (q <= c.Spam.JunkScore || (c.Spam.RejectScore > 0 && q >= c.Spam.RejectScore))) {
+		errs = append(errs, errors.New("spam.quarantine_score must be 0 (never) or between junk_score and reject_score"))
+	}
+	if a := c.Malware.Action; a != "quarantine" && a != "reject" {
+		errs = append(errs, fmt.Errorf("malware.action %q: must be quarantine or reject", a))
+	}
+	if c.Audit.KeepDays < 0 {
+		errs = append(errs, errors.New("audit.keep_days must be 0 (keep forever) or more"))
+	}
+	if c.Quarantine.KeepDays < 1 {
+		errs = append(errs, errors.New("quarantine.keep_days must be at least 1"))
+	}
+	if h := c.Quarantine.DigestHour; h < 0 || h > 23 {
+		errs = append(errs, errors.New("quarantine.digest_hour must be 0 to 23"))
+	}
+	for _, f := range c.SafeLinks.Feeds {
+		if f.Name == "" || !strings.HasPrefix(f.URL, "https://") && !strings.HasPrefix(f.URL, "http://") {
+			errs = append(errs, fmt.Errorf("safe_links.feed %q: needs a name and an http(s) url", f.Name))
+		}
+	}
+	if c.SafeLinks.Enabled && c.SafeLinks.Refresh.D() < time.Minute {
+		errs = append(errs, errors.New("safe_links.refresh must be at least 1m"))
+	}
+	if a := c.Malware.ClamAV; a != "" && !strings.HasPrefix(a, "unix:") && !strings.HasPrefix(a, "tcp:") {
+		errs = append(errs, errors.New("malware.clamav must be unix:/path/to/clamd.ctl or tcp:host:port"))
+	}
+	if c.Ingest.Enabled && c.Ingest.TokenFile == "" {
+		errs = append(errs, errors.New("ingest.enabled needs ingest.token_file"))
+	}
+	return errors.Join(errs...)
+}
+
+// ParsePrefixes parses CIDRs or bare IPs into prefixes.
+func ParsePrefixes(list []string) ([]netip.Prefix, error) {
+	out := make([]netip.Prefix, 0, len(list))
+	for _, s := range list {
+		if p, err := netip.ParsePrefix(s); err == nil {
+			out = append(out, p.Masked())
+			continue
+		}
+		a, err := netip.ParseAddr(s)
+		if err != nil {
+			return nil, fmt.Errorf("trusted proxy %q: not an IP or CIDR", s)
+		}
+		out = append(out, netip.PrefixFrom(a, a.BitLen()))
+	}
+	return out, nil
+}

@@ -1,0 +1,60 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: talaria
+          POSTGRES_PASSWORD: talaria
+          POSTGRES_DB: talaria_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U talaria" --health-interval 2s --health-timeout 5s --health-retries 20
+    env:
+      TALARIA_TEST_DATABASE_URL: postgres://talaria:talaria@localhost:5432/talaria_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: test -z "$(gofmt -l .)"
+      - run: go test -race ./...
+      - run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/talaria
+
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.5
+      - run: cd web && bun install --frozen-lockfile
+      # Layer rules, and endpoint/ and transport/ match the service interfaces.
+      - run: scripts/kakarot.sh check
+      # The OpenAPI document and the TypeScript client match the code.
+      - run: make gen
+      - run: git diff --exit-code
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.5
+      - run: bun install --frozen-lockfile
+      - run: bun run build
