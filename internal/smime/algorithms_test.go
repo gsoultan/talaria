@@ -44,10 +44,10 @@ func TestCheckAlgorithms(t *testing.T) {
 	c := &Checker{Roots: roots}
 
 	keys := map[string][]string{
-		"rsa":     {"-newkey", "rsa:2048"},
-		"p256":    {"-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-256"},
-		"p384":    {"-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-384"},
-		"p521":    {"-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-521"},
+		"rsa":  {"-newkey", "rsa:2048"},
+		"p256": {"-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-256"},
+		"p384": {"-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-384"},
+		"p521": {"-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-521"},
 	}
 	for name, args := range keys {
 		run(append([]string{"req"}, append(args, "-nodes", "-keyout", name+".key", "-out", name+".csr", "-subj", "/CN=Ana")...)...)
