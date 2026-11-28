@@ -4,6 +4,7 @@
 // The parts of an X.509 certificate S/MIME needs.
 
 import { type Bytes, type Node, ASN1Error, OID, Tag, child, int, oid, parse, tagged, text, time } from './der'
+import { type Curve, curveOfParams } from './ec'
 
 export type Cert = {
   der: Bytes
@@ -21,6 +22,9 @@ export type Cert = {
   /** RSA modulus and exponent, for RSA keys. */
   n?: bigint
   e?: bigint
+  /** Curve and public point, for EC keys. */
+  curve?: Curve
+  point?: Bytes
   emails: string[]
   subjectKeyId?: Bytes
 }
@@ -80,6 +84,10 @@ export function parseCert(der: Bytes): Cert {
     cert.n = int(child(k, 0, Tag.INTEGER))
     cert.e = int(child(k, 1, Tag.INTEGER))
   }
+  if (cert.keyAlg === OID.ecPublicKey) {
+    cert.curve = curveOfParams(child(spki, 0).children[1])
+    cert.point = child(spki, 1, Tag.BIT_STRING).body.subarray(1)
+  }
   const add = (e: string) => {
     e = e.trim().toLowerCase()
     if (e && !cert.emails.includes(e)) cert.emails.push(e)
@@ -115,6 +123,9 @@ export function sameBytes(a: Bytes, b: Bytes): boolean {
   return d === 0
 }
 
-export function assertRSA(c: Cert): asserts c is Cert & { n: bigint; e: bigint } {
-  if (c.n === undefined || c.e === undefined) throw new ASN1Error('only RSA certificates are supported for now')
+/** Throws unless the certificate's key can be used here: RSA, or EC on a NIST curve. */
+export function assertUsable(c: Cert) {
+  if (c.n !== undefined && c.e !== undefined) return
+  if (c.curve && c.point) return
+  throw new ASN1Error(`the certificate for ${c.emails[0] ?? c.subject} uses a key type that is not supported`)
 }

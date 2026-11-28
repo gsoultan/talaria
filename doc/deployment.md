@@ -265,10 +265,24 @@ checked the same way. Roots are the system's; add a company CA with:
 ca_file = "/etc/talaria/smime-ca.pem"
 ```
 
-Limits: RSA certificates only; .p12 files must use PBES2 (AES), which
-OpenSSL 3 and current Windows and macOS exports do, not the older 3DES or
-RC2 encryption; mail is encrypted with AES-256-CBC, and AES-128 and
-AES-256 can be decrypted. Search does not look inside encrypted mail.
+What works:
+
+- **Keys**: RSA, and EC on P-256, P-384 and P-521 (ECDSA signatures,
+  ECDH key agreement as in RFC 5753). One message can go to RSA and EC
+  recipients at once.
+- **.p12 files** from any common exporter: AES (PBES2), and the older
+  3DES, RC2, RC4 and DES encryption that older Windows, Outlook and
+  OpenSSL 1.x write. The file's integrity check is verified, so a wrong
+  password is reported as such.
+- **Signatures** read: RSA (PKCS #1 v1.5 and PSS) and ECDSA with SHA-1 to
+  SHA-512, detached or opaque, signers named by issuer and serial number
+  or by key identifier. Signatures are made with SHA-256 (RSA, P-256),
+  SHA-384 (P-384) or SHA-512 (P-521).
+- **Encryption**: mail is sent with AES-256-CBC, which every mail app
+  reads. Mail can be decrypted when it uses AES-128, AES-192 or AES-256
+  (CBC, or GCM in authenticated envelopes), 3DES, DES or RC2.
+
+Search does not look inside encrypted mail.
 
 ## Outbound mail
 

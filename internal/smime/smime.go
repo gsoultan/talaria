@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/emersion/go-message/textproto"
-	"github.com/smallstep/pkcs7"
 )
 
 // Status is what the server can tell about a message's S/MIME.
@@ -107,56 +106,43 @@ func (c *Checker) Check(r io.Reader) Status {
 		return Status{Signed: true, Problem: "the message could not be read"}
 	}
 	mt, params, _ := mime.ParseMediaType(h.Get("Content-Type"))
-	var p7 *pkcs7.PKCS7
-	var content []byte
+	var res signature
 	if mt == "multipart/signed" {
 		content, sig, err := splitSigned(body, params["boundary"])
 		if err != nil {
 			return Status{Signed: true, Problem: err.Error()}
 		}
-		if p7, err = pkcs7.Parse(sig); err != nil {
-			return Status{Signed: true, Problem: "the signature could not be read"}
-		}
-		p7.Content = content
-	} else {
-		der, err := decodeBody(h, body)
-		if err == nil {
-			p7, err = pkcs7.Parse(der)
-		}
-		if err != nil {
-			return Status{Signed: true, Problem: "the signed message could not be read"}
-		}
-		content = p7.Content
+		res, err = verifySigned(sig, content)
+		return c.verify(res, err, from)
 	}
-	st := c.verify(p7, from)
-	if mt != "multipart/signed" {
-		st.Content = content
+	der, err := decodeBody(h, body)
+	if err != nil {
+		return Status{Signed: true, Problem: "the signed message could not be read"}
 	}
+	res, err = verifySigned(der, nil)
+	st := c.verify(res, err, from)
+	st.Content = res.content
 	return st
 }
 
-// verify checks the signature and the signer's certificate.
-func (c *Checker) verify(p7 *pkcs7.PKCS7, from string) Status {
+// verify turns a signature check into a Status, checking the signer's
+// certificate chain and address when the signature holds.
+func (c *Checker) verify(res signature, err error, from string) Status {
 	st := Status{Signed: true}
-	signer := p7.GetOnlySigner()
-	if signer == nil {
-		st.Problem = "the signature does not name exactly one signer"
-		return st
-	}
-	if err := p7.Verify(); err != nil {
-		var dm *pkcs7.MessageDigestMismatchError
-		if errors.As(err, &dm) {
-			st.Problem = "the message was changed after it was signed"
+	if err != nil {
+		var p problem
+		if errors.As(err, &p) {
+			st.Problem = string(p)
 		} else {
 			st.Problem = "the signature is not valid"
 		}
 		return st
 	}
-	st.Chain = append([]*x509.Certificate{signer}, slices.DeleteFunc(slices.Clone(p7.Certificates), func(x *x509.Certificate) bool { return x.Equal(signer) })...)
+	signer := res.signer
+	st.Chain = append([]*x509.Certificate{signer}, slices.DeleteFunc(slices.Clone(res.certs), func(x *x509.Certificate) bool { return x.Equal(signer) })...)
 	st.Signer = Email(signer)
 	when := c.now()
-	var t time.Time
-	if p7.UnmarshalSignedAttribute(pkcs7.OIDAttributeSigningTime, &t) == nil && t.Before(when) && !t.IsZero() {
+	if t := res.signedAt; !t.IsZero() && t.Before(when) {
 		when = t
 	}
 	if err := c.chain(st.Chain, when); err != nil {

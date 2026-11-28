@@ -7,7 +7,8 @@
 // signed or encrypted message, and the plain text it composed itself.
 
 import { type Bytes, b64, b64Lines, unb64 } from './smime/der'
-import { decrypt, encrypt, sign, verify } from './smime/cms'
+import { decrypt, encrypt, micalg, sign, signHash, signingKey, verify } from './smime/cms'
+import { fieldSize, keyKind, publicPoint, samePoint } from './smime/ec'
 import * as keys from './smime/keystore'
 import { readPKCS12 } from './smime/pkcs12'
 import { rsaFromPKCS8 } from './smime/rsa'
@@ -51,10 +52,9 @@ function info(i: keys.Identity): IdentityInfo {
 async function importP12(file: Bytes, password: string): Promise<IdentityInfo> {
   const bundle = await readPKCS12(file, password)
   const certs = bundle.certs.map(parseCert)
-  // The certificate that goes with the key: the one whose modulus matches.
+  // The certificate that goes with the key: the one with its public key.
   for (const pkcs8 of bundle.keys) {
-    const rsa = rsaFromPKCS8(pkcs8)
-    const mine = certs.find((c) => c.n === rsa.n)
+    const mine = await certFor(pkcs8, certs)
     if (!mine) continue
     if (mine.emails.length === 0) throw new Error('the certificate names no email address')
     const chain = [mine, ...certs.filter((c) => c !== mine)]
@@ -65,6 +65,16 @@ async function importP12(file: Bytes, password: string): Promise<IdentityInfo> {
     return info(rec)
   }
   throw new Error('the private key does not match any certificate in the file')
+}
+
+async function certFor(pkcs8: Bytes, certs: Cert[]): Promise<Cert | undefined> {
+  const k = keyKind(pkcs8)
+  if (k.kind === 'rsa') {
+    const rsa = rsaFromPKCS8(pkcs8)
+    return certs.find((c) => c.n === rsa.n)
+  }
+  const point = await publicPoint(pkcs8, k.curve)
+  return certs.find((c) => c.curve === k.curve && c.point && samePoint(c.point, point, fieldSize[k.curve]))
 }
 
 async function identityFor(email: string): Promise<keys.Identity> {
@@ -80,12 +90,12 @@ const boundary = () => `----=_smime_${hex(crypto.getRandomValues(new Uint8Array(
 async function signEntity(email: string, entity: string): Promise<string> {
   const id = await identityFor(email)
   const chain = id.chain.map(parseCert)
-  const key = await crypto.subtle.importKey('pkcs8', await keys.unseal(id), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign'])
+  const key = await signingKey(await keys.unseal(id), chain[0]!)
   const content = new TextEncoder().encode(entity)
   const sig = await sign(content, key, chain[0]!, chain)
   const b = boundary()
   return (
-    `Content-Type: multipart/signed; protocol="application/pkcs7-signature"; micalg=sha-256;\r\n boundary="${b}"\r\n\r\n` +
+    `Content-Type: multipart/signed; protocol="application/pkcs7-signature"; micalg=${micalg[signHash(chain[0]!)]};\r\n boundary="${b}"\r\n\r\n` +
     `This is a cryptographically signed message in MIME format.\r\n\r\n--${b}\r\n${entity}\r\n--${b}\r\n` +
     `Content-Type: application/pkcs7-signature; name="smime.p7s"\r\nContent-Transfer-Encoding: base64\r\n` +
     `Content-Disposition: attachment; filename="smime.p7s"\r\nContent-Description: S/MIME Cryptographic Signature\r\n\r\n` +
@@ -192,10 +202,7 @@ async function decryptMessage(raw: Bytes): Promise<{ entity: string; signature?:
   const p7 = decodeBody(head, body)
   const mine = (await keys.list()).map((id) => ({
     cert: parseCert(id.chain[0]!),
-    key: async () => {
-      const pkcs8 = await keys.unseal(id)
-      return { rsa: rsaFromPKCS8(pkcs8), pkcs8 }
-    },
+    key: () => keys.unseal(id),
   }))
   if (mine.length === 0) throw new Error('there is no S/MIME certificate in this browser; import yours in Settings')
   const inner = latin1(await decrypt(p7, mine))
